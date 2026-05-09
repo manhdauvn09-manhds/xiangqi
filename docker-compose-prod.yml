@@ -1,0 +1,45 @@
+version: '3.8'
+
+# Production deployment for xiangqi.games-core.com
+# Usage: docker-compose -f docker-compose-prod.yml up -d
+
+services:
+  xiangqi-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    image: xiangqi:prod
+    container_name: xiangqi-api
+    ports:
+      - "127.0.0.1:8787:8787"    # Only localhost (nginx handles external)
+    volumes:
+      - xiangqi-data:/data
+      - xiangqi-logs:/var/log
+    environment:
+      - XQ_PORT=8787
+      - XQ_DB_PATH=/data/xiangqi.db
+      - XQ_JWT_SECRET=${XQ_JWT_SECRET}  # Set via .env or -e flag
+      - CORS_ORIGINS=https://xiangqi.games-core.com
+      - PYTHONUNBUFFERED=1
+    restart: always
+    networks:
+      - xiangqi-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8787/api/leaderboard"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+volumes:
+  xiangqi-data:
+    driver: local
+  xiangqi-logs:
+    driver: local
+
+networks:
+  xiangqi-network:
+    driver: bridge
+
+# Nginx runs on host (not containerized) to handle SSL termination
+# See nginx-prod.conf for configuration

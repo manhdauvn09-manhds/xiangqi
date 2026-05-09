@@ -1,0 +1,65 @@
+# Production Dockerfile for Cờ Tướng Vương
+# Deploy on: xiangqi.games-core.com
+# Build: docker build -f Dockerfile.prod -t xiangqi:prod .
+
+# ============= Stage 1: API Backend =============
+FROM python:3.11-slim AS api-builder
+
+WORKDIR /app/api
+
+# Copy requirements
+COPY api-xiangqi/requirements.txt .
+
+# Install dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy API source
+COPY api-xiangqi/ .
+
+# ============= Stage 2: Frontend (static) =============
+FROM node:20-alpine AS fe-builder
+
+WORKDIR /app/fe
+COPY xiangqi/ .
+
+# ============= Stage 3: Runtime =============
+FROM python:3.11-slim
+
+# Install curl for health checks + utilities
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Setup API
+WORKDIR /app/api
+COPY --from=api-builder /app/api /app/api
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Setup Frontend
+WORKDIR /app/fe
+COPY --from=fe-builder /app/fe /app/fe
+
+# Expose only API port (FE served via nginx reverse proxy)
+EXPOSE 8787
+
+# Set env for production
+ENV XQ_PORT=8787 \
+    XQ_DB_PATH=/data/xiangqi.db \
+    CORS_ORIGINS=https://xiangqi.games-core.com \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+# Create data volume
+RUN mkdir -p /data && chmod 755 /data
+
+# Copy and configure entrypoint
+WORKDIR /app
+COPY entrypoint-prod.sh /app/
+RUN chmod +x /app/entrypoint-prod.sh
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+  CMD curl -f http://localhost:8787/api/leaderboard || exit 1
+
+ENTRYPOINT ["/app/entrypoint-prod.sh"]

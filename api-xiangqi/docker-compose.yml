@@ -1,0 +1,46 @@
+# Cờ Tướng Vương — Docker Compose (production-ready)
+# Usage:
+#   docker-compose up -d          # start all services
+#   docker-compose logs -f api    # tail API logs
+#   docker-compose down           # stop all
+
+version: '3.8'
+
+services:
+  api:
+    build: .
+    container_name: xq-api
+    ports:
+      - "8787:8787"
+    environment:
+      - XQ_DB_PATH=/app/data/xiangqi.db
+      - XQ_JWT_SECRET=${XQ_JWT_SECRET:-super-secret-change-me}
+      - CORS_ORIGINS=${CORS_ORIGINS:-*}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+    volumes:
+      - xq-data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8787/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # Nginx reverse proxy (serves static frontend + proxies API)
+  nginx:
+    image: nginx:alpine
+    container_name: xq-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ../games/xiangqi:/usr/share/nginx/html/games/xiangqi:ro
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  xq-data:
+    driver: local

@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  xiangqi:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: xiangqi:latest
+    container_name: xiangqi-game
+    ports:
+      - "8787:8787"      # API backend
+      - "5500:5500"      # Frontend static server
+    volumes:
+      - xiangqi-data:/data
+    environment:
+      - XQ_PORT=8787
+      - XQ_DB_PATH=/data/xiangqi.db
+      - CORS_ORIGINS=*
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8787/api/leaderboard"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  xiangqi-data:
+    driver: local
+
+# Usage:
+# docker-compose up -d          # Run in background
+# docker-compose logs -f        # View logs
+# docker-compose down           # Stop + remove
+# docker-compose ps             # Status

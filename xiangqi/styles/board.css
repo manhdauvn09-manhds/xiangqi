@@ -1,0 +1,128 @@
+/* Cờ Tướng Vương — board SVG styles */
+.xq-board-wrap {
+  background: var(--xq-board-paper);
+  border-radius: 16px;
+  padding: 14px;
+  box-shadow: var(--xq-shadow-2), inset 0 0 0 1px rgba(0,0,0,0.15);
+  position: relative;
+  /* Bàn rộng linh hoạt theo viewport.
+     min(...) chọn giá trị nhỏ nhất giữa: 100% column, 92vh*9/10 (đủ cao), 720px (cap) */
+  width: min(100%, calc(92vh * 9 / 10), 720px);
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+.xq-board {
+  width: 100%;
+  height: auto;
+  display: block;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  aspect-ratio: 9 / 10;     /* viewBox 540×600 */
+}
+
+@media (max-width: 600px) {
+  .xq-board-wrap { padding: 8px; border-radius: 12px; }
+}
+
+/* Trong layout 3 cột (≥1100px): bàn được phép to ~ tối đa 720px hoặc theo cao */
+@media (min-width: 1100px) {
+  .xq-board-wrap {
+    width: min(100%, calc(85vh * 9 / 10), 720px);
+  }
+}
+/* iPad — bàn full width của row trên */
+@media (min-width: 768px) and (max-width: 1099px) {
+  .xq-board-wrap {
+    width: min(100%, 620px);
+  }
+}
+
+.xq-board-bg { fill: var(--xq-board-paper); }
+.xq-board-border, .xq-board-line {
+  stroke: var(--xq-board-line);
+  stroke-width: 1.4;
+}
+.xq-board-border { stroke-width: 3; }
+
+.xq-river-text {
+  fill: var(--xq-board-river);
+  font-family: serif;
+  font-size: 22px;
+  font-style: italic;
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+/* Highlights */
+.xq-hilite { pointer-events: none; }
+.xq-hilite-last { fill: var(--xq-gold); opacity: 0.20; }
+.xq-hilite-sel  { fill: var(--xq-jade); opacity: 0.28; }
+
+.xq-target-dot {
+  fill: var(--xq-jade);
+  opacity: 0.85;
+  pointer-events: none;
+}
+.xq-target-capture {
+  fill: none;
+  stroke: var(--xq-red);
+  stroke-width: 3;
+  opacity: 0.9;
+  pointer-events: none;
+}
+
+/* Pieces */
+.xq-piece-bg {
+  fill: var(--xq-piece-bg);
+  stroke: var(--xq-piece-stroke);
+  stroke-width: 2;
+  filter: drop-shadow(0 2px 2px var(--xq-piece-shadow));
+}
+.xq-piece-ring {
+  fill: none;
+  stroke: var(--xq-piece-stroke);
+  stroke-width: 1;
+  opacity: 0.45;
+}
+.xq-piece-text {
+  font-family: 'Noto Serif SC', serif;
+  font-size: 26px;
+  font-weight: 800;
+  pointer-events: none;
+}
+.xq-piece-text-r { fill: var(--xq-piece-red); }
+.xq-piece-text-b { fill: var(--xq-piece-black); }
+
+.xq-piece-r .xq-piece-ring { stroke: var(--xq-piece-red); opacity: 0.35; }
+.xq-piece-b .xq-piece-ring { stroke: var(--xq-piece-black); opacity: 0.35; }
+
+/* Hover highlight via clickable rect */
+.xq-click {
+  cursor: pointer;
+}
+.xq-click:hover { fill: rgba(244, 196, 48, 0.10); }
+
+/* Check pulse */
+.xq-check-pulse {
+  fill: none;
+  stroke: var(--xq-red);
+  stroke-width: 2.5;
+  opacity: 0.7;
+  animation: xq-pulse 1.4s ease-in-out infinite;
+}
+@keyframes xq-pulse {
+  0%, 100% { opacity: 0.7; r: 28; }
+  50% { opacity: 0; r: 38; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .xq-check-pulse { animation: none; opacity: 0.6; }
+}
+
+/* Move animation: just smooth transform on transform attribute */
+.xq-piece {
+  transition: transform 0.22s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .xq-piece { transition: none; }
+}
