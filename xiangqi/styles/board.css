@@ -60,10 +60,17 @@
   fill: none;
   stroke-width: 2;
 }
-.xq-hilite-last .xq-hilite-ring {
+/* Last move: from (nơi đi từ) — light green, subtle */
+.xq-hilite-last-from .xq-hilite-ring {
   stroke: var(--xq-jade);
-  opacity: 0.45;
+  opacity: 0.35;
 }
+/* Last move: to (vị trí vừa đi) — dark green, prominent */
+.xq-hilite-last-to .xq-hilite-ring {
+  stroke: var(--xq-jade);
+  opacity: 0.8;
+}
+/* Selected square (nước sắp đi) */
 .xq-hilite-sel .xq-hilite-ring {
   stroke: var(--xq-jade);
   opacity: 0.75;

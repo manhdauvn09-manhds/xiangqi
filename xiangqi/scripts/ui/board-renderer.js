@@ -123,8 +123,8 @@ export function createBoardRenderer(container, onSquareClick, opts = {}) {
     if (state.lastMove) {
       const [fx, fy] = squareXY(state.lastMove.from.file, state.lastMove.from.rank, state.flipped);
       const [tx, ty] = squareXY(state.lastMove.to.file,   state.lastMove.to.rank,   state.flipped);
-      lyHilite.appendChild(squareHilite(fx, fy, 'last'));
-      lyHilite.appendChild(squareHilite(tx, ty, 'last'));
+      lyHilite.appendChild(squareHilite(fx, fy, 'last-from'));
+      lyHilite.appendChild(squareHilite(tx, ty, 'last-to'));
     }
     if (state.selected) {
       const [x, y] = squareXY(state.selected.file, state.selected.rank, state.flipped);
@@ -191,7 +191,12 @@ function squareXY(file, rank, flipped) {
 
 function squareHilite(cx, cy, kind) {
   const g = document.createElementNS(SVG_NS, 'g');
-  g.setAttribute('class', `xq-hilite ${kind === 'sel' ? 'xq-hilite-sel' : 'xq-hilite-last'}`);
+  let cls = 'xq-hilite';
+  if (kind === 'sel') cls += ' xq-hilite-sel';
+  else if (kind === 'last-to') cls += ' xq-hilite-last-to';
+  else if (kind === 'last-from') cls += ' xq-hilite-last-from';
+  else cls += ' xq-hilite-last';
+  g.setAttribute('class', cls);
 
   // Inner circle (radius 20)
   const c1 = document.createElementNS(SVG_NS, 'circle');
