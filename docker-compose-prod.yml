@@ -2,6 +2,11 @@ version: '3.8'
 
 # Production deployment for xiangqi.games-core.com
 # Usage: docker-compose -f docker-compose-prod.yml up -d
+#
+# Services:
+#   - xiangqi-api: FastAPI backend on localhost:8787 (internal only)
+#   - xiangqi-frontend: Static HTTP server on localhost:5500 (internal only)
+#   - Nginx: Reverse proxy on 0.0.0.0:80,443 (runs on host, not in container)
 
 services:
   xiangqi-api:
@@ -30,6 +35,27 @@ services:
       timeout: 10s
       retries: 3
       start_period: 15s
+    depends_on:
+      - xiangqi-frontend
+
+  xiangqi-frontend:
+    image: python:3.11-slim
+    container_name: xiangqi-frontend
+    ports:
+      - "127.0.0.1:5500:5500"    # Only localhost (nginx proxies)
+    volumes:
+      - ./xiangqi:/app/fe:ro     # Read-only mount
+    working_dir: /app/fe
+    command: python -m http.server 5500 --bind 0.0.0.0
+    restart: always
+    networks:
+      - xiangqi-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5500"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
 
 volumes:
   xiangqi-data:
@@ -41,5 +67,14 @@ networks:
   xiangqi-network:
     driver: bridge
 
-# Nginx runs on host (not containerized) to handle SSL termination
-# See nginx-prod.conf for configuration
+# ═══════════════════════════════════════════════════════════════════════
+# IMPORTANT: Nginx must be configured separately on the HOST machine
+# (not in Docker container) to manage SSL, co-exist with other domains,
+# and handle port 80/443
+#
+# See nginx-prod.conf for Nginx configuration
+# Install: cp nginx-prod.conf /etc/nginx/sites-available/xiangqi.games-core.com
+# Enable:  ln -s /etc/nginx/sites-available/xiangqi.games-core.com /etc/nginx/sites-enabled/
+# Test:    nginx -t
+# Reload:  systemctl reload nginx
+# ═══════════════════════════════════════════════════════════════════════

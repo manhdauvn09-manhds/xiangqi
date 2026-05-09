@@ -262,10 +262,20 @@ echo "JWT Secret created and saved to .env"
     Write-Status "7. Enabling Nginx site..." "Cyan"
     ssh $ServerAddr "ln -sf /etc/nginx/sites-available/xiangqi.games-core.com /etc/nginx/sites-enabled/ && nginx -t && systemctl reload nginx"
 
-    Write-Status "8. Setting up SSL with Let's Encrypt..." "Cyan"
+    Write-Status "8. Setting up SSL with Let's Encrypt (Certbot)..." "Cyan"
     ssh $ServerAddr @"
-apt-get update && apt-get install -y certbot python3-certbot-nginx
-certbot certonly --standalone -d xiangqi.games-core.com --non-interactive --agree-tos -m admin@xiangqi.games-core.com 2>&1 || true
+# Check if certbot is already installed
+which certbot > /dev/null
+if [ `$? -ne 0 ]; then
+    apt-get update && apt-get install -y certbot python3-certbot-nginx
+else
+    echo "Certbot already installed"
+fi
+
+# Try to generate SSL certificate (may already exist from other certs)
+certbot certonly --webroot -w /opt/apps/xiangqi/xiangqi -d xiangqi.games-core.com --non-interactive --agree-tos -m admin@xiangqi.games-core.com 2>&1 || echo "Certificate may already exist or webroot unavailable"
+
+# Reload Nginx with new certs
 systemctl reload nginx
 "@
 
@@ -273,6 +283,11 @@ systemctl reload nginx
     Write-Success "✅ First-time setup complete!"
     Write-Host ""
     Write-Host "🚀 Server is ready at: https://xiangqi.games-core.com" -ForegroundColor Green
+    Write-Host ""
+    Write-Host "⚠️  IMPORTANT: If SSL certificate setup failed:" -ForegroundColor Yellow
+    Write-Host "  ssh root@62.238.28.106" -ForegroundColor Yellow
+    Write-Host "  certbot certonly -d xiangqi.games-core.com" -ForegroundColor Yellow
+    Write-Host ""
     Write-Host "Next: .\deploy.ps1 -Deploy" -ForegroundColor Cyan
 }
 

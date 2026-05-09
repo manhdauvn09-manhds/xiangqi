@@ -8,7 +8,8 @@
       "Bash(curl -s -o /dev/null -w \"API:%{http_code} \" http://127.0.0.1:8787/api/leaderboard)",
       "Bash(curl -s -o /dev/null -w \"FE:%{http_code}\\\\n\" http://127.0.0.1:5500/index.html)",
       "Bash(git add *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(ssh root@62.238.28.106 \"echo '=== NGINX SITES ===' && ls -la /etc/nginx/sites-available/ && echo '' && echo '=== NGINX ENABLED ===' && ls -la /etc/nginx/sites-enabled/ && echo '' && echo '=== PORT STATUS ===' && netstat -tlnp | grep -E ':80|:443|:8787|:5500'\")"
     ]
   }
 }
