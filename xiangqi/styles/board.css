@@ -56,8 +56,8 @@
 
 /* Highlights */
 .xq-hilite { pointer-events: none; }
-.xq-hilite-last { fill: var(--xq-gold); opacity: 0.20; }
-.xq-hilite-sel  { fill: var(--xq-jade); opacity: 0.28; }
+.xq-hilite-last { fill: var(--xq-gold); opacity: 0.45; }
+.xq-hilite-sel  { fill: var(--xq-jade); opacity: 0.55; }
 
 .xq-target-dot {
   fill: var(--xq-jade);
