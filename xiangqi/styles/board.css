@@ -54,10 +54,20 @@
   pointer-events: none;
 }
 
-/* Highlights */
+/* Highlights — 2 circle rings */
 .xq-hilite { pointer-events: none; }
-.xq-hilite-last { fill: var(--xq-gold); opacity: 0.45; }
-.xq-hilite-sel  { fill: var(--xq-jade); opacity: 0.55; }
+.xq-hilite-ring {
+  fill: none;
+  stroke-width: 2;
+}
+.xq-hilite-last .xq-hilite-ring {
+  stroke: var(--xq-jade);
+  opacity: 0.45;
+}
+.xq-hilite-sel .xq-hilite-ring {
+  stroke: var(--xq-jade);
+  opacity: 0.75;
+}
 
 .xq-target-dot {
   fill: var(--xq-jade);

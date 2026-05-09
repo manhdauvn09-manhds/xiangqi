@@ -190,14 +190,26 @@ function squareXY(file, rank, flipped) {
 }
 
 function squareHilite(cx, cy, kind) {
-  const rect = document.createElementNS(SVG_NS, 'rect');
-  rect.setAttribute('x', cx - 28);
-  rect.setAttribute('y', cy - 28);
-  rect.setAttribute('width', 56);
-  rect.setAttribute('height', 56);
-  rect.setAttribute('rx', 6);
-  rect.setAttribute('class', `xq-hilite ${kind === 'sel' ? 'xq-hilite-sel' : 'xq-hilite-last'}`);
-  return rect;
+  const g = document.createElementNS(SVG_NS, 'g');
+  g.setAttribute('class', `xq-hilite ${kind === 'sel' ? 'xq-hilite-sel' : 'xq-hilite-last'}`);
+
+  // Inner circle (radius 20)
+  const c1 = document.createElementNS(SVG_NS, 'circle');
+  c1.setAttribute('cx', cx);
+  c1.setAttribute('cy', cy);
+  c1.setAttribute('r', 20);
+  c1.setAttribute('class', 'xq-hilite-ring');
+  g.appendChild(c1);
+
+  // Outer circle (radius 30)
+  const c2 = document.createElementNS(SVG_NS, 'circle');
+  c2.setAttribute('cx', cx);
+  c2.setAttribute('cy', cy);
+  c2.setAttribute('r', 30);
+  c2.setAttribute('class', 'xq-hilite-ring');
+  g.appendChild(c2);
+
+  return g;
 }
 
 function drawPiece(piece, file, rank, flipped) {
