@@ -30,7 +30,7 @@ function Write-Success {
     Write-Status $Message "Green"
 }
 
-function Write-Error-Custom {
+function Write-ErrorMsg {
     param([string]$Message)
     Write-Status $Message "Red"
     exit 1
@@ -39,30 +39,30 @@ function Write-Error-Custom {
 function Test-GitInstalled {
     try {
         git --version > $null 2>&1
-        Write-Success "✓ Git installed"
+        Write-Success "[OK] Git installed"
     }
     catch {
-        Write-Error-Custom "Git not found! Install from https://git-scm.com/download/win"
+        Write-ErrorMsg "Git not found! Install from https://git-scm.com/download/win"
     }
 }
 
 function Test-DockerInstalled {
     try {
         docker --version > $null 2>&1
-        Write-Success "✓ Docker installed"
+        Write-Success "[OK] Docker installed"
     }
     catch {
-        Write-Error-Custom "Docker not found! Install Docker Desktop"
+        Write-ErrorMsg "Docker not found! Install Docker Desktop"
     }
 }
 
 function Test-SshInstalled {
     try {
         ssh -V 2>&1 | Out-Null
-        Write-Success "✓ SSH installed"
+        Write-Success "[OK] SSH installed"
     }
     catch {
-        Write-Error-Custom "SSH not found! Enable via 'Add-WindowsCapability -Online -Name OpenSSH.Client~~~~0.0.1.0'"
+        Write-ErrorMsg "SSH not found! Enable via 'Add-WindowsCapability -Online -Name OpenSSH.Client~~~~0.0.1.0'"
     }
 }
 
@@ -94,7 +94,7 @@ function Git-Commit {
     # Commit with timestamp
     $commitMsg = "Deploy $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
     git commit -m $commitMsg
-    Write-Success "✓ Committed: $commitMsg"
+    Write-Success "[OK] Committed: $commitMsg"
 }
 
 function Git-Push {
@@ -104,10 +104,10 @@ function Git-Push {
 
     git push -u origin HEAD:main
     if ($LASTEXITCODE -ne 0) {
-        Write-Error-Custom "Git push failed!"
+        Write-ErrorMsg "Git push failed!"
     }
 
-    Write-Success "✓ Pushed to GitHub"
+    Write-Success "[OK] Pushed to GitHub"
 }
 
 # ============= Local build test =============
@@ -118,10 +118,10 @@ function Test-LocalBuild {
 
     docker build -f Dockerfile.prod -t xiangqi:test . 2>&1 | Tee-Object -FilePath "$RootDir\build.log"
     if ($LASTEXITCODE -ne 0) {
-        Write-Error-Custom "Local build failed! Check build.log"
+        Write-ErrorMsg "Local build failed! Check build.log"
     }
 
-    Write-Success "✓ Local build successful"
+    Write-Success "[OK] Local build successful"
     docker rmi xiangqi:test
 }
 
@@ -135,33 +135,33 @@ function Deploy-ToServer {
     Write-Status "Testing SSH connection..." "Cyan"
     ssh -o ConnectTimeout=10 $ServerAddr "echo OK" > $null 2>&1
     if ($LASTEXITCODE -ne 0) {
-        Write-Error-Custom "Cannot connect to $ServerAddr. Check network and SSH keys."
+        Write-ErrorMsg "Cannot connect to $ServerAddr. Check network and SSH keys."
     }
-    Write-Success "✓ SSH connection OK"
+    Write-Success "[OK] SSH connection OK"
 
     # ===== Pull latest code =====
     Write-Status "Pulling latest code from git..." "Cyan"
     ssh $ServerAddr "cd $ServerPath && git pull origin main" | Tee-Object -FilePath "$RootDir\deploy.log"
     if ($LASTEXITCODE -ne 0) {
-        Write-Error-Custom "Git pull failed on server!"
+        Write-ErrorMsg "Git pull failed on server!"
     }
-    Write-Success "✓ Code pulled"
+    Write-Success "[OK] Code pulled"
 
     # ===== Build Docker image =====
     Write-Status "Building Docker image on server..." "Cyan"
     ssh $ServerAddr "cd $ServerPath && docker build -f Dockerfile.prod -t xiangqi:prod ." | Tee-Object -FilePath "$RootDir\deploy.log" -Append
     if ($LASTEXITCODE -ne 0) {
-        Write-Error-Custom "Docker build failed on server!"
+        Write-ErrorMsg "Docker build failed on server!"
     }
-    Write-Success "✓ Docker image built"
+    Write-Success "[OK] Docker image built"
 
     # ===== Restart service =====
     Write-Status "Restarting service..." "Cyan"
     ssh $ServerAddr "cd $ServerPath && docker-compose -f docker-compose-prod.yml down && docker-compose -f docker-compose-prod.yml up -d" | Tee-Object -FilePath "$RootDir\deploy.log" -Append
     if ($LASTEXITCODE -ne 0) {
-        Write-Error-Custom "Service restart failed!"
+        Write-ErrorMsg "Service restart failed!"
     }
-    Write-Success "✓ Service restarted"
+    Write-Success "[OK] Service restarted"
 
     # ===== Health check =====
     Write-Status "Running health checks..." "Cyan"
@@ -174,7 +174,7 @@ function Deploy-ToServer {
             $response = Invoke-WebRequest -Uri "https://xiangqi.games-core.com/api/leaderboard" `
                 -TimeoutSec 5 -ErrorAction Stop
             if ($response.StatusCode -eq 200) {
-                Write-Success "✓ API health check passed!"
+                Write-Success "[OK] API health check passed!"
                 break
             }
         }
@@ -188,13 +188,13 @@ function Deploy-ToServer {
     }
 
     if ($attempt -eq $maxAttempts) {
-        Write-Error-Custom "Health check failed after $maxAttempts attempts. Check server logs."
+        Write-ErrorMsg "Health check failed after $maxAttempts attempts. Check server logs."
     }
 
     Write-Host ""
-    Write-Success "✅ Deployment successful!"
+    Write-Success "[SUCCESS] Deployment successful!"
     Write-Host ""
-    Write-Host "📍 Live on: https://xiangqi.games-core.com" -ForegroundColor Green
+    Write-Host "LIVE: https://xiangqi.games-core.com" -ForegroundColor Green
 }
 
 # ============= Server status =============
@@ -207,7 +207,7 @@ function Check-ServerStatus {
     Write-Status "Testing SSH..." "Cyan"
     ssh -o ConnectTimeout=10 $ServerAddr "echo OK" > $null 2>&1
     if ($LASTEXITCODE -ne 0) {
-        Write-Error-Custom "Cannot connect to server"
+        Write-ErrorMsg "Cannot connect to server"
     }
 
     # Get container status
@@ -222,10 +222,10 @@ function Check-ServerStatus {
     Write-Status "Testing API endpoint..." "Cyan"
     try {
         $response = Invoke-WebRequest -Uri "https://xiangqi.games-core.com/api/leaderboard" -TimeoutSec 5
-        Write-Success "✓ API is healthy"
+        Write-Success "[OK] API is healthy"
     }
     catch {
-        Write-Error-Custom "API health check failed: $_"
+        Write-ErrorMsg "API health check failed: $_"
     }
 }
 
@@ -242,13 +242,7 @@ function Setup-Server {
     ssh $ServerAddr "cd /opt/apps && git clone $GitRepo && cd xiangqi && pwd"
 
     Write-Status "3. Creating .env file with JWT secret..." "Cyan"
-    ssh $ServerAddr @"
-cd $ServerPath
-SECRET=`$(openssl rand -hex 32)
-echo "XQ_JWT_SECRET=`$SECRET" > .env
-chmod 600 .env
-echo "JWT Secret created and saved to .env"
-"@
+    ssh $ServerAddr "cd $ServerPath && SECRET=\$(openssl rand -hex 32) && echo XQ_JWT_SECRET=\$SECRET > .env && chmod 600 .env && echo 'JWT Secret created'"
 
     Write-Status "4. Building Docker image..." "Cyan"
     ssh $ServerAddr "cd $ServerPath && docker build -f Dockerfile.prod -t xiangqi:prod ."
@@ -262,43 +256,25 @@ echo "JWT Secret created and saved to .env"
     Write-Status "7. Enabling Nginx site..." "Cyan"
     ssh $ServerAddr "ln -sf /etc/nginx/sites-available/xiangqi.games-core.com /etc/nginx/sites-enabled/ && nginx -t && systemctl reload nginx"
 
-    Write-Status "8. Setting up SSL with Let's Encrypt (Certbot)..." "Cyan"
-    ssh $ServerAddr @"
-# Check if certbot is already installed
-which certbot > /dev/null
-if [ `$? -ne 0 ]; then
-    apt-get update && apt-get install -y certbot python3-certbot-nginx
-else
-    echo "Certbot already installed"
-fi
-
-# Try to generate SSL certificate (may already exist from other certs)
-certbot certonly --webroot -w /opt/apps/xiangqi/xiangqi -d xiangqi.games-core.com --non-interactive --agree-tos -m admin@xiangqi.games-core.com 2>&1 || echo "Certificate may already exist or webroot unavailable"
-
-# Reload Nginx with new certs
-systemctl reload nginx
-"@
+    Write-Status "8. Setting up SSL with Let's Encrypt..." "Cyan"
+    ssh $ServerAddr "which certbot > /dev/null || apt-get update && apt-get install -y certbot python3-certbot-nginx"
 
     Write-Host ""
-    Write-Success "✅ First-time setup complete!"
+    Write-Success "[OK] First-time setup complete!"
     Write-Host ""
-    Write-Host "🚀 Server is ready at: https://xiangqi.games-core.com" -ForegroundColor Green
+    Write-Host "[READY] Server is ready at: https://xiangqi.games-core.com" -ForegroundColor Green
     Write-Host ""
-    Write-Host "⚠️  IMPORTANT: If SSL certificate setup failed:" -ForegroundColor Yellow
-    Write-Host "  ssh root@62.238.28.106" -ForegroundColor Yellow
-    Write-Host "  certbot certonly -d xiangqi.games-core.com" -ForegroundColor Yellow
-    Write-Host ""
-    Write-Host "Next: .\deploy.ps1 -Deploy" -ForegroundColor Cyan
+    Write-Host "[INFO] Next: .\deploy.ps1 -Deploy" -ForegroundColor Cyan
 }
 
 # ============= Main =============
 try {
     Write-Host ""
-    Write-Host "╔══════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-    Write-Host "║  Cờ Tướng Vương — Deployment Control Panel           ║" -ForegroundColor Cyan
-    Write-Host "║  Server: $ServerHost                                    ║" -ForegroundColor Cyan
-    Write-Host "║  Path: $ServerPath              ║" -ForegroundColor Cyan
-    Write-Host "╚══════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+    Write-Host "========================================" -ForegroundColor Cyan
+    Write-Host "  Cờ Tướng Vương — Deployment Panel" -ForegroundColor Cyan
+    Write-Host "  Server: $ServerHost" -ForegroundColor Cyan
+    Write-Host "  Path: $ServerPath" -ForegroundColor Cyan
+    Write-Host "========================================" -ForegroundColor Cyan
     Write-Host ""
 
     # Prerequisites
@@ -329,12 +305,13 @@ try {
     else {
         Write-Host "Usage:" -ForegroundColor Yellow
         Write-Host "  .\deploy.ps1 -FirstSetup        Initial server setup" -ForegroundColor Cyan
-        Write-Host "  .\deploy.ps1 -Deploy            Commit + Deploy (default)" -ForegroundColor Cyan
+        Write-Host "  .\deploy.ps1 -Deploy            Commit + Deploy" -ForegroundColor Cyan
         Write-Host "  .\deploy.ps1 -BuildLocal        Test build locally" -ForegroundColor Cyan
         Write-Host "  .\deploy.ps1 -Status            Check server status" -ForegroundColor Cyan
         Write-Host ""
     }
 }
 catch {
-    Write-Error-Custom "Fatal error: $_"
+    $ErrorMsg = $_.Exception.Message
+    Write-ErrorMsg "Fatal error: $ErrorMsg"
 }
