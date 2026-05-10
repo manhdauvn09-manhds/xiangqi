@@ -3,6 +3,7 @@ import * as theme from './theme/theme.js';
 import * as i18n  from './i18n/i18n.js';
 import { t } from './i18n/i18n.js';
 import { openAIModal } from './ui/ai-modal.js';
+import { openFindMatchModal } from './ui/find-match-modal.js';
 import { openAuthModal } from './ui/auth-modal.js';
 import { GameController } from './ui/game-controller.js';
 import { getProfile, getSettings, setSettings, getGameSession, clearGameSession } from './storage/local.js';
@@ -277,11 +278,14 @@ function renderHome(root) {
 
 async function startBotGame(variant = 'standard') {
   const settings = getSettings();
-  const cfg = await openAIModal({ level: settings.lastBotLevel, side: settings.lastSide, variant });
+  const cfg = await openFindMatchModal('bot');
   if (!cfg) return;
-  setSettings({ ...settings, lastBotLevel: cfg.level, lastSide: cfg.side });
+  setSettings({ ...settings, lastBotLevel: cfg.difficulty, lastSide: cfg.side });
   sessionStorage.setItem('xq_pending_game', JSON.stringify({
-    mode: 'bot', botLevel: cfg.level, userSide: cfg.side, variant,
+    mode: 'bot',
+    difficulty: cfg.difficulty,
+    userSide: cfg.side,
+    variant: cfg.variant || variant,
   }));
   if (location.hash === '#/play') applyRoute();
   else location.hash = '#/play';
@@ -318,6 +322,8 @@ function renderPlay(root) {
   } else {
     try { cfg = JSON.parse(sessionStorage.getItem('xq_pending_game') || 'null'); } catch {}
     if (!cfg) { routeTo('#/home'); return; }
+    // Normalize config: map 'difficulty' to 'botLevel' for consistency with GameController
+    if (cfg.difficulty && !cfg.botLevel) cfg.botLevel = cfg.difficulty;
   }
 
   const profile = getProfile();

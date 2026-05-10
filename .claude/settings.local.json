@@ -56,7 +56,12 @@
       "Bash(powershell -Command \"ssh root@62.238.28.106 'cd /opt/apps/xiangqi && docker build --no-cache -f Dockerfile.prod -t xiangqi:prod .'\")",
       "Bash(find /opt/apps/xiangqi/api-xiangqi -name \"*.py\" -type f | head -20)",
       "Bash(grep \"xq-api-base\" E:\\\\\\\\SourceCode\\\\\\\\GAMES\\\\\\\\xiangqi\\\\\\\\xiangqi\\\\\\\\index.html)",
-      "Bash(powershell -Command \"Select-String -Path 'E:\\\\SourceCode\\\\GAMES\\\\xiangqi\\\\xiangqi\\\\scripts\\\\net\\\\api.js' -Pattern \\\\\"request\\\\\\(\\\\\" | Select-Object -First 15\")"
+      "Bash(powershell -Command \"Select-String -Path 'E:\\\\SourceCode\\\\GAMES\\\\xiangqi\\\\xiangqi\\\\scripts\\\\net\\\\api.js' -Pattern \\\\\"request\\\\\\(\\\\\" | Select-Object -First 15\")",
+      "Bash(powershell -Command \"ssh root@62.238.28.106 'cd /opt/apps/xiangqi && docker-compose -f docker-compose-prod.yml down && docker-compose -f docker-compose-prod.yml up -d'\")",
+      "Bash(powershell -Command \".\\\\build.ps1 -BuildRun\")",
+      "Bash(python -m http.server 5500)",
+      "mcp__Claude_in_Chrome__browser_batch",
+      "Bash(node -c xiangqi/scripts/main.js)"
     ]
   }
 }

@@ -13,6 +13,8 @@ import { createBlindBoard, generateBlindLegalMoves, applyBlindMove, undoBlindMov
 import * as wsClient from '../net/ws-client.js';
 import { games as apiGames, isAuthed, getUser } from '../net/api.js';
 import { createChatPanel } from './chat-panel.js';
+import { TimeControl, TIME_FORMATS } from '../game/time-control.js';
+import { fakePlayerManager } from '../game/fake-players.js';
 
 const ELO_BY_LV = [600, 800, 1000, 1200, 1400, 1600, 1800, 2000, 2200, 2400];
 
@@ -20,6 +22,10 @@ export class GameController {
   constructor(els, config) {
     this.els = els;
     this.config = config;
+    // Ensure gameId for bot/local games (needed for FakePlayers)
+    if (!config.gameId) {
+      config.gameId = `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    }
     this.variant = config.variant === 'blind' ? 'blind' : 'standard';
     this.userSide = config.userSide || 'r';
     this.botSide = OPP[this.userSide];
@@ -77,6 +83,22 @@ export class GameController {
 
     // Init sound from settings
     setSoundEnabled(getSettings().sound !== false);
+
+    // Init time control if config has time setting
+    this.timeControl = null;
+    this.moveStartTime = Date.now();
+    if (config.time) {
+      const format = this._getTimeFormat(config.time);
+      this.timeControl = new TimeControl(format);
+      // Listen for time expiration and updates
+      this._timeExpiredHandler = (e) => this._onTimeExpired(e);
+      this._timeUpdateHandler = () => this.updateStatus();
+      window.addEventListener('timeExpired', this._timeExpiredHandler);
+      window.addEventListener('timeUpdate', this._timeUpdateHandler);
+      // Start game clock for red
+      const startPlayer = config.userSide === 'r' && config.mode === 'bot' && this.botSide === 'r' ? 'black' : 'red';
+      this.timeControl.startTurn(startPlayer);
+    }
 
     this.renderer = createBoardRenderer(els.boardHost, (f, r) => this.onSquareClick(f, r), {
       flipped: this.userSide === 'b',
@@ -153,6 +175,12 @@ export class GameController {
     }
     this._unsubLang && this._unsubLang();
     if (this._wsUnsubs) this._wsUnsubs.forEach(fn => fn && fn());
+    if (this.timeControl) {
+      this.timeControl.stop();
+      window.removeEventListener('timeExpired', this._timeExpiredHandler);
+      window.removeEventListener('timeUpdate', this._timeUpdateHandler);
+      this.timeControl = null;
+    }
     if (this.chatPanel) {
       this.chatPanel._chatAPI?.destroy();
       this.chatPanel.remove();
@@ -277,6 +305,18 @@ export class GameController {
     this.updateInfo();
     this.updateMovesLog();
 
+    // Time control: end turn for the player who just moved
+    if (this.timeControl) {
+      const justMovedPlayer = this.movesLog[this.movesLog.length - 1].side === 'r' ? 'red' : 'black';
+      const moveTime = Date.now() - this.moveStartTime;
+      const timeExpired = this.timeControl.endTurn(justMovedPlayer, moveTime);
+      if (timeExpired) {
+        const winner = justMovedPlayer === 'red' ? 'b' : 'r';
+        this.endGame({ ended: true, winner, reason: 'time' });
+        return;
+      }
+    }
+
     // Status
     const sideToMove = this.board.side;
     const inCheck = isCheck(this.board, sideToMove);
@@ -286,6 +326,13 @@ export class GameController {
       SoundFX.check();
     } else {
       this.renderer.setInCheck(null);
+    }
+
+    // Time control: start turn for the next player
+    if (this.timeControl) {
+      const nextPlayer = sideToMove === 'r' ? 'red' : 'black';
+      this.timeControl.startTurn(nextPlayer);
+      this.moveStartTime = Date.now();
     }
 
     // Online: gửi nước qua WS (chỉ khi đây là nước local, không phải remote echo)
@@ -341,6 +388,29 @@ export class GameController {
       return;
     }
 
+    // Use FakePlayers if it's a bot game or online with fake opponent
+    const botLevel = this.config.botLevel || this.config.difficulty;
+    if ((this.config.mode === 'bot' || this.config.fakeOpponent) && botLevel) {
+      const moves = generateLegalMoves(this.board, this.board.side);
+      if (moves.length === 0) {
+        this.isThinking = false;
+        this.endGame(detectGameResult(this.board));
+        return;
+      }
+      try {
+        const move = await fakePlayerManager.makeMove(this.config.gameId, this.board, moves);
+        this.isThinking = false;
+        if (move) this.commitMove(move);
+        else this.endGame(detectGameResult(this.board));
+      } catch (err) {
+        console.error('FakePlayers error:', err);
+        toast(t('toast.bot_error') + ': ' + err.message, { type: 'error' });
+        this.isThinking = false;
+      }
+      return;
+    }
+
+    // Fallback to AI worker
     const worker = this.ensureWorker();
     const fen = toFEN(this.board);
     const level = this.config.botLevel || 3;
@@ -431,6 +501,11 @@ export class GameController {
     this.gameEnded = true;
     // Clear session when game ends
     clearGameSession();
+    // Release fake player if it was a bot game
+    const botLevel = this.config.botLevel || this.config.difficulty;
+    if ((this.config.mode === 'bot' || this.config.fakeOpponent) && botLevel) {
+      fakePlayerManager.releasePlayer(this.config.gameId);
+    }
     let winner = result.winner;
     let myResult = 0.5;
     if (winner === this.userSide) myResult = 1;
@@ -552,6 +627,11 @@ export class GameController {
     }
     let txt = t(key);
     if (isCheck(this.board, this.board.side)) txt += ' · ' + t('status.check');
+    if (this.timeControl) {
+      const status = this.timeControl.getStatus();
+      const playerTime = this.board.side === 'r' ? status.red : status.black;
+      txt += ` · ⏱ ${playerTime}`;
+    }
     e.statusEl.textContent = txt;
   }
 
@@ -575,6 +655,22 @@ export class GameController {
     }
     el.innerHTML = `<table>${rows.join('')}</table>`;
     el.scrollTop = el.scrollHeight;
+  }
+
+  _getTimeFormat(timeStr) {
+    if (!timeStr) return TIME_FORMATS.NO_CLOCK;
+    const initial = parseInt(timeStr.split('+')[0], 10);
+    if (initial <= 5) return TIME_FORMATS.BLITZ;
+    if (initial <= 10) return TIME_FORMATS.RAPID;
+    return TIME_FORMATS.RAPID;
+  }
+
+  _onTimeExpired(e) {
+    if (!this.timeControl) return;
+    const player = e.detail?.player;
+    const opponent = player === 'red' ? 'black' : 'red';
+    const winner = opponent === 'red' ? 'r' : 'b';
+    this.endGame({ ended: true, winner, reason: 'time' });
   }
 }
 

@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Frontend Dev",
+      "runtimeExecutable": "powershell.exe",
+      "runtimeArgs": ["-Command", ".\\build.ps1"],
+      "port": 5500
+    }
+  ]
+}
