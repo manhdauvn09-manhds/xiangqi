@@ -103,7 +103,8 @@ export class GameController {
       // Create time display component
       this.timeDisplay = createTimeDisplay(this.timeControl);
       if (this.timeDisplay && els.statusEl) {
-        els.statusEl.parentElement?.insertBefore(this.timeDisplay, els.statusEl.nextSibling);
+        // Insert time display before status element for prominence
+        els.statusEl.parentElement?.insertBefore(this.timeDisplay, els.statusEl);
       }
     }
 
