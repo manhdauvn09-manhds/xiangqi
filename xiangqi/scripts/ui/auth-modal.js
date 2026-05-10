@@ -5,6 +5,33 @@ import { toast } from './toast.js';
 
 const GOOGLE_CLIENT_ID = '161005265746-d51l7k3cl82pvfu31kb0ke3990cv87me.apps.googleusercontent.com';
 
+// Global callback for Google Sign In (must be accessible to Google SDK)
+window.handleGoogleSignInResponse = async function(response) {
+  try {
+    if (!response.credential) {
+      toast(t('auth.err.google_failed'), { type: 'error' });
+      return;
+    }
+    // Send token to backend
+    const result = await apiGoogleSignIn({ idToken: response.credential });
+
+    // Close modal and resolve
+    const back = document.querySelector('.xq-modal-backdrop');
+    if (back) back.remove();
+
+    toast(t('auth.welcome'), { type: 'success' });
+    window.location.hash = '#/home';
+  } catch (err) {
+    console.error('Google sign in error:', err);
+    let msg = t('auth.err.unknown');
+    if (err.message) msg = err.message;
+
+    const errBox = document.querySelector('.auth-err');
+    if (errBox) errBox.textContent = msg;
+    toast(msg, { type: 'error' });
+  }
+};
+
 export function openAuthModal(initialTab = 'login') {
   return new Promise(resolve => {
     let tab = initialTab;
@@ -34,65 +61,19 @@ export function openAuthModal(initialTab = 'login') {
         paint();
       }));
 
-      // Google Sign In button
+      // Google Sign In button — render with Google SDK
       const googleBtn = back.querySelector('#googleSignIn');
       if (googleBtn && window.google?.accounts?.id) {
-        googleBtn.addEventListener('click', async () => {
-          if (busy) return;
-          busy = true;
-          try {
-            // Initialize Google Sign In if not already done
-            if (!window.google?.accounts?.id._initialized) {
-              window.google.accounts.id.initialize({
-                client_id: GOOGLE_CLIENT_ID,
-                callback: handleGoogleCallback,
-                error_callback: () => {
-                  toast(t('auth.err.google_failed'), { type: 'error' });
-                  busy = false;
-                }
-              });
-              window.google.accounts.id._initialized = true;
-            }
-            // Prompt for sign in
-            window.google.accounts.id.prompt((notification) => {
-              if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-                // Fallback to one tap or trigger sign in flow
-                window.google.accounts.id.renderButton(googleBtn, {
-                  type: 'standard',
-                  size: 'large',
-                  text: 'signin_with'
-                });
-              }
-            });
-          } catch (err) {
-            console.error('Google Sign In error:', err);
-            toast(t('auth.err.google_failed'), { type: 'error' });
-            busy = false;
+        // Use renderButton instead of onclick
+        window.google.accounts.id.renderButton(
+          googleBtn,
+          {
+            theme: 'outline',
+            size: 'large',
+            text: 'signin_with',
+            locale: 'en'
           }
-        });
-      }
-
-      async function handleGoogleCallback(response) {
-        try {
-          if (!response.credential) {
-            toast(t('auth.err.google_failed'), { type: 'error' });
-            busy = false;
-            return;
-          }
-          // Send token to backend
-          const result = await apiGoogleSignIn({ idToken: response.credential });
-          back.remove();
-          toast(t('auth.welcome'), { type: 'success' });
-          resolve(true);
-        } catch (err) {
-          let msg = t('auth.err.unknown');
-          if (err.message) msg = err.message;
-          const errBox = back.querySelector('.auth-err');
-          if (errBox) errBox.textContent = msg;
-          toast(msg, { type: 'error' });
-        } finally {
-          busy = false;
-        }
+        );
       }
 
       back.querySelector('form')?.addEventListener('submit', async (e) => {

@@ -22,10 +22,27 @@ import { toast } from './ui/toast.js';
 
 let currentGame = null;
 
+// Initialize Google Sign In
+function initGoogleSignIn() {
+  if (!window.google?.accounts?.id) {
+    console.warn('Google Sign In SDK not loaded yet');
+    setTimeout(initGoogleSignIn, 500);
+    return;
+  }
+
+  window.google.accounts.id.initialize({
+    client_id: '161005265746-d51l7k3cl82pvfu31kb0ke3990cv87me.apps.googleusercontent.com',
+    callback: window.handleGoogleSignInResponse,
+  });
+}
+
 function boot() {
   theme.init();
   i18n.init();
   i18n.applyToDocument();
+
+  // Initialize Google Sign In
+  initGoogleSignIn();
 
   const s = getSettings();
   setSoundEnabled(s.sound !== false);
