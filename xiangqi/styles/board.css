@@ -54,41 +54,48 @@
   pointer-events: none;
 }
 
-/* Highlights — 2 circle rings */
-.xq-hilite { pointer-events: none; }
-.xq-hilite-ring {
-  fill: none;
+/* Highlights — filled squares with border */
+.xq-hilite {
+  pointer-events: none;
   stroke-width: 2;
 }
-/* Last move: from (nơi đi từ) — light green, subtle pulse */
-.xq-hilite-last-from .xq-hilite-ring {
+
+/* Last move: from (nơi đi từ) — light green, subtle */
+.xq-hilite-last-from {
+  fill: var(--xq-jade);
   stroke: var(--xq-jade);
-  animation: xq-pulse-from 1.6s ease-in-out infinite;
+  animation: xq-pulse-from 1.8s ease-in-out infinite;
 }
-/* Last move: to (vị trí vừa đi) — dark green, prominent pulse */
-.xq-hilite-last-to .xq-hilite-ring {
-  stroke: var(--xq-jade);
+
+/* Last move: to (vị trí vừa đi) — bright green/red, prominent */
+.xq-hilite-last-to {
+  fill: #ff6b6b;
+  stroke: #ff4444;
+  stroke-width: 3;
   animation: xq-pulse-to 1.2s ease-in-out infinite;
 }
+
 /* Selected square (nước sắp đi) */
-.xq-hilite-sel .xq-hilite-ring {
+.xq-hilite-sel {
+  fill: var(--xq-jade);
   stroke: var(--xq-jade);
-  opacity: 0.75;
+  opacity: 0.35;
 }
 
 /* Pulse animations */
 @keyframes xq-pulse-from {
-  0%, 100% { opacity: 0.25; }
-  50% { opacity: 0.55; }
+  0%, 100% { opacity: 0.15; }
+  50% { opacity: 0.35; }
 }
+
 @keyframes xq-pulse-to {
-  0%, 100% { opacity: 0.7; }
-  50% { opacity: 1.0; stroke-width: 2.5; }
+  0%, 100% { opacity: 0.5; stroke-width: 3; }
+  50% { opacity: 0.75; stroke-width: 3.5; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .xq-hilite-last-from .xq-hilite-ring { animation: none; opacity: 0.35; }
-  .xq-hilite-last-to .xq-hilite-ring { animation: none; opacity: 0.85; }
+  .xq-hilite-last-from { animation: none; opacity: 0.2; }
+  .xq-hilite-last-to { animation: none; opacity: 0.6; }
 }
 
 .xq-target-dot {
