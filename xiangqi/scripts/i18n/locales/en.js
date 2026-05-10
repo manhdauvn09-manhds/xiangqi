@@ -137,6 +137,8 @@ export default {
 
   'time.title': 'Time control', 'time.label': 'Time',
   'time.no_clock': 'No clock', 'time.minutes': 'min', 'time.hours': 'hr',
+  'time.blitz': 'Blitz (10m + 1m/move)', 'time.rapid': 'Rapid (20m + 2m/move)',
+  'time.warning': 'Time running out!', 'time.expired': 'Time expired',
 
   'room.side': 'First mover', 'room.password': 'Password',
   'room.password.optional': '(optional)',
