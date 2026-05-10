@@ -3,7 +3,7 @@ import { t } from '../i18n/i18n.js';
 import { register as apiRegister, login as apiLogin, googleSignIn as apiGoogleSignIn } from '../net/api.js';
 import { toast } from './toast.js';
 
-const GOOGLE_CLIENT_ID = '161005265746-d51l7k3cl82pvfu31kb0ke3990cv87me.apps.googleusercontent.com';
+const GOOGLE_CLIENT_ID = '8628113689-u891ob67bfnricdbjlmtti91dma0uokt.apps.googleusercontent.com';
 
 // Global callback for Google Sign In (must be accessible to Google SDK)
 window.handleGoogleSignInResponse = async function(response) {

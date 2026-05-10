@@ -31,7 +31,7 @@ function initGoogleSignIn() {
   }
 
   window.google.accounts.id.initialize({
-    client_id: '161005265746-d51l7k3cl82pvfu31kb0ke3990cv87me.apps.googleusercontent.com',
+    client_id: '8628113689-u891ob67bfnricdbjlmtti91dma0uokt.apps.googleusercontent.com',
     callback: window.handleGoogleSignInResponse,
   });
 }
