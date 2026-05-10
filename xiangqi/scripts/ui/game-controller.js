@@ -142,8 +142,10 @@ export class GameController {
       // Chat messages handled by chat-panel.js directly via wsClient.on
     }
 
-    // Bot Đỏ đi trước nếu user cầm Đen
-    if (this.config.mode === 'bot' && this.botSide === 'r') {
+    // Bot/Fake opponent Đỏ đi trước nếu user cầm Đen
+    const isBotRed = (this.config.mode === 'bot' && this.botSide === 'r') ||
+                     (this.config.mode === 'online' && this.config.fakeOpponent && this.userSide === 'b');
+    if (isBotRed) {
       setTimeout(() => this.botMove(), 300);
     }
   }
@@ -374,7 +376,10 @@ export class GameController {
       this.saveGameSession();
     }
 
-    if (this.config.mode === 'bot' && this.board.side === this.botSide) {
+    // Trigger bot move for bot games or online games with fake opponents
+    const isBotTurn = (this.config.mode === 'bot' || (this.config.mode === 'online' && this.config.fakeOpponent))
+                      && this.board.side === this.botSide;
+    if (isBotTurn) {
       setTimeout(() => this.botMove(), 250);
     }
   }
