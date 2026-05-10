@@ -219,11 +219,13 @@ function routeTo(hash) {
 function renderHome(root) {
   const profile = getProfile();
   const rank = getRank(profile.elo);
+  const savedGame = getGameSession();
   root.innerHTML = `
     <section class="xq-hero">
       <h1>${esc(t('app.title'))} <span class="grad">象棋</span></h1>
       <p>${esc(t('app.tagline'))}</p>
       <div class="xq-hero-actions">
+        ${savedGame ? `<button class="btn btn-danger btn-lg" id="ctaResumeGame" style="animation: pulse-resume 1.5s infinite">⚡ Tiếp tục trò chơi</button>` : ''}
         <a class="btn btn-primary btn-lg" href="#/online">🌐 ${esc(t('online.title'))}</a>
         <button class="btn btn-lg" id="ctaPlayBot">🤖 ${esc(t('mode.bot'))}</button>
         <button class="btn btn-lg" id="ctaPlayBotBlind">🎴 ${esc(t('variant.blind'))} (Bot)</button>
@@ -271,6 +273,10 @@ function renderHome(root) {
     </section>
   `;
 
+  document.getElementById('ctaResumeGame')?.addEventListener('click', () => {
+    sessionStorage.removeItem('xq_pending_game');
+    location.hash = '#/play?resume=true';
+  });
   document.getElementById('ctaPlayBot')?.addEventListener('click', () => startBotGame('standard'));
   document.getElementById('ctaPlayBotBlind')?.addEventListener('click', () => startBotGame('blind'));
   document.getElementById('ctaPlayLocal')?.addEventListener('click', startLocalGame);

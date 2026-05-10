@@ -148,6 +148,15 @@ export class GameController {
     if (isBotRed) {
       setTimeout(() => this.botMove(), 300);
     }
+
+    // Auto-save game when user navigates away
+    this._handleBeforeUnload = () => {
+      if (!this.gameEnded) {
+        this.saveGameSession();
+      }
+    };
+    window.addEventListener('beforeunload', this._handleBeforeUnload);
+    window.addEventListener('hashchange', this._handleBeforeUnload);
   }
 
   _onRemoteMove(msg) {
@@ -178,6 +187,11 @@ export class GameController {
   }
 
   destroy() {
+    // Save game before destroying
+    if (!this.gameEnded) {
+      this.saveGameSession();
+    }
+
     if (this.aiWorker) {
       this.aiWorker.terminate();
       this.aiWorker = null;
@@ -193,6 +207,11 @@ export class GameController {
     if (this.timeDisplay) {
       this.timeDisplay.remove();
       this.timeDisplay = null;
+    }
+    if (this._handleBeforeUnload) {
+      window.removeEventListener('beforeunload', this._handleBeforeUnload);
+      window.removeEventListener('hashchange', this._handleBeforeUnload);
+      this._handleBeforeUnload = null;
     }
     if (this.chatPanel) {
       this.chatPanel._chatAPI?.destroy();
