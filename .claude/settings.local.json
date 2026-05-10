@@ -52,7 +52,8 @@
       "Bash(docker-compose restart *)",
       "Bash(powershell -Command \"scp.exe -r 'E:\\\\SourceCode\\\\GAMES\\\\xiangqi\\\\xiangqi\\\\scripts\\\\ui' 'root@62.238.28.106:/opt/apps/xiangqi/xiangqi/scripts/'\")",
       "Bash(powershell -Command \"scp.exe -r 'E:\\\\SourceCode\\\\GAMES\\\\xiangqi\\\\xiangqi\\\\scripts\\\\i18n' 'root@62.238.28.106:/opt/apps/xiangqi/xiangqi/scripts/'\")",
-      "Bash(powershell -Command \"ssh root@62.238.28.106 'cd /opt/apps/xiangqi && docker build -f Dockerfile.prod -t xiangqi:prod .'\")"
+      "Bash(powershell -Command \"ssh root@62.238.28.106 'cd /opt/apps/xiangqi && docker build -f Dockerfile.prod -t xiangqi:prod .'\")",
+      "Bash(powershell -Command \"ssh root@62.238.28.106 'cd /opt/apps/xiangqi && docker build --no-cache -f Dockerfile.prod -t xiangqi:prod .'\")"
     ]
   }
 }
