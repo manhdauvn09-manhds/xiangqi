@@ -36,6 +36,7 @@ export default {
   'btn.reset_all':    'Xoá tất cả',
   'btn.back_history': 'Về lịch sử',
   'btn.back_home':    'Về trang chủ',
+  'btn.resume_game':  'Tiếp tục ván',
 
   // Sides
   'side.red':         'Đỏ',

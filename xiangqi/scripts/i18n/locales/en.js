@@ -13,6 +13,7 @@ export default {
   'btn.takeback.short': 'Takeback', 'btn.flip': 'Flip', 'btn.copy': 'Copy', 'btn.save': 'Save',
   'btn.hint': 'Hint', 'btn.reset': 'Reset', 'btn.reset_all': 'Reset all',
   'btn.back_history': 'Back to history', 'btn.back_home': 'Back to home',
+  'btn.resume_game': 'Resume game',
 
   'side.red': 'Red', 'side.black': 'Black', 'side.you': 'You',
   'side.bot': 'Bot', 'side.opponent': 'Opponent', 'side.random': 'Random',

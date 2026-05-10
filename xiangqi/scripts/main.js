@@ -5,7 +5,7 @@ import { t } from './i18n/i18n.js';
 import { openAIModal } from './ui/ai-modal.js';
 import { openAuthModal } from './ui/auth-modal.js';
 import { GameController } from './ui/game-controller.js';
-import { getProfile, getSettings, setSettings } from './storage/local.js';
+import { getProfile, getSettings, setSettings, getGameSession, clearGameSession } from './storage/local.js';
 import { getRank } from './elo/elo.js';
 import { renderSettingsPage } from './ui/settings-page.js';
 import { renderHistoryPage } from './ui/history-page.js';
@@ -64,6 +64,11 @@ function bindTopbar() {
       menu.remove();
     }
   });
+
+  // Sync resume button visibility
+  syncResumeButton();
+  window.addEventListener('hashchange', syncResumeButton);
+  i18n.onChange(() => syncResumeButton());
 }
 
 function syncUserChip() {
@@ -128,6 +133,39 @@ function syncNavActive() {
     const href = a.getAttribute('href') || '';
     a.classList.toggle('active', hash === href || (href !== '#/home' && hash.startsWith(href)));
   });
+}
+
+// Resume game button (persistent sessions)
+function syncResumeButton() {
+  const session = getGameSession();
+  const topbar = document.querySelector('.xq-topbar');
+  let resumeBtn = document.getElementById('resumeGameBtn');
+
+  if (session && !location.hash.startsWith('#/play')) {
+    // Show resume button
+    if (!resumeBtn && topbar) {
+      resumeBtn = document.createElement('button');
+      resumeBtn.id = 'resumeGameBtn';
+      resumeBtn.className = 'btn btn-primary';
+      resumeBtn.innerHTML = '▶️ ' + t('btn.resume_game');
+      resumeBtn.style.marginLeft = 'auto';
+      resumeBtn.addEventListener('click', resumeGameSession);
+      topbar.appendChild(resumeBtn);
+    } else if (resumeBtn) {
+      resumeBtn.innerHTML = '▶️ ' + t('btn.resume_game');
+    }
+  } else {
+    // Hide resume button
+    if (resumeBtn) resumeBtn.remove();
+  }
+}
+
+function resumeGameSession() {
+  const session = getGameSession();
+  if (!session) return;
+
+  // Navigate to play page with resume flag
+  location.hash = '#/play?resume=true';
 }
 
 // ─────────────── Routing ───────────────
@@ -240,9 +278,30 @@ function startLocalGame() {
 
 // ─────────────── Game view ───────────────
 function renderPlay(root) {
+  // Check if resuming a saved game
+  const params = new URLSearchParams(location.hash.split('?')[1] || '');
+  const isResuming = params.get('resume') === 'true';
+
   let cfg;
-  try { cfg = JSON.parse(sessionStorage.getItem('xq_pending_game') || 'null'); } catch {}
-  if (!cfg) { routeTo('#/home'); return; }
+  if (isResuming) {
+    const session = getGameSession();
+    if (!session) { routeTo('#/home'); return; }
+    // Reconstruct config from session
+    cfg = {
+      mode: session.mode,
+      variant: session.variant,
+      userSide: session.userSide,
+      botLevel: session.botLevel,
+      resumedFromSession: true,
+      fen: session.fen,
+      moves: session.moves,
+      iccsHistory: session.iccsHistory,
+      blindSeed: session.blindSeed,
+    };
+  } else {
+    try { cfg = JSON.parse(sessionStorage.getItem('xq_pending_game') || 'null'); } catch {}
+    if (!cfg) { routeTo('#/home'); return; }
+  }
 
   const profile = getProfile();
   const settings = getSettings();

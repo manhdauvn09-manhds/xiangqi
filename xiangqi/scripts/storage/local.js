@@ -2,6 +2,7 @@
 const PROFILE_KEY = 'xq_profile';
 const HISTORY_KEY = 'xq_history';
 const SETTINGS_KEY = 'xq_settings';
+const SESSION_KEY = 'xq_active_session';
 
 import { STARTING_ELO } from '../elo/elo.js';
 
@@ -67,4 +68,34 @@ export function listGames(limit = 50) {
     const arr = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
     return arr.slice(0, limit);
   } catch { return []; }
+}
+
+/** Session management — lưu trữ ván đang chơi dở */
+export function saveGameSession(sessionData) {
+  try {
+    localStorage.setItem(SESSION_KEY, JSON.stringify({
+      ...sessionData,
+      savedAt: Date.now(),
+    }));
+  } catch (e) {
+    console.error('Failed to save game session:', e);
+  }
+}
+
+export function getGameSession() {
+  try {
+    const raw = localStorage.getItem(SESSION_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    console.error('Failed to load game session:', e);
+    return null;
+  }
+}
+
+export function clearGameSession() {
+  try {
+    localStorage.removeItem(SESSION_KEY);
+  } catch (e) {
+    console.error('Failed to clear game session:', e);
+  }
 }

@@ -1,13 +1,13 @@
 // Cờ Tướng Vương — game controller
 import { OPP } from '../core/constants.js';
 import { createInitialBoard, applyMove, undoMove, pieceAt, findGeneral, toFEN } from '../core/board.js';
-import { isCheck, isFacingGenerals, detectGameResult } from '../core/rules.js';
+import { isCheck, isFacingGenerals, detectGameResult, generateLegalMoves } from '../core/rules.js';
 import { movesForPiece } from '../core/moves.js';
 import { moveToVN, moveToICCS, iccsToMove } from '../core/notation.js';
 import { createBoardRenderer } from './board-renderer.js';
 import { t, onChange as onLangChange } from '../i18n/i18n.js';
 import { toast, confirm } from './toast.js';
-import { getProfile, setProfile, getSettings, setSettings, appendGame } from '../storage/local.js';
+import { getProfile, setProfile, getSettings, setSettings, appendGame, saveGameSession, clearGameSession } from '../storage/local.js';
 import { SoundFX, setEnabled as setSoundEnabled } from '../sound/sound.js';
 import { createBlindBoard, generateBlindLegalMoves, applyBlindMove, undoBlindMove, genSeed } from '../variants/blind.js';
 import * as wsClient from '../net/ws-client.js';
@@ -36,6 +36,43 @@ export class GameController {
       this.board = createBlindBoard(this.blindSeed);
     } else {
       this.board = createInitialBoard('standard');
+    }
+
+    // Load from saved session if resuming
+    if (config.resumedFromSession && config.fen && config.moves) {
+      try {
+        // Replay all moves to restore board state
+        if (config.moves && Array.isArray(config.moves)) {
+          for (const moveRecord of config.moves) {
+            // moveRecord has: { side, san, iccs, reveal? }
+            const iccs = moveRecord.iccs;
+            if (iccs && iccs.length === 4) {
+              const from = { file: iccs.charCodeAt(0) - 'a'.charCodeAt(0), rank: parseInt(iccs[1]) };
+              const to = { file: iccs.charCodeAt(2) - 'a'.charCodeAt(0), rank: parseInt(iccs[3]) };
+              const moves = generateLegalMoves(this.board, this.board.side);
+              const move = moves.find(m => m.from.file === from.file && m.from.rank === from.rank &&
+                                           m.to.file === to.file && m.to.rank === to.rank);
+              if (move) {
+                if (this.variant === 'blind') applyBlindMove(this.board, move);
+                else applyMove(this.board, move);
+              }
+            }
+          }
+        }
+        this.movesLog = config.moves.slice();
+        this.iccsHistory = config.iccsHistory ? config.iccsHistory.slice() : [];
+      } catch (e) {
+        console.error('Failed to restore game from session:', e);
+        // Fall back to initial board
+        if (this.variant === 'blind') {
+          this.blindSeed = config.blindSeed || genSeed();
+          this.board = createBlindBoard(this.blindSeed);
+        } else {
+          this.board = createInitialBoard('standard');
+        }
+        this.movesLog = [];
+        this.iccsHistory = [];
+      }
     }
 
     // Init sound from settings
@@ -127,6 +164,29 @@ export class GameController {
     if (this.aiWorker) return this.aiWorker;
     this.aiWorker = new Worker(new URL('../ai/ai.worker.js', import.meta.url), { type: 'module' });
     return this.aiWorker;
+  }
+
+  saveGameSession() {
+    // Save current game state for resuming later (bot & local modes only)
+    if (this.gameEnded) {
+      clearGameSession();
+      return;
+    }
+    try {
+      const fen = toFEN(this.board);
+      saveGameSession({
+        mode: this.config.mode,
+        variant: this.variant,
+        userSide: this.userSide,
+        botLevel: this.config.botLevel,
+        fen: fen,
+        moves: this.movesLog.slice(),
+        iccsHistory: this.iccsHistory.slice(),
+        blindSeed: this.variant === 'blind' ? this.blindSeed : undefined,
+      });
+    } catch (e) {
+      console.error('Failed to save game session:', e);
+    }
   }
 
   onSquareClick(file, rank) {
@@ -251,6 +311,11 @@ export class GameController {
     }
     this.updateStatus();
 
+    // Save game session for resuming later
+    if (this.config.mode === 'bot' || this.config.mode === 'local') {
+      this.saveGameSession();
+    }
+
     if (this.config.mode === 'bot' && this.board.side === this.botSide) {
       setTimeout(() => this.botMove(), 250);
     }
@@ -364,6 +429,8 @@ export class GameController {
 
   endGame(result) {
     this.gameEnded = true;
+    // Clear session when game ends
+    clearGameSession();
     let winner = result.winner;
     let myResult = 0.5;
     if (winner === this.userSide) myResult = 1;

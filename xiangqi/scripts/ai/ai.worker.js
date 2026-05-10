@@ -4,18 +4,18 @@ import { searchBestMove, searchTopMoves, randomMove, greedyCaptureMove } from '.
 import { findBookMove } from './openings.js';
 import { iccsToMove } from '../core/notation.js';
 
-// Cấu hình theo level
+// Cấu hình theo level (Enhanced — 2x stronger)
 const LEVEL_CONFIG = {
   1:  { algo: 'random',  depth: 1, time: 100,  useTT: false, useBook: false },
   2:  { algo: 'greedy',  depth: 1, time: 200,  useTT: false, useBook: false },
-  3:  { algo: 'minimax', depth: 2, time: 300,  useTT: false, useBook: false },
-  4:  { algo: 'minimax', depth: 3, time: 500,  useTT: false, useBook: false },
-  5:  { algo: 'minimax', depth: 3, time: 800,  useTT: false, useBook: false },
-  6:  { algo: 'minimax', depth: 4, time: 1500, useTT: true,  useBook: false },
-  7:  { algo: 'minimax', depth: 4, time: 2000, useTT: true,  useBook: true  },
-  8:  { algo: 'minimax', depth: 5, time: 4000, useTT: true,  useBook: true  },
-  9:  { algo: 'minimax', depth: 5, time: 6000, useTT: true,  useBook: true  },
-  10: { algo: 'minimax', depth: 6, time: 9000, useTT: true,  useBook: true  },
+  3:  { algo: 'minimax', depth: 3, time: 500,  useTT: false, useBook: false }, // 2→3
+  4:  { algo: 'minimax', depth: 4, time: 800,  useTT: true,  useBook: false }, // 3→4, +TT
+  5:  { algo: 'minimax', depth: 4, time: 1200, useTT: true,  useBook: false }, // 3→4, +TT, more time
+  6:  { algo: 'minimax', depth: 5, time: 2000, useTT: true,  useBook: false }, // 4→5, more time
+  7:  { algo: 'minimax', depth: 5, time: 2500, useTT: true,  useBook: true  }, // depth→5, more time
+  8:  { algo: 'minimax', depth: 6, time: 4500, useTT: true,  useBook: true  }, // 5→6, more time
+  9:  { algo: 'minimax', depth: 6, time: 6500, useTT: true,  useBook: true  }, // 5→6, more time
+  10: { algo: 'minimax', depth: 6, time: 10000, useTT: true, useBook: true  }, // more time
 };
 
 self.addEventListener('message', (e) => {

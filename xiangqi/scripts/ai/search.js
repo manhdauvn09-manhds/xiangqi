@@ -114,7 +114,7 @@ function negamax(board, depth, alpha, beta, side, deadline, ctx) {
  * Trả về { move, score, depth, nodes, ms }
  */
 export function searchBestMove(board, opts = {}) {
-  const maxDepth = Math.max(1, Math.min(6, opts.maxDepth || 3));
+  const maxDepth = Math.max(1, Math.min(6, opts.maxDepth || 5));  // Increased from 3 to 5
   const timeMs = opts.timeMs ?? 0;
   const start = performance.now();
   const deadline = timeMs > 0 ? start + timeMs : 0;
