@@ -8,6 +8,8 @@
   flex-direction: column;
   flex: 1;
   width: 100%;
+  background: var(--xq-page-bg);
+  border-radius: 12px;
 }
 
 main#app {
