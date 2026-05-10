@@ -15,6 +15,7 @@ import { games as apiGames, isAuthed, getUser } from '../net/api.js';
 import { createChatPanel } from './chat-panel.js';
 import { TimeControl, TIME_FORMATS } from '../game/time-control.js';
 import { fakePlayerManager } from '../game/fake-players.js';
+import { createTimeDisplay } from './time-display.js';
 
 const ELO_BY_LV = [600, 800, 1000, 1200, 1400, 1600, 1800, 2000, 2200, 2400];
 
@@ -86,6 +87,7 @@ export class GameController {
 
     // Init time control if config has time setting
     this.timeControl = null;
+    this.timeDisplay = null;
     this.moveStartTime = Date.now();
     if (config.time) {
       const format = this._getTimeFormat(config.time);
@@ -98,6 +100,11 @@ export class GameController {
       // Start game clock for red
       const startPlayer = config.userSide === 'r' && config.mode === 'bot' && this.botSide === 'r' ? 'black' : 'red';
       this.timeControl.startTurn(startPlayer);
+      // Create time display component
+      this.timeDisplay = createTimeDisplay(this.timeControl);
+      if (this.timeDisplay && els.statusEl) {
+        els.statusEl.parentElement?.insertBefore(this.timeDisplay, els.statusEl.nextSibling);
+      }
     }
 
     this.renderer = createBoardRenderer(els.boardHost, (f, r) => this.onSquareClick(f, r), {
@@ -180,6 +187,10 @@ export class GameController {
       window.removeEventListener('timeExpired', this._timeExpiredHandler);
       window.removeEventListener('timeUpdate', this._timeUpdateHandler);
       this.timeControl = null;
+    }
+    if (this.timeDisplay) {
+      this.timeDisplay.remove();
+      this.timeDisplay = null;
     }
     if (this.chatPanel) {
       this.chatPanel._chatAPI?.destroy();
