@@ -24,6 +24,7 @@ services:
       - XQ_PORT=8787
       - XQ_DB_PATH=/data/xiangqi.db
       - XQ_JWT_SECRET=${XQ_JWT_SECRET}  # Set via .env or -e flag
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}  # Set via .env or -e flag
       - CORS_ORIGINS=https://xiangqi.games-core.com
       - PYTHONUNBUFFERED=1
     restart: always
