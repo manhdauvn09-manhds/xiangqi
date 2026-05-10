@@ -1,0 +1,83 @@
+/* ═══════════════════════════════════════════════════════════════
+   FRAMED LAYOUT TEMPLATE — Reusable for any project
+   Outer margins: light gray (always)
+   Inner content: theme-aware background (light/dark toggle)
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Root theme colors — customize these */
+:root, [data-theme="dark"] {
+  --bg-outer: #e8e8e8;           /* Light gray outer margins */
+  --bg-inner-dark: #1a1a2e;      /* Dark theme inner background */
+  --text-dark: #e0e0e0;
+}
+
+[data-theme="light"] {
+  --bg-inner-light: #f5f5f5;     /* Light theme inner background */
+  --text-light: #1a1a1a;
+}
+
+/* HTML & Body — outer frame */
+html {
+  height: 100%;
+  background: var(--bg-outer);
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
+  background: var(--bg-outer);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+/* Main container — inner content with theme background */
+.app-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 16px 20px 40px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  width: 100%;
+  background: var(--bg-inner-dark);        /* Default dark */
+  color: var(--text-dark);
+  border-radius: 12px;
+}
+
+/* Light theme override */
+[data-theme="light"] .app-container {
+  background: var(--bg-inner-light);
+  color: var(--text-light);
+}
+
+/* Main content area — takes remaining space */
+main {
+  flex: 1;
+}
+
+/* Footer stays at bottom */
+footer {
+  margin-top: auto;
+  padding: 22px 0 8px;
+  border-top: 1px solid rgba(255,255,255,0.1);
+  font-size: 13px;
+  opacity: 0.8;
+}
+
+/* Responsive adjustments */
+@media (max-width: 720px) {
+  .app-container {
+    padding: 10px 12px 28px;
+    border-radius: 8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body, .app-container {
+    transition: none;
+  }
+}
