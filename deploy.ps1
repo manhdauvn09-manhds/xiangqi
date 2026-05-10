@@ -10,6 +10,7 @@ param(
     [switch]$Deploy,
     [switch]$BuildLocal,
     [switch]$Status,
+    [switch]$SkipLocalTest,
     [string]$ServerUser = "root",
     [string]$ServerHost = "62.238.28.106",
     [string]$ServerPath = "/opt/apps/xiangqi",
@@ -278,11 +279,16 @@ try {
     Write-Host ""
 
     # Prerequisites
-    if ($FirstSetup -or $Deploy -or $BuildLocal) {
+    if ($FirstSetup -or $BuildLocal) {
         Test-GitInstalled
         Test-DockerInstalled
     }
-    if ($FirstSetup -or $Deploy -or $Status) {
+    if ($Deploy -and -not $SkipLocalTest) {
+        Test-GitInstalled
+        Test-DockerInstalled
+    }
+    if ($Deploy -or $FirstSetup -or $Status) {
+        Test-GitInstalled
         Test-SshInstalled
     }
 
@@ -293,7 +299,9 @@ try {
     elseif ($Deploy) {
         Git-Commit
         Git-Push
-        Test-LocalBuild
+        if (-not $SkipLocalTest) {
+            Test-LocalBuild
+        }
         Deploy-ToServer
     }
     elseif ($BuildLocal) {
@@ -304,10 +312,11 @@ try {
     }
     else {
         Write-Host "Usage:" -ForegroundColor Yellow
-        Write-Host "  .\deploy.ps1 -FirstSetup        Initial server setup" -ForegroundColor Cyan
-        Write-Host "  .\deploy.ps1 -Deploy            Commit + Deploy" -ForegroundColor Cyan
-        Write-Host "  .\deploy.ps1 -BuildLocal        Test build locally" -ForegroundColor Cyan
-        Write-Host "  .\deploy.ps1 -Status            Check server status" -ForegroundColor Cyan
+        Write-Host "  .\deploy.ps1 -FirstSetup                Initial server setup" -ForegroundColor Cyan
+        Write-Host "  .\deploy.ps1 -Deploy                    Commit + Deploy + Test build" -ForegroundColor Cyan
+        Write-Host "  .\deploy.ps1 -Deploy -SkipLocalTest     Deploy without local test" -ForegroundColor Cyan
+        Write-Host "  .\deploy.ps1 -BuildLocal                Test build locally" -ForegroundColor Cyan
+        Write-Host "  .\deploy.ps1 -Status                    Check server status" -ForegroundColor Cyan
         Write-Host ""
     }
 }
