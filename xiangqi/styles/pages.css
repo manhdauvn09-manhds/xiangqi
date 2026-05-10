@@ -573,16 +573,85 @@ textarea.text-input { resize: vertical; min-height: 70px; }
 .online-mode-btn {
   padding: 16px;
   background: var(--xq-bg-elevated);
-  border: 1px solid var(--xq-border);
+  border: 2px solid var(--xq-border);
   border-radius: 12px;
   cursor: pointer;
   text-align: center;
   transition: all .18s;
 }
 .online-mode-btn:hover { border-color: var(--xq-jade); transform: translateY(-2px); }
+.online-mode-btn.active {
+  border-color: var(--xq-accent);
+  background: var(--xq-accent-soft);
+  color: var(--xq-accent);
+  font-weight: 600;
+}
 .online-mode-btn .ico { font-size: 24px; margin-bottom: 6px; }
 .online-mode-btn .nm { font-weight: 700; font-size: 14px; }
 .online-mode-btn .tm { font-size: 12px; color: var(--xq-text-mute); margin-top: 2px; }
+
+/* Find Match Modal - Time & Variant Selection */
+.time-grid, .variant-grid, .side-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+.variant-grid { grid-template-columns: 1fr 1fr; }
+.side-grid { grid-template-columns: 1fr 1fr; }
+
+.time-opt, .variant-opt, .side-opt {
+  padding: 12px 14px;
+  background: var(--xq-bg-elevated);
+  border: 2px solid var(--xq-border);
+  border-radius: 10px;
+  cursor: pointer;
+  text-align: center;
+  font-weight: 600;
+  font-size: 13px;
+  transition: all .15s ease;
+}
+.time-opt:hover, .variant-opt:hover, .side-opt:hover {
+  border-color: var(--xq-accent);
+  transform: translateY(-2px);
+}
+.time-opt.active, .variant-opt.active, .side-opt.active {
+  background: var(--xq-accent);
+  border-color: var(--xq-accent);
+  color: white;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+.variant-opt .ico, .side-opt .ico { font-size: 20px; margin-bottom: 4px; }
+
+/* Difficulty Preview in Find Match Modal */
+.diff-preview {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+  background: var(--xq-bg-elevated);
+  border-radius: 10px;
+  margin-bottom: 16px;
+}
+.diff-lv-num {
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--xq-accent);
+  min-width: 50px;
+  text-align: center;
+}
+.diff-lv-name {
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.lv-marks {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--xq-text-mute);
+}
 
 .connection-badge {
   display: inline-flex; align-items: center; gap: 6px;

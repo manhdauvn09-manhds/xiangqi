@@ -55,11 +55,13 @@ export function openFindMatchModal(initialTab = 'bot') {
         const numEl = back.querySelector('#diffNum');
         const nameEl = back.querySelector('#diffName');
         const eloEl = back.querySelector('#diffElo');
+        const diffLabelEl = back.querySelector('#diffLabel');
 
         function updateDiff() {
           numEl.textContent = difficulty;
           nameEl.textContent = t(`ai.lv${difficulty}`);
           eloEl.textContent = `~${ELO_BY_LV[difficulty - 1]} ELO`;
+          diffLabelEl.textContent = `Level ${difficulty}`;
         }
         slider.addEventListener('input', () => {
           difficulty = parseInt(slider.value, 10);
@@ -70,6 +72,10 @@ export function openFindMatchModal(initialTab = 'bot') {
         back.querySelectorAll('.side-opt[data-side]').forEach((b) => {
           b.addEventListener('click', () => {
             side = b.dataset.side;
+            const sideLabel = back.querySelector('#sideLabel');
+            if (sideLabel) {
+              sideLabel.textContent = side === 'r' ? '🔴 Red' : '🟢 Black';
+            }
             back.querySelectorAll('.side-opt[data-side]').forEach((x) =>
               x.classList.toggle('active', x === b)
             );
@@ -135,8 +141,11 @@ export function openFindMatchModal(initialTab = 'bot') {
           </div>
         </div>
 
-        <div class="field" style="margin-top:16px">
-          <label>${esc(t('ai.level'))}</label>
+        <div class="field">
+          <label style="display:flex; justify-content:space-between">
+            <span>${esc(t('ai.level'))}</span>
+            <strong style="color:var(--xq-accent)" id="diffLabel">Level 3</strong>
+          </label>
           <input type="range" min="1" max="10" value="3" id="diffSlider" class="range">
           <div class="lv-marks">
             <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span>
@@ -145,7 +154,10 @@ export function openFindMatchModal(initialTab = 'bot') {
         </div>
 
         <div class="field" style="margin-top:16px">
-          <label>${esc(t('side.you'))}</label>
+          <label style="display:flex; justify-content:space-between">
+            <span>${esc(t('side.you'))}</span>
+            <strong style="color:var(--xq-accent)" id="sideLabel">🔴 Red</strong>
+          </label>
           <div class="side-grid">
             <button class="side-opt active" data-side="r">
               <div class="ico" style="color:var(--xq-red)">🔴</div>
@@ -166,11 +178,14 @@ export function openFindMatchModal(initialTab = 'bot') {
         <p class="muted small" style="margin-bottom:16px">Chọn thời gian và kiểu chơi</p>
 
         <div class="field">
-          <label>Time Control</label>
+          <label style="display:flex; justify-content:space-between">
+            <span>⏱️ Time Control</span>
+            <strong style="color:var(--xq-accent)">${esc(time)}</strong>
+          </label>
           <div class="time-grid">
             ${TIME_OPTIONS.map(
               (opt) => `
-              <button class="time-opt ${opt.value === '10+5' ? 'active' : ''}" data-time="${opt.value}">
+              <button class="time-opt ${opt.value === time ? 'active' : ''}" data-time="${opt.value}">
                 ${esc(opt.label)}
               </button>
             `
@@ -179,13 +194,16 @@ export function openFindMatchModal(initialTab = 'bot') {
         </div>
 
         <div class="field" style="margin-top:16px">
-          <label>${esc(t('variant.title'))}</label>
+          <label style="display:flex; justify-content:space-between">
+            <span>${esc(t('variant.title'))}</span>
+            <strong style="color:var(--xq-accent)">${variant === 'blind' ? '🎴 Blind' : '♚ Standard'}</strong>
+          </label>
           <div class="variant-grid">
-            <button class="variant-opt active" data-variant="standard">
+            <button class="variant-opt ${variant === 'standard' ? 'active' : ''}" data-variant="standard">
               <div class="ico">♚</div>
               <div>${esc(t('variant.standard'))}</div>
             </button>
-            <button class="variant-opt" data-variant="blind">
+            <button class="variant-opt ${variant === 'blind' ? 'active' : ''}" data-variant="blind">
               <div class="ico">🎴</div>
               <div>${esc(t('variant.blind'))}</div>
             </button>

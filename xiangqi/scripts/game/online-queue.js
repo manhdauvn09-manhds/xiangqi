@@ -70,11 +70,11 @@ export class OnlineQueue {
       message: t('online.queue.searching'),
     });
 
-    // Try to find real player for 5 seconds
+    // Try to find real player for 30 seconds, then fallback to fake player
     const realPlayerTimeout = new Promise(resolve => {
       this.searchTimeout = setTimeout(() => {
         resolve(null);
-      }, 5000);
+      }, 30000);
     });
 
     try {
