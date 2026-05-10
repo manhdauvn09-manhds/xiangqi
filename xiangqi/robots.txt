@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /api/internal/
+
+Sitemap: https://xiangqi.games-core.com/sitemap.xml
