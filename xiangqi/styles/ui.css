@@ -140,15 +140,6 @@ main#app {
   overflow: hidden;
   margin-bottom: 22px;
 }
-.xq-hero::before {
-  content: '帥';
-  position: absolute; right: -20px; top: -30px;
-  font-family: 'Noto Serif SC', serif;
-  font-size: 240px;
-  color: var(--xq-red-soft);
-  font-weight: 900;
-  pointer-events: none;
-}
 .xq-hero h1 { font-size: 30px; font-weight: 800; margin-bottom: 8px; line-height: 1.15; }
 .xq-hero h1 .grad {
   background: linear-gradient(135deg, var(--xq-red), var(--xq-gold));
