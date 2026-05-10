@@ -61,7 +61,8 @@
       "Bash(powershell -Command \".\\\\build.ps1 -BuildRun\")",
       "Bash(python -m http.server 5500)",
       "mcp__Claude_in_Chrome__browser_batch",
-      "Bash(node -c xiangqi/scripts/main.js)"
+      "Bash(node -c xiangqi/scripts/main.js)",
+      "Bash(ssh root@62.238.28.106 'cd /opt/apps/xiangqi && git pull origin main && docker-compose -f docker-compose-prod.yml restart xiangqi-frontend && sleep 3 && docker-compose -f docker-compose-prod.yml ps')"
     ]
   }
 }

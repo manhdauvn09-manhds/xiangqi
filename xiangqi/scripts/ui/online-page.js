@@ -2,6 +2,7 @@
 import { t } from '../i18n/i18n.js';
 import { isAuthed, getUser } from '../net/api.js';
 import * as ws from '../net/ws-client.js';
+import { OnlineQueue } from '../game/online-queue.js';
 import { openAuthModal } from './auth-modal.js';
 import { toast } from './toast.js';
 
@@ -29,6 +30,7 @@ export async function renderOnlinePage(root) {
   }
 
   const user = getUser();
+  const queue = new OnlineQueue();
 
   let selectedTime = '10+5';
   let selectedVariant = 'standard';
@@ -108,20 +110,29 @@ export async function renderOnlinePage(root) {
     inQueue = true;
     paint();
     try {
-      await ws.connect();
-      // Listen for matchmaking
-      const offMatched = ws.on('queue.matched', onMatched);
-      const offJoined = ws.on('queue.joined', (m) => {
-        const info = root.querySelector('#queueInfo');
-        if (info) info.textContent = `Position ${m.position} in queue · ${selectedTime} · ${selectedVariant}`;
+      // Listen for queue events
+      const offMatched = queue.on('matched', (data) => {
+        onMatched(data);
       });
-      ws.send('queue.join', { variant: selectedVariant, time: selectedTime });
+      const offStatusChange = queue.on('statusChange', (data) => {
+        const info = root.querySelector('#queueInfo');
+        if (info) {
+          info.textContent = `${data.message} · ${selectedTime} · ${selectedVariant}`;
+        }
+      });
+
+      // Start searching with 30s timeout + fallback to fake player
+      await queue.startSearch(null, null);
+
       // Cleanup if user navigates away
-      window.addEventListener('hashchange', () => {
-        offMatched(); offJoined();
-        if (inQueue) ws.send('queue.leave');
-      }, { once: true });
+      const cleanup = () => {
+        offMatched();
+        offStatusChange();
+        if (queue.status === 'searching') queue.cancel();
+      };
+      window.addEventListener('hashchange', cleanup, { once: true });
     } catch (e) {
+      console.error('Queue error:', e);
       toast(t('auth.err.no_backend'), { type: 'error', duration: 5000 });
       inQueue = false;
       paint();
@@ -129,22 +140,39 @@ export async function renderOnlinePage(root) {
   }
 
   function cancelQueue() {
-    if (ws.isConnected()) ws.send('queue.leave');
+    if (queue) queue.cancel();
     inQueue = false;
     paint();
   }
 
-  function onMatched(msg) {
+  function onMatched(data) {
     inQueue = false;
+    const opponent = data.opponent;
+    const isFakePlayer = data.isFakePlayer;
+
+    // Generate random side for player
+    const userSide = Math.random() > 0.5 ? 'r' : 'b';
+
     // Lưu game info → redirect to /play với mode online
-    sessionStorage.setItem('xq_pending_game', JSON.stringify({
+    const gameConfig = {
       mode: 'online',
-      gameId: msg.gameId,
-      userSide: msg.side,
-      variant: msg.variant,
-      opponent: msg.opponent,
+      gameId: queue.currentGameId,
+      userSide,
+      variant: selectedVariant,
+      opponent: {
+        id: opponent.id,
+        displayName: opponent.name,
+        isFakePlayer,
+      },
       time: selectedTime,
-    }));
+      difficulty: opponent.difficulty, // for fake player bot
+      fakeOpponent: isFakePlayer, // flag for GameController
+    };
+
+    console.log('Matched with:', opponent.name, '(fake:', isFakePlayer, ')');
+    toast(`⚡ ${t('online.queue.matched')} ${opponent.name}!`, { type: 'success' });
+
+    sessionStorage.setItem('xq_pending_game', JSON.stringify(gameConfig));
     location.hash = '#/play';
   }
 

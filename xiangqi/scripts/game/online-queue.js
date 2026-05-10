@@ -79,8 +79,9 @@ export class OnlineQueue {
 
     try {
       // Attempt to connect to backend for real player matching
+      // If findRealPlayer fails/rejects, continue waiting for timeout
       const realPlayer = await Promise.race([
-        this.findRealPlayer(),
+        this.findRealPlayer().catch(() => null),
         realPlayerTimeout,
       ]);
 
@@ -98,10 +99,10 @@ export class OnlineQueue {
         return;
       }
     } catch (err) {
-      console.warn('Real player search failed:', err);
+      console.warn('Real player search error:', err);
     }
 
-    // Fallback: use fake player after timeout
+    // Fallback: use fake player after 30s timeout
     if (this.status === QUEUE_STATUS.SEARCHING) {
       await this.matchWithFakePlayer();
     }
