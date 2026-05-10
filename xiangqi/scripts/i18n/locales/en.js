@@ -168,6 +168,7 @@ export default {
   'auth.err.name_short': 'Display name too short',
   'auth.err.unknown': 'Something went wrong',
   'auth.err.no_backend': 'Cannot reach server. Make sure backend is running on localhost:8787',
+  'auth.err.google_failed': 'Google sign in failed',
 
   'online.title': 'Play online',
   'online.queue.find': 'Find match',

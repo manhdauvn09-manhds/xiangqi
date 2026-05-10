@@ -268,6 +268,7 @@ export default {
   'auth.err.name_short':  'Tên hiển thị quá ngắn',
   'auth.err.unknown':     'Có lỗi xảy ra',
   'auth.err.no_backend':  'Không kết nối được server. Đảm bảo backend đang chạy ở localhost:8787',
+  'auth.err.google_failed': 'Đăng nhập Google thất bại',
 
   // Online
   'online.title':         'Chơi online',

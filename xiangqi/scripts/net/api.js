@@ -72,6 +72,15 @@ export async function login({ email, password }) {
   return r;
 }
 
+export async function googleSignIn({ idToken }) {
+  const r = await request('/api/auth/google', {
+    method: 'POST',
+    body: { id_token: idToken },
+  });
+  _setToken(r.jwt, r.user);
+  return r;
+}
+
 export async function logout() {
   try { await request('/api/auth/logout', { method: 'POST' }); } catch {}
   _setToken(null, null);

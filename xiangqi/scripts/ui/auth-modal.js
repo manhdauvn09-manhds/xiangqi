@@ -1,7 +1,9 @@
-// Cờ Tướng Vương — Auth modal (login + register tabs)
+// Cờ Tướng Vương — Auth modal (login + register tabs + Google Sign In)
 import { t } from '../i18n/i18n.js';
-import { register as apiRegister, login as apiLogin } from '../net/api.js';
+import { register as apiRegister, login as apiLogin, googleSignIn as apiGoogleSignIn } from '../net/api.js';
 import { toast } from './toast.js';
+
+const GOOGLE_CLIENT_ID = '161005265746-d51l7k3cl82pvfu31kb0ke3990cv87me.apps.googleusercontent.com';
 
 export function openAuthModal(initialTab = 'login') {
   return new Promise(resolve => {
@@ -31,6 +33,67 @@ export function openAuthModal(initialTab = 'login') {
         tab = b.dataset.tab;
         paint();
       }));
+
+      // Google Sign In button
+      const googleBtn = back.querySelector('#googleSignIn');
+      if (googleBtn && window.google?.accounts?.id) {
+        googleBtn.addEventListener('click', async () => {
+          if (busy) return;
+          busy = true;
+          try {
+            // Initialize Google Sign In if not already done
+            if (!window.google?.accounts?.id._initialized) {
+              window.google.accounts.id.initialize({
+                client_id: GOOGLE_CLIENT_ID,
+                callback: handleGoogleCallback,
+                error_callback: () => {
+                  toast(t('auth.err.google_failed'), { type: 'error' });
+                  busy = false;
+                }
+              });
+              window.google.accounts.id._initialized = true;
+            }
+            // Prompt for sign in
+            window.google.accounts.id.prompt((notification) => {
+              if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+                // Fallback to one tap or trigger sign in flow
+                window.google.accounts.id.renderButton(googleBtn, {
+                  type: 'standard',
+                  size: 'large',
+                  text: 'signin_with'
+                });
+              }
+            });
+          } catch (err) {
+            console.error('Google Sign In error:', err);
+            toast(t('auth.err.google_failed'), { type: 'error' });
+            busy = false;
+          }
+        });
+      }
+
+      async function handleGoogleCallback(response) {
+        try {
+          if (!response.credential) {
+            toast(t('auth.err.google_failed'), { type: 'error' });
+            busy = false;
+            return;
+          }
+          // Send token to backend
+          const result = await apiGoogleSignIn({ idToken: response.credential });
+          back.remove();
+          toast(t('auth.welcome'), { type: 'success' });
+          resolve(true);
+        } catch (err) {
+          let msg = t('auth.err.unknown');
+          if (err.message) msg = err.message;
+          const errBox = back.querySelector('.auth-err');
+          if (errBox) errBox.textContent = msg;
+          toast(msg, { type: 'error' });
+        } finally {
+          busy = false;
+        }
+      }
 
       back.querySelector('form')?.addEventListener('submit', async (e) => {
         e.preventDefault();
