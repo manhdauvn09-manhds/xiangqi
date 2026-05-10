@@ -60,20 +60,35 @@
   fill: none;
   stroke-width: 2;
 }
-/* Last move: from (nơi đi từ) — light green, subtle */
+/* Last move: from (nơi đi từ) — light green, subtle pulse */
 .xq-hilite-last-from .xq-hilite-ring {
   stroke: var(--xq-jade);
-  opacity: 0.35;
+  animation: xq-pulse-from 1.6s ease-in-out infinite;
 }
-/* Last move: to (vị trí vừa đi) — dark green, prominent */
+/* Last move: to (vị trí vừa đi) — dark green, prominent pulse */
 .xq-hilite-last-to .xq-hilite-ring {
   stroke: var(--xq-jade);
-  opacity: 0.8;
+  animation: xq-pulse-to 1.2s ease-in-out infinite;
 }
 /* Selected square (nước sắp đi) */
 .xq-hilite-sel .xq-hilite-ring {
   stroke: var(--xq-jade);
   opacity: 0.75;
+}
+
+/* Pulse animations */
+@keyframes xq-pulse-from {
+  0%, 100% { opacity: 0.25; }
+  50% { opacity: 0.55; }
+}
+@keyframes xq-pulse-to {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1.0; stroke-width: 2.5; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .xq-hilite-last-from .xq-hilite-ring { animation: none; opacity: 0.35; }
+  .xq-hilite-last-to .xq-hilite-ring { animation: none; opacity: 0.85; }
 }
 
 .xq-target-dot {
