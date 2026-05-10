@@ -130,8 +130,8 @@ export class OnlineQueue {
         Math.floor(Math.random() * 4) + 3; // 3-6
 
       const fakePlayer = fakePlayerManager.getPlayerForGame(
-        this.currentGameId,
-        difficulty
+        difficulty,
+        this.currentGameId
       );
 
       this.opponent = fakePlayer;
