@@ -4,6 +4,7 @@
 import { t } from '../i18n/i18n.js';
 import { fakePlayerManager } from './fake-players.js';
 import { toast } from '../ui/toast.js';
+import * as wsClient from '../net/ws-client.js';
 
 export const QUEUE_STATUS = {
   IDLE: 'idle',
@@ -109,14 +110,48 @@ export class OnlineQueue {
   }
 
   /**
-   * Try to find a real player via backend
-   * This will be implemented when backend matchmaking is ready
+   * Try to find a real player via WebSocket backend
    */
   async findRealPlayer() {
-    // This would call the backend API
-    // For now, always fails gracefully to fallback to fake players
+    // Ensure WebSocket is connected
+    if (!wsClient.isConnected()) {
+      try {
+        await wsClient.connect();
+      } catch (err) {
+        return null; // Fall back to fake player
+      }
+    }
+
     return new Promise((resolve, reject) => {
-      setTimeout(() => reject(new Error('Backend not available')), 100);
+      const timeoutId = setTimeout(() => {
+        // Timeout after 30s, will be caught by Promise.race in startSearch
+        unsubscribe();
+        reject(new Error('No player found'));
+      }, 30000);
+
+      // Listen for match found event
+      const unsubscribe = wsClient.on('queue.matched', (msg) => {
+        clearTimeout(timeoutId);
+        unsubscribe();
+
+        if (msg.opponent) {
+          resolve({
+            id: msg.opponent.id,
+            name: msg.opponent.displayName || msg.opponent.name,
+            elo: msg.opponent.elo,
+            isFakePlayer: false,
+          });
+        } else {
+          reject(new Error('Invalid opponent data'));
+        }
+      });
+
+      // Send match request to backend
+      wsClient.send('queue.join', {
+        gameId: this.currentGameId,
+        timeControl: this.timeControl,
+        difficulty: this.selectedDifficulty,
+      });
     });
   }
 
@@ -166,8 +201,16 @@ export class OnlineQueue {
       this.searchTimeout = null;
     }
 
-    if (this.currentGameId && this.opponent?.isFakePlayer) {
-      fakePlayerManager.releasePlayer(this.currentGameId);
+    // Notify backend of queue cancellation
+    if (this.currentGameId) {
+      wsClient.send('queue.leave', {
+        gameId: this.currentGameId,
+      });
+
+      // Release fake player if matched
+      if (this.opponent?.isFakePlayer) {
+        fakePlayerManager.releasePlayer(this.currentGameId);
+      }
     }
 
     this.status = QUEUE_STATUS.CANCELED;
