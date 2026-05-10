@@ -316,6 +316,65 @@ main#app {
 .xq-modal-body { padding: 20px 22px; max-height: 60vh; overflow-y: auto; }
 .xq-modal-foot { padding: 14px 22px; border-top: 1px solid var(--xq-border); display: flex; gap: 10px; justify-content: flex-end; }
 
+/* Confirm modal overlay (game start) */
+.xq-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  padding: 16px;
+  animation: fadeIn .2s ease-out;
+}
+.xq-confirm-modal {
+  width: 100%;
+  max-width: 420px;
+  background: var(--xq-bg-surface);
+  border: 1px solid var(--xq-border-strong);
+  border-radius: 16px;
+  box-shadow: var(--xq-shadow-3);
+  padding: 24px;
+  animation: slideUp .25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.xq-confirm-modal h2 {
+  font-size: 24px;
+  font-weight: 800;
+  margin-bottom: 20px;
+  text-align: center;
+  color: var(--xq-text);
+}
+.confirm-info {
+  background: var(--xq-bg-elevated);
+  border: 1px solid var(--xq-border);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.confirm-player {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+}
+.confirm-player .ico {
+  font-size: 40px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.confirm-player .name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--xq-text);
+}
+.confirm-player .meta {
+  font-size: 12px;
+  color: var(--xq-text-mute);
+  margin-top: 2px;
+}
+
 /* AI modal specific */
 .ai-preview {
   display: flex;

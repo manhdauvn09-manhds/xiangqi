@@ -331,60 +331,107 @@ function renderPlay(root) {
   const isBlind = cfg.variant === 'blind';
   const isOnline = cfg.mode === 'online';
 
+  // Show confirm dialog before starting game
+  const opponentName = isOnline ? (cfg.opponent?.displayName || '?') : `Bot Lv ${cfg.botLevel || '3'}`;
+  const opponentInfo = isOnline ? `${cfg.time || '10+5'} · ${cfg.variant}` : (cfg.botLevel ? `~${[600,800,1000,1200,1400,1600,1800,2000,2200,2400][cfg.botLevel-1]} ELO` : '');
+
   root.innerHTML = `
     <div class="xq-game">
-      <div class="xq-side">
-        <div class="xq-player ${cfg.userSide==='b'?'red':''}">
-          <div class="av">${isOnline ? esc((cfg.opponent?.displayName || '?').slice(0,2).toUpperCase()) : '🤖'}</div>
-          <div>
-            <div class="name" id="opNameRed">${isOnline ? esc(cfg.opponent?.displayName || '?') : `🤖 Bot Lv ${cfg.botLevel || '—'}`}</div>
-            <div class="meta">${isOnline ? esc(t('online.title')) + ' · ' + esc(cfg.time || '10+5') : (cfg.mode==='bot' ? '~' + (cfg.botLevel ? [600,800,1000,1200,1400,1600,1800,2000,2200,2400][cfg.botLevel-1] : 1000) + ' ELO' : '')}</div>
+      <div class="xq-confirm-overlay" id="confirmOverlay">
+        <div class="xq-confirm-modal">
+          <h2>⚔️ Chuẩn bị trận đấu</h2>
+          <div class="confirm-info">
+            <div class="confirm-player">
+              <div class="ico">🤖</div>
+              <div>
+                <div class="name">${esc(opponentName)}</div>
+                <div class="meta">${esc(opponentInfo)}</div>
+              </div>
+            </div>
+            <div style="text-align:center; margin:12px 0; color:var(--xq-text-mute); font-size:13px">vs</div>
+            <div class="confirm-player">
+              <div class="ico">${esc((profile.name||'You').slice(0,2).toUpperCase())}</div>
+              <div>
+                <div class="name">${esc(profile.name || 'You')}</div>
+                <div class="meta">ELO ${profile.elo}</div>
+              </div>
+            </div>
           </div>
-        </div>
-        <div class="xq-status" id="xqStatus">…</div>
-        <div class="xq-actions">
-          <button class="btn btn-sm" id="btnHint" title="${esc(t('btn.hint'))}">💡 ${esc(t('btn.hint'))}</button>
-          <button class="btn btn-sm" id="btnTakeback" title="${esc(t('btn.takeback'))}">↺ ${esc(t('btn.takeback.short'))}</button>
-          <button class="btn btn-sm" id="btnFlip">🔁 ${esc(t('btn.flip'))}</button>
-          <button class="btn btn-sm" id="btnNew">🆕 ${esc(t('btn.new_game'))}</button>
-          <button class="btn btn-sm btn-danger" id="btnResign">🚩 ${esc(t('btn.resign'))}</button>
-          <button class="btn btn-sm btn-ghost" id="btnBackHome">🏠 ${esc(t('btn.back_home'))}</button>
-        </div>
-        ${isBlind ? `<div class="alert warn" style="margin:0;font-size:12px;padding:8px 10px">🎴 ${esc(t('variant.blind'))} — ${esc('chạm quân úp để lật, hoặc chọn quân đã lật để đi')}</div>` : ''}
-        <div class="xq-player ${cfg.userSide==='r'?'red':''}">
-          <div class="av">${esc((profile.name||'You').slice(0,2).toUpperCase())}</div>
-          <div>
-            <div class="name" id="opNameBlack">${esc(profile.name || t('side.you'))}</div>
-            <div class="meta">ELO ${profile.elo}</div>
+          <div style="color:var(--xq-text-mute); font-size:12px; text-align:center; margin:14px 0">
+            🔴 Quân Đỏ sẽ đi trước
+          </div>
+          <div style="display:flex; gap:10px">
+            <button class="btn btn-ghost" id="confirmCancel" style="flex:1">Hủy</button>
+            <button class="btn btn-primary" id="confirmStart" style="flex:1">⚡ Bắt đầu</button>
           </div>
         </div>
       </div>
-      <div class="xq-board-stage">
-        <div class="xq-board-wrap" id="xqBoardHost"></div>
-      </div>
-      <div class="xq-moves" id="xqMovesPanel">
-        <div class="head">${esc(t('log.title'))}</div>
-        <div id="xqMovesBody"><div class="empty">${esc(t('log.empty'))}</div></div>
+
+      <div class="xq-game-content" style="display:none" id="gameContent">
+        <div class="xq-side">
+          <div class="xq-player ${cfg.userSide==='b'?'red':''}">
+            <div class="av">${isOnline ? esc((cfg.opponent?.displayName || '?').slice(0,2).toUpperCase()) : '🤖'}</div>
+            <div>
+              <div class="name" id="opNameRed">${isOnline ? esc(cfg.opponent?.displayName || '?') : `🤖 Bot Lv ${cfg.botLevel || '—'}`}</div>
+              <div class="meta">${isOnline ? esc(t('online.title')) + ' · ' + esc(cfg.time || '10+5') : (cfg.mode==='bot' ? '~' + (cfg.botLevel ? [600,800,1000,1200,1400,1600,1800,2000,2200,2400][cfg.botLevel-1] : 1000) + ' ELO' : '')}</div>
+            </div>
+          </div>
+          <div class="xq-status" id="xqStatus">…</div>
+          <div class="xq-actions">
+            <button class="btn btn-sm" id="btnHint" title="${esc(t('btn.hint'))}">💡 ${esc(t('btn.hint'))}</button>
+            <button class="btn btn-sm" id="btnTakeback" title="${esc(t('btn.takeback'))}">↺ ${esc(t('btn.takeback.short'))}</button>
+            <button class="btn btn-sm" id="btnFlip">🔁 ${esc(t('btn.flip'))}</button>
+            <button class="btn btn-sm" id="btnNew">🆕 ${esc(t('btn.new_game'))}</button>
+            <button class="btn btn-sm btn-danger" id="btnResign">🚩 ${esc(t('btn.resign'))}</button>
+            <button class="btn btn-sm btn-ghost" id="btnBackHome">🏠 ${esc(t('btn.back_home'))}</button>
+          </div>
+          ${isBlind ? `<div class="alert warn" style="margin:0;font-size:12px;padding:8px 10px">🎴 ${esc(t('variant.blind'))} — ${esc('chạm quân úp để lật, hoặc chọn quân đã lật để đi')}</div>` : ''}
+          <div class="xq-player ${cfg.userSide==='r'?'red':''}">
+            <div class="av">${esc((profile.name||'You').slice(0,2).toUpperCase())}</div>
+            <div>
+              <div class="name" id="opNameBlack">${esc(profile.name || t('side.you'))}</div>
+              <div class="meta">ELO ${profile.elo}</div>
+            </div>
+          </div>
+        </div>
+        <div class="xq-board-stage">
+          <div class="xq-board-wrap" id="xqBoardHost"></div>
+        </div>
+        <div class="xq-moves" id="xqMovesPanel">
+          <div class="head">${esc(t('log.title'))}</div>
+          <div id="xqMovesBody"><div class="empty">${esc(t('log.empty'))}</div></div>
+        </div>
       </div>
     </div>
   `;
 
-  currentGame = new GameController(
-    {
-      boardHost: document.getElementById('xqBoardHost'),
-      statusEl: document.getElementById('xqStatus'),
-      movesEl: document.getElementById('xqMovesBody'),
-      redInfoEl:   cfg.userSide==='r' ? document.getElementById('opNameBlack') : document.getElementById('opNameRed'),
-      blackInfoEl: cfg.userSide==='b' ? document.getElementById('opNameBlack') : document.getElementById('opNameRed'),
-      btnResign: document.getElementById('btnResign'),
-      btnFlip: document.getElementById('btnFlip'),
-      btnNew: document.getElementById('btnNew'),
-      btnHint: document.getElementById('btnHint'),
-      btnTakeback: document.getElementById('btnTakeback'),
-      btnBackHome: document.getElementById('btnBackHome'),
-    },
-    cfg
-  );
+  // Confirm dialog handlers
+  document.getElementById('confirmCancel')?.addEventListener('click', () => {
+    routeTo('#/home');
+  });
+
+  document.getElementById('confirmStart')?.addEventListener('click', () => {
+    document.getElementById('confirmOverlay').style.display = 'none';
+    document.getElementById('gameContent').style.display = '';
+
+    // Start game
+    currentGame = new GameController(
+      {
+        boardHost: document.getElementById('xqBoardHost'),
+        statusEl: document.getElementById('xqStatus'),
+        movesEl: document.getElementById('xqMovesBody'),
+        redInfoEl:   cfg.userSide==='r' ? document.getElementById('opNameBlack') : document.getElementById('opNameRed'),
+        blackInfoEl: cfg.userSide==='b' ? document.getElementById('opNameBlack') : document.getElementById('opNameRed'),
+        btnResign: document.getElementById('btnResign'),
+        btnFlip: document.getElementById('btnFlip'),
+        btnNew: document.getElementById('btnNew'),
+        btnHint: document.getElementById('btnHint'),
+        btnTakeback: document.getElementById('btnTakeback'),
+        btnBackHome: document.getElementById('btnBackHome'),
+      },
+      cfg
+    );
+  });
 }
 
 function destroyCurrentGame() {
