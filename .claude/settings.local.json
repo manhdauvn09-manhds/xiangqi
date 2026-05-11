@@ -71,7 +71,10 @@
       "Bash(curl -s -I https://xiangqi.games-core.com/api/leaderboard)",
       "mcp__Claude_in_Chrome__read_console_messages",
       "Bash(ssh root@62.238.28.106 \"cd /opt/apps/xiangqi && git pull origin main && docker build -f Dockerfile.prod -t xiangqi:prod . && docker-compose -f docker-compose-prod.yml down && docker-compose -f docker-compose-prod.yml up -d\")",
-      "Bash(ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no root@62.238.28.106 \"cd /opt/apps/xiangqi && git pull origin main && docker build -f Dockerfile.prod -t xiangqi:prod . && docker-compose -f docker-compose-prod.yml restart\")"
+      "Bash(ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no root@62.238.28.106 \"cd /opt/apps/xiangqi && git pull origin main && docker build -f Dockerfile.prod -t xiangqi:prod . && docker-compose -f docker-compose-prod.yml restart\")",
+      "Bash(ssh -o ConnectTimeout=30 root@62.238.28.106 \"cd /opt/apps/xiangqi && git pull origin main && docker build -f Dockerfile.prod -t xiangqi:prod . && docker-compose -f docker-compose-prod.yml restart\")",
+      "Bash(curl -s -I https://xiangqi.games-core.com/og-image.svg)",
+      "Bash(curl -s https://xiangqi.games-core.com/ | head -300 > /tmp/xiangqi_audit.html && cat /tmp/xiangqi_audit.html)"
     ]
   }
 }
