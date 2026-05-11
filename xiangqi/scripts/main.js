@@ -338,11 +338,8 @@ function renderPlay(root) {
   const isOnline = cfg.mode === 'online';
 
   // Show confirm dialog before starting game
-  console.log('[renderPlay] Starting with config:', cfg);
   const opponentName = isOnline ? (cfg.opponent?.displayName || '?') : `Bot Lv ${cfg.botLevel || '3'}`;
   const opponentInfo = isOnline ? `${cfg.time || '10+5'} · ${cfg.variant}` : (cfg.botLevel ? `~${[600,800,1000,1200,1400,1600,1800,2000,2200,2400][cfg.botLevel-1]} ELO` : '');
-
-  console.log('[renderPlay] Opponent:', opponentName, opponentInfo);
   root.innerHTML = `
     <div class="xq-game">
       <div class="xq-confirm-overlay" id="confirmOverlay">
@@ -414,19 +411,14 @@ function renderPlay(root) {
   `;
 
   // Confirm dialog handlers
-  console.log('[renderPlay] Setting up event listeners');
   const cancelBtn = document.getElementById('confirmCancel');
   const startBtn = document.getElementById('confirmStart');
-  console.log('[renderPlay] Cancel button:', cancelBtn);
-  console.log('[renderPlay] Start button:', startBtn);
 
   cancelBtn?.addEventListener('click', () => {
-    console.log('[confirmCancel] Clicked');
     routeTo('#/home');
   });
 
   startBtn?.addEventListener('click', () => {
-    console.log('[confirmStart] Clicked');
     document.getElementById('confirmOverlay').style.display = 'none';
     document.getElementById('gameContent').style.display = 'flex';
 

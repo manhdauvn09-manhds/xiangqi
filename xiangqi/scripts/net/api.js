@@ -1,8 +1,14 @@
 // Cờ Tướng Vương — REST API client
 // Detect API base từ <meta name="xq-api-base"> hoặc fallback localhost:8787
+// In production, enforce HTTPS for API calls
 
 const META = document.querySelector('meta[name="xq-api-base"]');
-export const API_BASE = (META?.content || 'http://127.0.0.1:8787').replace(/\/$/, '');
+let apiBase = META?.content || 'http://127.0.0.1:8787';
+// Enforce HTTPS in production (not localhost)
+if (apiBase.includes('http://') && !apiBase.includes('127.0.0.1') && !apiBase.includes('localhost')) {
+  apiBase = apiBase.replace('http://', 'https://');
+}
+export const API_BASE = apiBase.replace(/\/$/, '');
 
 const KEY_TOKEN = 'xq_jwt';
 

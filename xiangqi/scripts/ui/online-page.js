@@ -169,7 +169,6 @@ export async function renderOnlinePage(root) {
       fakeOpponent: isFakePlayer, // flag for GameController
     };
 
-    console.log('Matched with:', opponent.name, '(fake:', isFakePlayer, ')');
     toast(`⚡ ${t('online.queue.matched')} ${opponent.name}!`, { type: 'success' });
 
     sessionStorage.setItem('xq_pending_game', JSON.stringify(gameConfig));
