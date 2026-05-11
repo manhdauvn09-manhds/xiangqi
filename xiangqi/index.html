@@ -8,6 +8,8 @@
 <meta name="keywords" content="xiangqi, chinese chess, cờ tướng, online game, board game, AI opponent">
 <meta name="referrer" content="no-referrer-when-downgrade">
 <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+<meta http-equiv="Cache-Control" content="public, max-age=3600">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='75' font-size='90' font-family='serif'>象</text></svg>">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%230a0e1a' width='180' height='180'/><text x='50%' y='55%' font-size='120' font-family='serif' fill='%2306d6a0' text-anchor='middle' dominant-baseline='middle'>象</text></svg>">
@@ -176,6 +178,28 @@
 }
 </script>
 
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Cờ Tướng Vương",
+  "description": "Play Xiangqi online with AI and real players",
+  "url": "https://xiangqi.games-core.com",
+  "applicationCategory": "GameApplication",
+  "operatingSystem": "Web",
+  "author": {
+    "@type": "Person",
+    "name": "ManhDS",
+    "url": "https://github.com/manhdauvn09-manhds"
+  },
+  "creator": {
+    "@type": "Organization",
+    "name": "allin1site.com"
+  },
+  "version": "1.0.0"
+}
+</script>
+
 <!-- SPA Route Prefetch for faster navigation -->
 <link rel="prefetch" href="#/play">
 <link rel="prefetch" href="#/online">
@@ -225,6 +249,10 @@
       <span class="small">MVP build · 2026</span>
     </div>
     <div class="xq-footer-row">
+      <a href="#/leaderboard" title="View world rankings">🏆 Rankings</a>
+      <span class="sep" aria-hidden="true">·</span>
+      <a href="#/tournament" title="Join tournaments">🎯 Tournament</a>
+      <span class="sep" aria-hidden="true">·</span>
       <a href="https://github.com/manhdauvn09-manhds/xiangqi" rel="noopener" title="View source code on GitHub">📖 GitHub</a>
       <span class="sep" aria-hidden="true">·</span>
       <a href="#/home" title="Back to home">🏠 Home</a>
@@ -237,6 +265,21 @@
 
 <script async src="https://accounts.google.com/gsi/client"></script>
 <script type="module" src="scripts/main.js"></script>
+
+<!-- Service Worker registration for PWA offline support -->
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/service-worker.js')
+      .then((registration) => {
+        console.log('[App] Service Worker registered successfully:', registration);
+      })
+      .catch((error) => {
+        console.log('[App] Service Worker registration failed:', error);
+      });
+  });
+}
+</script>
 
 </body>
 </html>
