@@ -41,6 +41,16 @@
 <!-- Backend API base — đổi khi deploy production -->
 <meta name="xq-api-base" content="https://xiangqi.games-core.com">
 
+<!-- Performance & Analytics monitoring (Phase 2) -->
+<!-- TODO: Add Web Vitals reporting: https://github.com/GoogleChrome/web-vitals -->
+<!-- TODO: Add Sentry error tracking for production monitoring -->
+<!-- TODO: Add Google Analytics 4 for conversion tracking -->
+<!-- TODO: Add A/B testing framework for funnel optimization -->
+
+<!-- Language-specific optimization -->
+<meta property="og:locale:alternate" content="en_US">
+<meta property="og:locale:alternate" content="vi_VN">
+
 <!-- Theme boot — chống flash of wrong theme. PHẢI nằm trước CSS để applyTheme kịp. -->
 <script>
 (function () {
@@ -197,6 +207,66 @@
     "name": "allin1site.com"
   },
   "version": "1.0.0"
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "CreativeWork",
+  "name": "Xiangqi Game Modes",
+  "description": "Xiangqi offers multiple game modes including Standard and Blind variants",
+  "hasPart": [
+    {
+      "@type": "Thing",
+      "name": "Standard Xiangqi",
+      "description": "Classic Chinese chess with all pieces visible"
+    },
+    {
+      "@type": "Thing",
+      "name": "Blind Xiangqi",
+      "description": "Hidden piece variant requiring strategic memory and deduction"
+    }
+  ]
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Event",
+  "name": "Xiangqi Tournament Season",
+  "description": "Join monthly tournaments with ELO-rated competitions",
+  "eventAttendanceMode": "OnlineEventAttendanceMode",
+  "eventStatus": "EventScheduled",
+  "url": "https://xiangqi.games-core.com/#/tournament",
+  "organizer": {
+    "@type": "Organization",
+    "name": "Cờ Tướng Vương",
+    "url": "https://xiangqi.games-core.com"
+  }
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "AggregateOffer",
+  "priceCurrency": "USD",
+  "lowPrice": "0",
+  "highPrice": "0",
+  "offerCount": "1",
+  "offers": [
+    {
+      "@type": "Offer",
+      "name": "Play Xiangqi Free",
+      "description": "Free-to-play online Xiangqi game with AI opponents",
+      "price": "0",
+      "priceCurrency": "USD",
+      "availability": "https://schema.org/InStock",
+      "url": "https://xiangqi.games-core.com"
+    }
+  ]
 }
 </script>
 
