@@ -146,8 +146,13 @@ export class GameController {
     // Bot/Fake opponent Đỏ đi trước nếu user cầm Đen
     const isBotRed = (this.config.mode === 'bot' && this.botSide === 'r') ||
                      (this.config.mode === 'online' && this.config.fakeOpponent && this.userSide === 'b');
+    console.log('[GameController] isBotRed:', isBotRed, 'botSide:', this.botSide, 'userSide:', this.userSide, 'mode:', this.config.mode);
     if (isBotRed) {
-      setTimeout(() => this.botMove(), 300);
+      console.log('[GameController] Scheduling bot first move...');
+      setTimeout(() => {
+        console.log('[GameController] Calling botMove()');
+        this.botMove();
+      }, 300);
     }
 
     // Auto-save game when user navigates away

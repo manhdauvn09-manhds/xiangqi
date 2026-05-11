@@ -64,7 +64,13 @@
       "Bash(node -c xiangqi/scripts/main.js)",
       "Bash(ssh root@62.238.28.106 'cd /opt/apps/xiangqi && git pull origin main && docker-compose -f docker-compose-prod.yml restart xiangqi-frontend && sleep 3 && docker-compose -f docker-compose-prod.yml ps')",
       "Bash(ssh root@62.238.28.106 'cd /opt/apps/xiangqi && git pull origin main && docker-compose -f docker-compose-prod.yml restart xiangqi-frontend && sleep 4 && docker-compose -f docker-compose-prod.yml ps')",
-      "mcp__Claude_in_Chrome__get_page_text"
+      "mcp__Claude_in_Chrome__get_page_text",
+      "Bash(ssh -o ConnectTimeout=10 root@62.238.28.106 \"cd /opt/apps/xiangqi && git pull origin main\")",
+      "Bash(ssh root@62.238.28.106 \"cd /opt/apps/xiangqi && docker build -f Dockerfile.prod -t xiangqi:prod .\")",
+      "Bash(ssh root@62.238.28.106 \"cd /opt/apps/xiangqi && docker-compose -f docker-compose-prod.yml down && docker-compose -f docker-compose-prod.yml up -d\")",
+      "Bash(curl -s -I https://xiangqi.games-core.com/api/leaderboard)",
+      "mcp__Claude_in_Chrome__read_console_messages",
+      "Bash(ssh root@62.238.28.106 \"cd /opt/apps/xiangqi && git pull origin main && docker build -f Dockerfile.prod -t xiangqi:prod . && docker-compose -f docker-compose-prod.yml down && docker-compose -f docker-compose-prod.yml up -d\")"
     ]
   }
 }
