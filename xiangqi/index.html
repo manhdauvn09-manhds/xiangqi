@@ -175,52 +175,62 @@
   ]
 }
 </script>
+
+<!-- SPA Route Prefetch for faster navigation -->
+<link rel="prefetch" href="#/play">
+<link rel="prefetch" href="#/online">
+<link rel="prefetch" href="#/leaderboard">
+<link rel="prefetch" href="#/profile">
+<link rel="prefetch" href="#/history">
 </head>
 <body>
 
+<!-- Skip to main content link for accessibility -->
+<a href="#app" style="position:absolute;left:-9999px;z-index:-1">Skip to main content</a>
+
 <div class="xq-shell">
   <!-- Topbar -->
-  <header class="xq-topbar">
-    <a class="xq-logo" href="#/home" aria-label="Cờ Tướng Vương">
+  <header class="xq-topbar" role="banner">
+    <a class="xq-logo" href="#/home" aria-label="Cờ Tướng Vương - Xiangqi game">
       象棋 <span class="accent">Cờ Tướng Vương</span>
     </a>
-    <nav class="xq-nav" aria-label="Main">
-      <a href="#/home"        data-i18n="nav.home">Trang chủ</a>
-      <a href="#/online"      data-i18n="online.title">Online</a>
-      <a href="#/daily"       data-i18n="nav.daily">Daily</a>
-      <a href="#/history"     data-i18n="nav.history">Lịch sử</a>
-      <a href="#/tournament"  data-i18n="nav.tournament">Giải đấu</a>
-      <a href="#/leaderboard" data-i18n="nav.leaderboard">Xếp hạng</a>
-      <a href="#/profile"     data-i18n="nav.profile">Hồ sơ</a>
+    <nav class="xq-nav" aria-label="Main navigation" role="navigation">
+      <a href="#/home"        data-i18n="nav.home" title="Home - Trang chủ">Trang chủ</a>
+      <a href="#/online"      data-i18n="online.title" title="Online - Chơi trực tuyến">Online</a>
+      <a href="#/daily"       data-i18n="nav.daily" title="Daily puzzle">Daily</a>
+      <a href="#/history"     data-i18n="nav.history" title="Game history - Lịch sử">Lịch sử</a>
+      <a href="#/tournament"  data-i18n="nav.tournament" title="Tournaments - Giải đấu">Giải đấu</a>
+      <a href="#/leaderboard" data-i18n="nav.leaderboard" title="Rankings - Xếp hạng">Xếp hạng</a>
+      <a href="#/profile"     data-i18n="nav.profile" title="User profile - Hồ sơ">Hồ sơ</a>
     </nav>
 
     <span class="xq-spacer"></span>
 
-    <div class="xq-toggle-pill" role="group" aria-label="Language">
-      <button data-lang-set="vi" class="active">🇻🇳 VN</button>
-      <button data-lang-set="en">🇬🇧 EN</button>
+    <div class="xq-toggle-pill" role="group" aria-label="Language selection">
+      <button data-lang-set="vi" class="active" aria-label="Vietnamese" title="Tiếng Việt">🇻🇳 VN</button>
+      <button data-lang-set="en" aria-label="English" title="English">🇬🇧 EN</button>
     </div>
-    <button class="xq-icon-btn" id="themeToggle" aria-label="Toggle theme" title="Đổi sáng/tối">
-      <span class="moon">🌙</span><span class="sun">☀️</span>
+    <button class="xq-icon-btn" id="themeToggle" aria-label="Toggle light/dark theme" title="Dark/Light mode">
+      <span class="moon" aria-hidden="true">🌙</span><span class="sun" aria-hidden="true">☀️</span>
     </button>
     <span id="userChipSlot"></span>
   </header>
 
-  <main id="app"></main>
+  <main id="app" role="main" aria-label="Game content"></main>
 
-  <footer class="xq-footer">
+  <footer class="xq-footer" role="contentinfo">
     <div class="xq-footer-row brand">
-      <span class="ic">象棋</span> Cờ Tướng Vương
-      <span class="sep">·</span>
+      <span class="ic" aria-label="Xiangqi">象棋</span> Cờ Tướng Vương
+      <span class="sep" aria-hidden="true">·</span>
       <span class="small">MVP build · 2026</span>
     </div>
     <div class="xq-footer-row">
-      <a href="https://github.com/manhdauvn09-manhds/xiangqi" rel="noopener">📖 GitHub</a>
-      <span class="sep">·</span>
-      <a href="#/home" rel="noopener">🏠 Home</a>
+      <a href="https://github.com/manhdauvn09-manhds/xiangqi" rel="noopener" title="View source code on GitHub">📖 GitHub</a>
+      <span class="sep" aria-hidden="true">·</span>
+      <a href="#/home" title="Back to home">🏠 Home</a>
     </div>
     <div class="xq-footer-row small">
-      Mở source · No tracking · No ads · Made with ♥
+      <span title="Open source software">Mở source</span> · <span title="No analytics tracking">No tracking</span> · <span title="Free to play">No ads</span> · <span title="Made with passion">Made with ♥</span>
     </div>
   </footer>
 </div>
