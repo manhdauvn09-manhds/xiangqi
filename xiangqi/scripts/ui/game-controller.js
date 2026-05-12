@@ -1,7 +1,7 @@
 // Cờ Tướng Vương — game controller
 import { OPP } from '../core/constants.js';
 import { createInitialBoard, applyMove, undoMove, pieceAt, findGeneral, toFEN } from '../core/board.js';
-import { isCheck, isFacingGenerals, detectGameResult, generateLegalMoves } from '../core/rules.js';
+import { isCheck, isFacingGenerals, detectGameResult, generateLegalMoves, isThreefoldRepetition } from '../core/rules.js';
 import { movesForPiece } from '../core/moves.js';
 import { moveToVN, moveToICCS, iccsToMove } from '../core/notation.js';
 import { createBoardRenderer } from './board-renderer.js';
@@ -36,6 +36,7 @@ export class GameController {
     this.gameEnded = false;
     this.movesLog = [];
     this.iccsHistory = [];
+    this.fenHistory = [];  // Track FEN after each move for repetition detection
 
     // Init board theo variant
     if (this.variant === 'blind') {
@@ -298,6 +299,20 @@ export class GameController {
       applyMove(this.board, m);
       const movedSide = OPP[this.board.side];
       const ok = !isCheck(this.board, movedSide) && !isFacingGenerals(this.board);
+
+      // Check if move would create 3rd repetition
+      if (ok) {
+        const fen = toFEN(this.board);
+        let fenCount = 0;
+        for (const f of this.fenHistory) {
+          if (f === fen) fenCount++;
+        }
+        // If would create 3rd repetition, reject move
+        if (fenCount >= 2) {
+          ok = false;
+        }
+      }
+
       undoMove(this.board);
       return ok;
     });
@@ -340,6 +355,12 @@ export class GameController {
     this.updateInfo();
     this.updateMovesLog();
 
+    // Repetition detection: track FEN after each move
+    if (!move.reveal) {
+      const fen = toFEN(this.board);
+      this.fenHistory.push(fen);
+    }
+
     // Time control: end turn for the player who just moved
     if (this.timeControl) {
       const justMovedPlayer = this.movesLog[this.movesLog.length - 1].side === 'r' ? 'red' : 'black';
@@ -378,7 +399,15 @@ export class GameController {
       });
     }
 
-    const result = detectGameResult(this.board);
+    let result = detectGameResult(this.board);
+
+    // Check for 3-fold repetition
+    if (!result.ended && this.fenHistory.length >= 5) {
+      if (isThreefoldRepetition(this.fenHistory)) {
+        result = { ended: true, winner: null, reason: 'threefold_repetition' };
+      }
+    }
+
     if (result.ended) {
       // Online: báo server kết quả
       if (this.config.mode === 'online' && !remote) {

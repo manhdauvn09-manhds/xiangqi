@@ -1,5 +1,6 @@
 // Fake Players System - AI opponents for online queue
 // 30 bots per difficulty level with random names and realistic behavior
+import { searchBestMove, randomMove, greedyCaptureMove } from '../ai/search.js';
 
 const FIRST_NAME_PARTS = [
   'Cao', 'Đặng', 'Dương', 'Đoàn', 'Đinh', 'Đỗ',
@@ -219,17 +220,54 @@ export class FakePlayerManager {
       throw new Error(`No active fake player for game: ${gameId}`);
     }
 
-    // Simulate thinking time based on difficulty
-    await new Promise(resolve => setTimeout(resolve, player.moveThinkTimeMs));
-
-    // Simple strategy: pick random legal move
-    // (Real implementation would use chess engine)
     if (!availableMoves || availableMoves.length === 0) {
       throw new Error('No available moves for fake player');
     }
 
-    const moveIndex = Math.floor(Math.random() * availableMoves.length);
-    return availableMoves[moveIndex];
+    // Level configuration matching ai.worker.js
+    const LEVEL_CONFIG = {
+      1:  { depth: 1, time: 100,  enhancedEval: false },
+      2:  { depth: 1, time: 200,  enhancedEval: false },
+      3:  { depth: 3, time: 500,  enhancedEval: false },
+      4:  { depth: 4, time: 800,  enhancedEval: false },
+      5:  { depth: 4, time: 1200, enhancedEval: false },
+      6:  { depth: 5, time: 2000, enhancedEval: false },
+      7:  { depth: 5, time: 2500, enhancedEval: false },
+      8:  { depth: 6, time: 5000, enhancedEval: true  },
+      9:  { depth: 7, time: 7000, enhancedEval: true  },
+      10: { depth: 8, time: 12000, enhancedEval: true },
+    };
+
+    const difficulty = player.level || 5;
+    const cfg = LEVEL_CONFIG[difficulty] || LEVEL_CONFIG[5];
+
+    let move;
+    if (difficulty >= 5) {
+      // Use actual minimax search for levels 5+
+      const result = searchBestMove(gameState, {
+        maxDepth: cfg.depth,
+        timeMs: cfg.time,
+        useTT: difficulty >= 4,
+        enhancedEval: cfg.enhancedEval,
+        level: difficulty,
+      });
+      move = result.move;
+    } else {
+      // Levels 1-4: use random/greedy (intentionally weak)
+      move = difficulty === 1 ? randomMove(gameState) : greedyCaptureMove(gameState);
+    }
+
+    if (!move) {
+      // Fallback to random if search fails
+      const moveIndex = Math.floor(Math.random() * availableMoves.length);
+      move = availableMoves[moveIndex];
+    }
+
+    // Simulate thinking time based on difficulty and search result
+    const thinkTimeMs = cfg.time || (100 + difficulty * 200);
+    await new Promise(resolve => setTimeout(resolve, thinkTimeMs));
+
+    return move;
   }
 
   /**

@@ -2,7 +2,7 @@
 import { OPP } from '../core/constants.js';
 import { applyMove, undoMove, pieceAt } from '../core/board.js';
 import { generateLegalMoves } from '../core/rules.js';
-import { evaluate } from './eval.js';
+import { evaluate, evaluateEnhanced } from './eval.js';
 import { MATERIAL } from './pst.js';
 import { TT, TT_FLAG } from './tt.js';
 import { hashBoard } from '../core/zobrist.js';
@@ -67,7 +67,10 @@ function negamax(board, depth, alpha, beta, side, deadline, ctx) {
   }
 
   if (depth <= 0) {
-    return { score: evaluate(board, side) };
+    const evalFn = ctx.enhancedEval ? evaluateEnhanced : evaluate;
+    const levelForEval = ctx.level || 7;
+    const evalScore = ctx.enhancedEval ? evalFn(board, side, levelForEval) : evalFn(board, side);
+    return { score: evalScore };
   }
 
   const moves = generateLegalMoves(board, side);
@@ -114,7 +117,7 @@ function negamax(board, depth, alpha, beta, side, deadline, ctx) {
  * Trả về { move, score, depth, nodes, ms }
  */
 export function searchBestMove(board, opts = {}) {
-  const maxDepth = Math.max(1, Math.min(6, opts.maxDepth || 5));  // Increased from 3 to 5
+  const maxDepth = Math.max(1, Math.min(8, opts.maxDepth || 5));  // Increased to support level 10 depth 8
   const timeMs = opts.timeMs ?? 0;
   const start = performance.now();
   const deadline = timeMs > 0 ? start + timeMs : 0;
@@ -125,6 +128,8 @@ export function searchBestMove(board, opts = {}) {
     stop: false,
     nodes: 0,
     useTT: !!opts.useTT,
+    enhancedEval: !!opts.enhancedEval,
+    level: opts.level || 7,
     killers: new Array(maxDepth + 2).fill(null),
   };
 

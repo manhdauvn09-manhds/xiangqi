@@ -6,16 +6,16 @@ import { iccsToMove } from '../core/notation.js';
 
 // Cấu hình theo level (Enhanced — 2x stronger)
 const LEVEL_CONFIG = {
-  1:  { algo: 'random',  depth: 1, time: 100,  useTT: false, useBook: false },
-  2:  { algo: 'greedy',  depth: 1, time: 200,  useTT: false, useBook: false },
-  3:  { algo: 'minimax', depth: 3, time: 500,  useTT: false, useBook: false }, // 2→3
-  4:  { algo: 'minimax', depth: 4, time: 800,  useTT: true,  useBook: false }, // 3→4, +TT
-  5:  { algo: 'minimax', depth: 4, time: 1200, useTT: true,  useBook: false }, // 3→4, +TT, more time
-  6:  { algo: 'minimax', depth: 5, time: 2000, useTT: true,  useBook: false }, // 4→5, more time
-  7:  { algo: 'minimax', depth: 5, time: 2500, useTT: true,  useBook: true  }, // depth→5, more time
-  8:  { algo: 'minimax', depth: 6, time: 4500, useTT: true,  useBook: true  }, // 5→6, more time
-  9:  { algo: 'minimax', depth: 6, time: 6500, useTT: true,  useBook: true  }, // 5→6, more time
-  10: { algo: 'minimax', depth: 6, time: 10000, useTT: true, useBook: true  }, // more time
+  1:  { algo: 'random',  depth: 1, time: 100,  useTT: false, useBook: false, enhancedEval: false },
+  2:  { algo: 'greedy',  depth: 1, time: 200,  useTT: false, useBook: false, enhancedEval: false },
+  3:  { algo: 'minimax', depth: 3, time: 500,  useTT: false, useBook: false, enhancedEval: false },
+  4:  { algo: 'minimax', depth: 4, time: 800,  useTT: true,  useBook: false, enhancedEval: false },
+  5:  { algo: 'minimax', depth: 4, time: 1200, useTT: true,  useBook: false, enhancedEval: false },
+  6:  { algo: 'minimax', depth: 5, time: 2000, useTT: true,  useBook: false, enhancedEval: false },
+  7:  { algo: 'minimax', depth: 5, time: 2500, useTT: true,  useBook: true,  enhancedEval: false },
+  8:  { algo: 'minimax', depth: 6, time: 5000, useTT: true,  useBook: true,  enhancedEval: true  }, // Enhanced eval
+  9:  { algo: 'minimax', depth: 7, time: 7000, useTT: true,  useBook: true,  enhancedEval: true  }, // depth 6→7, enhanced eval
+  10: { algo: 'minimax', depth: 8, time: 12000, useTT: true, useBook: true,  enhancedEval: true }, // depth 6→8, enhanced eval, more time
 };
 
 self.addEventListener('message', (e) => {
@@ -47,6 +47,8 @@ self.addEventListener('message', (e) => {
           maxDepth: cfg.depth,
           timeMs: cfg.time,
           useTT: cfg.useTT,
+          enhancedEval: cfg.enhancedEval,
+          level: msg.level,
           onProgress: ({ depth, score }) => self.postMessage({ type: 'progress', depth, score }),
         });
       }
