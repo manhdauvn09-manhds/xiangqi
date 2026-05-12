@@ -3,7 +3,16 @@
 // In production, enforce HTTPS for API calls
 
 const META = document.querySelector('meta[name="xq-api-base"]');
-let apiBase = META?.content || 'http://127.0.0.1:8787';
+let apiBase = META?.content;
+
+// Fallback only for localhost development, NEVER use in production
+if (!apiBase) {
+  const hostname = window.location.hostname;
+  const isDev = hostname === 'localhost' || hostname === '127.0.0.1';
+  const protocol = window.location.protocol;
+  apiBase = isDev ? `${protocol}//127.0.0.1:8787` : window.location.origin;
+}
+
 // Enforce HTTPS in production (not localhost)
 if (apiBase.includes('http://') && !apiBase.includes('127.0.0.1') && !apiBase.includes('localhost')) {
   apiBase = apiBase.replace('http://', 'https://');
