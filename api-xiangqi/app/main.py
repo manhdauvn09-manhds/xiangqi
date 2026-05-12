@@ -27,9 +27,7 @@ from typing import Any
 from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field
-
-EmailStr = str
+from pydantic import BaseModel, Field, EmailStr
 
 from . import auth, db, elo
 from .rate_limit import (
@@ -40,6 +38,7 @@ from .anticheat import anticheat, check_elo_anomaly
 from .tournaments import tournament_mgr, TournamentFormat, TournamentStatus
 from . import email_service, oauth
 from . import xiangqi_engine as engine
+from . import audit
 
 # ─────────────── App + CORS ───────────────
 
@@ -57,13 +56,16 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title='Cờ Tướng Vương Backend', version='0.3.0', lifespan=lifespan)
 
 import os
-CORS_ORIGINS = os.getenv('CORS_ORIGINS', '*').split(',')
+# CORS: restrict to known origins. Default to localhost for dev
+CORS_ORIGINS_STR = os.getenv('CORS_ORIGINS', 'http://localhost:3000,http://localhost:5173')
+CORS_ORIGINS = [o.strip() for o in CORS_ORIGINS_STR.split(',') if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=CORS_ORIGINS if CORS_ORIGINS != ['*'] else ['*'],
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
-    allow_methods=['*'],
-    allow_headers=['*'],
+    allow_methods=['GET', 'POST', 'PATCH', 'DELETE', 'PUT'],
+    allow_headers=['Content-Type', 'Authorization'],
 )
 
 
@@ -86,6 +88,48 @@ async def rate_limit_middleware(request: Request, call_next):
         check_rate_limit(api_limiter, f'api:{ip}')
 
     return await call_next(request)
+
+
+@app.middleware('http')
+async def audit_middleware(request: Request, call_next):
+    """Log all API requests with timing."""
+    ip = get_client_ip(request)
+    path = request.url.path
+    method = request.method
+    user_id = None
+
+    # Skip healthz and static assets from logging
+    if path == '/healthz' or path.startswith('/static/'):
+        return await call_next(request)
+
+    # Try to extract user_id from token
+    try:
+        h = request.headers.get('authorization', '')
+        import re as regex
+        m = regex.match(r'^Bearer\s+(.+)$', h)
+        if m:
+            payload = auth.decode_jwt(m.group(1))
+            if payload:
+                user_id = int(payload.get('sub', 0))
+    except Exception:
+        pass
+
+    # Time the request
+    start = time.time()
+    response = await call_next(request)
+    elapsed_ms = (time.time() - start) * 1000
+
+    # Add security headers
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'DENY'
+    response.headers['X-XSS-Protection'] = '1; mode=block'
+    response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+    response.headers['Content-Security-Policy'] = "default-src 'self'"
+
+    # Log the request
+    audit.log_api_call(user_id, method, path, response.status_code, ip, elapsed_ms)
+
+    return response
 
 
 # ─────────────── Auth dependency ───────────────
@@ -134,27 +178,33 @@ EMAIL_RX = re.compile(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
 
 
 @app.post('/api/auth/register')
-async def register(body: RegisterIn):
+async def register(body: RegisterIn, req: Request):
     if not EMAIL_RX.match(body.email):
+        audit.log_auth('register', body.email, False, get_client_ip(req), 'invalid_email')
         raise HTTPException(400, 'bad_email')
     if auth.get_user_by_email(body.email):
+        audit.log_auth('register', body.email, False, get_client_ip(req), 'email_taken')
         raise HTTPException(409, 'email_taken')
     user_id = auth.create_user(body.email, body.password, body.display_name.strip())
     token = auth.create_jwt(user_id)
     # Send verification email
     email_service.request_email_verification(user_id)
+    audit.log_auth('register', body.email, True, get_client_ip(req), f'user_id={user_id}')
     return {'jwt': token, 'user': _public_user(auth.get_user_by_id(user_id))}
 
 
 @app.post('/api/auth/login')
-async def login(body: LoginIn):
+async def login(body: LoginIn, req: Request):
     user = auth.get_user_by_email(body.email)
     if not user or not user.get('password_hash'):
+        audit.log_auth('login', body.email, False, get_client_ip(req), 'invalid_credentials')
         raise HTTPException(401, 'bad_credentials')
     if not auth.verify_password(body.password, user['password_hash']):
+        audit.log_auth('login', body.email, False, get_client_ip(req), 'password_mismatch')
         raise HTTPException(401, 'bad_credentials')
     token = auth.create_jwt(user['id'])
     db.execute('UPDATE users SET last_seen_at = ? WHERE id = ?', (int(time.time()), user['id']))
+    audit.log_auth('login', body.email, True, get_client_ip(req), f'user_id={user["id"]}')
     return {'jwt': token, 'user': _public_user(user)}
 
 
@@ -953,14 +1003,27 @@ async def ws_endpoint(ws: WebSocket):
 
             # Rate limit WebSocket messages
             if not check_ws_rate(f'ws:{user_id}'):
+                audit.log_security_event('ws_rate_limit', user_id, 'WebSocket rate limit exceeded')
                 await _send(user_id, {'type': 'error', 'code': 'rate_limited'})
                 continue
 
             try:
                 m = json.loads(raw)
             except Exception:
+                audit.log_security_event('ws_invalid_json', user_id, 'Invalid JSON received on WebSocket')
                 continue
+
+            # Validate message structure
+            if not isinstance(m, dict) or 'type' not in m:
+                audit.log_security_event('ws_invalid_msg', user_id, 'Missing type field in WebSocket message')
+                continue
+
             t = m.get('type')
+
+            # Validate type is a string
+            if not isinstance(t, str) or len(t) > 32:
+                audit.log_security_event('ws_invalid_type', user_id, f'Invalid message type: {t}')
+                continue
 
             if t == 'queue.join':
                 key = f"{m.get('variant', 'standard')}:{m.get('time', '10+5')}"

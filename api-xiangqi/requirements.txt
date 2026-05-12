@@ -1,5 +1,15 @@
-fastapi==0.115.5
-uvicorn[standard]==0.32.1
+# Core framework
+fastapi==0.115.6
+uvicorn[standard]==0.32.2
+pydantic[email]==2.10.5
+
+# Security
 pyjwt[crypto]==2.10.1
+cryptography==44.0.1
+email-validator==2.2.0
+
+# HTTP client
 httpx==0.28.1
-python-multipart==0.0.20
+
+# Utilities
+python-multipart==0.0.21
