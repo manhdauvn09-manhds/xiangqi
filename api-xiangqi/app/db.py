@@ -9,19 +9,32 @@ Lý do dùng SQLite thay Postgres ở Phase 2 v1:
 import os
 import sqlite3
 import threading
+import time
 from pathlib import Path
 from typing import Any, Iterable
 
 DB_PATH = Path(os.getenv('XQ_DB_PATH', './data/xiangqi.db'))
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
-_lock = threading.Lock()      # SQLite write serialize
+_lock = threading.Lock()      # SQLite write serialize + init lock
 _conn: sqlite3.Connection | None = None
+_slow_query_threshold_ms = 100  # Log queries taking > 100ms
 
 
 def get_conn() -> sqlite3.Connection:
+    """Get or create database connection. Thread-safe initialization."""
     global _conn
-    if _conn is None:
+    # Fast path: already initialized
+    if _conn is not None:
+        return _conn
+
+    # Slow path: initialize with lock
+    with _lock:
+        # Double-check after acquiring lock
+        if _conn is not None:
+            return _conn
+
+        print(f'[db] initializing connection to {DB_PATH}')
         _conn = sqlite3.connect(str(DB_PATH), check_same_thread=False, isolation_level=None, timeout=30.0)
         _conn.row_factory = sqlite3.Row
         _conn.execute('PRAGMA journal_mode=WAL')
@@ -29,15 +42,39 @@ def get_conn() -> sqlite3.Connection:
         _conn.execute('PRAGMA synchronous=NORMAL')
         _conn.execute('PRAGMA busy_timeout=30000')  # 30s timeout for locks
         migrate(_conn)
+        print('[db] connection ready')
     return _conn
 
 
-def query(sql: str, params: Iterable[Any] = ()) -> list[sqlite3.Row]:
-    """Execute SELECT query. Cursor auto-closed after fetchall()."""
+def query(sql: str, params: Iterable[Any] = (), limit: int | None = None) -> list[sqlite3.Row]:
+    """Execute SELECT query. Cursor auto-closed after fetchall().
+
+    Args:
+        sql: SQL query string
+        params: Query parameters
+        limit: Optional max rows to fetch (default: no limit, backward compatible)
+    """
+    start_ms = time.time() * 1000
     conn = get_conn()
     cur = conn.execute(sql, params)
     try:
-        return cur.fetchall()
+        if limit is None:
+            result = cur.fetchall()
+        else:
+            # Fetch only up to limit rows to prevent memory overflow
+            result = []
+            for _ in range(limit):
+                row = cur.fetchone()
+                if row is None:
+                    break
+                result.append(row)
+
+        # Log slow queries
+        elapsed_ms = time.time() * 1000 - start_ms
+        if elapsed_ms > _slow_query_threshold_ms:
+            print(f'[db] slow query ({elapsed_ms:.1f}ms): {sql[:60]}...')
+
+        return result
     finally:
         cur.close()
 
@@ -53,11 +90,19 @@ def fetch_one(sql: str, params: Iterable[Any] = ()) -> sqlite3.Row | None:
 
 
 def execute(sql: str, params: Iterable[Any] = ()) -> int:
-    """Insert/update/delete. Trả về lastrowid."""
+    """Insert/update/delete. Trả về lastrowid hoặc rowcount."""
+    start_ms = time.time() * 1000
     with _lock:
         cur = get_conn().execute(sql, params)
         try:
-            return cur.lastrowid or cur.rowcount
+            result = cur.lastrowid or cur.rowcount
+
+            # Log slow writes
+            elapsed_ms = time.time() * 1000 - start_ms
+            if elapsed_ms > _slow_query_threshold_ms:
+                print(f'[db] slow write ({elapsed_ms:.1f}ms): {sql[:60]}...')
+
+            return result
         finally:
             cur.close()
 
