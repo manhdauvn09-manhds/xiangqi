@@ -33,7 +33,7 @@ export function setLang(lang) {
   localStorage.setItem(STORAGE_KEY, lang);
   applyToDocument();
   subscribers.forEach(fn => {
-    try { fn(lang); } catch (e) { console.error(e); }
+    try { fn(lang); } catch (e) { /* Silently ignore subscriber errors */ }
   });
 }
 

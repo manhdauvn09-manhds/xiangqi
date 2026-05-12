@@ -76,7 +76,27 @@
       "Bash(curl -s -I https://xiangqi.games-core.com/og-image.svg)",
       "Bash(curl -s https://xiangqi.games-core.com/ | head -300 > /tmp/xiangqi_audit.html && cat /tmp/xiangqi_audit.html)",
       "Bash(sleep 3 && curl -s https://xiangqi.games-core.com/ > /tmp/test.html && echo \"=== Page Title ===\" && grep \"<title>\" /tmp/test.html && echo \"=== og:title ===\" && grep \"og:title\" /tmp/test.html && echo \"=== color-scheme ===\" && grep \"color-scheme\" /tmp/test.html && echo \"=== manifest ===\" && grep \"manifest\" /tmp/test.html && echo \"=== preconnect ===\" && grep \"preconnect\" /tmp/test.html)",
-      "Bash(curl -s https://xiangqi.games-core.com/manifest.json)"
+      "Bash(curl -s https://xiangqi.games-core.com/manifest.json)",
+      "Bash(curl -s https://xiangqi.games-core.com/service-worker.js)",
+      "Bash(ssh -o ConnectTimeout=30 xiangqi@62.238.28.106 \"cd /home/xiangqi/xiangqi && git pull origin main && docker-compose up -d --build\")",
+      "Bash(ls -la ~/.ssh/ 2>/dev/null | grep -E \"id_rsa|id_ed25519\" || echo \"No SSH keys found in standard location\")",
+      "Bash(ssh -i ~/.ssh/id_ed25519 -o ConnectTimeout=30 xiangqi@62.238.28.106 \"cd /home/xiangqi/xiangqi && git pull origin main && docker-compose up -d --build\")",
+      "Bash(xargs ls -la)",
+      "Bash(cat)",
+      "Bash(bash /tmp/security_test.sh)",
+      "Bash(ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no xiangqi@62.238.28.106 \"cd /home/xiangqi/xiangqi && git pull origin main && echo 'Git pull successful' || echo 'Git pull failed'\")",
+      "Bash(ssh -o ConnectTimeout=30 root@62.238.28.106 \"docker ps --format 'table {{.Names}}\\\\t{{.Status}}'\")",
+      "Bash(python -m py_compile app/db.py app/main.py)",
+      "Bash(python -m py_compile app/db.py)",
+      "Bash(python -m py_compile app/main.py app/audit.py app/http_client.py server.py)",
+      "Bash(python -c \"import sys; sys.path.insert\\(0, '.'\\); from app import main, audit, http_client; print\\('✓ All imports OK'\\)\")",
+      "Bash(pip install *)",
+      "Bash(python -c \"import sys; sys.path.insert\\(0, 'E:\\\\SourceCode\\\\GAMES\\\\xiangqi\\\\api-xiangqi'\\); from app import main, audit, http_client; print\\('✓ All imports OK'\\)\")",
+      "Bash(python -c \"from app import main, audit, http_client; print\\('✓ All imports OK'\\)\")",
+      "Bash(ssh root@62.238.28.106 \"pwd && ls -la ~\")",
+      "Bash(ssh root@62.238.28.106 \"docker inspect xiangqi-api --format '{{json .Mounts}}' 2>&1 | python -m json.tool\")",
+      "Bash(ssh root@62.238.28.106 \"cd /opt/apps/xiangqi && git pull origin main && cd api-xiangqi && docker-compose up -d --build 2>&1 | tail -30\")",
+      "Bash(node -c scripts/net/api.js)"
     ]
   }
 }

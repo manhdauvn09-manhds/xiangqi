@@ -12,7 +12,18 @@ export const API_BASE = apiBase.replace(/\/$/, '');
 
 const KEY_TOKEN = 'xq_jwt';
 
-let _token = localStorage.getItem(KEY_TOKEN) || null;
+// Use sessionStorage for JWT (XSS protection): token lost on page close
+// Previous localStorage tokens migrated on first load
+let _token = sessionStorage.getItem(KEY_TOKEN);
+if (!_token) {
+  // Attempt migration from localStorage (old versions)
+  _token = localStorage.getItem(KEY_TOKEN) || null;
+  if (_token) {
+    // Move to sessionStorage and clear localStorage
+    sessionStorage.setItem(KEY_TOKEN, _token);
+    localStorage.removeItem(KEY_TOKEN);
+  }
+}
 let _user = null;
 const _subs = new Set();
 
@@ -30,8 +41,8 @@ function _emit() { _subs.forEach(fn => { try { fn(_user); } catch {} }); }
 function _setToken(token, user = null) {
   _token = token;
   _user = user;
-  if (token) localStorage.setItem(KEY_TOKEN, token);
-  else localStorage.removeItem(KEY_TOKEN);
+  if (token) sessionStorage.setItem(KEY_TOKEN, token);
+  else sessionStorage.removeItem(KEY_TOKEN);
   _emit();
 }
 
