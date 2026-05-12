@@ -32,8 +32,8 @@ services:
     image: nginx:alpine
     container_name: xq-nginx
     ports:
-      - "80:80"
-      - "443:443"
+      - "8700:80"     # Map container port 80 to host port 8700
+      - "8701:443"    # Map container port 443 to host port 8701
     volumes:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
       - ../games/xiangqi:/usr/share/nginx/html/games/xiangqi:ro
