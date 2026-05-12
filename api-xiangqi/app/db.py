@@ -22,23 +22,34 @@ _conn: sqlite3.Connection | None = None
 def get_conn() -> sqlite3.Connection:
     global _conn
     if _conn is None:
-        _conn = sqlite3.connect(str(DB_PATH), check_same_thread=False, isolation_level=None)
+        _conn = sqlite3.connect(str(DB_PATH), check_same_thread=False, isolation_level=None, timeout=30.0)
         _conn.row_factory = sqlite3.Row
         _conn.execute('PRAGMA journal_mode=WAL')
         _conn.execute('PRAGMA foreign_keys=ON')
         _conn.execute('PRAGMA synchronous=NORMAL')
+        _conn.execute('PRAGMA busy_timeout=30000')  # 30s timeout for locks
         migrate(_conn)
     return _conn
 
 
 def query(sql: str, params: Iterable[Any] = ()) -> list[sqlite3.Row]:
-    cur = get_conn().execute(sql, params)
-    return cur.fetchall()
+    """Execute SELECT query. Cursor auto-closed after fetchall()."""
+    conn = get_conn()
+    cur = conn.execute(sql, params)
+    try:
+        return cur.fetchall()
+    finally:
+        cur.close()
 
 
 def fetch_one(sql: str, params: Iterable[Any] = ()) -> sqlite3.Row | None:
-    cur = get_conn().execute(sql, params)
-    return cur.fetchone()
+    """Execute SELECT returning one row. Cursor auto-closed after fetchone()."""
+    conn = get_conn()
+    cur = conn.execute(sql, params)
+    try:
+        return cur.fetchone()
+    finally:
+        cur.close()
 
 
 def execute(sql: str, params: Iterable[Any] = ()) -> int:
@@ -51,6 +62,18 @@ def execute(sql: str, params: Iterable[Any] = ()) -> int:
 def execute_many(sql: str, params_list: Iterable[Iterable[Any]]) -> None:
     with _lock:
         get_conn().executemany(sql, params_list)
+
+
+def close_conn() -> None:
+    """Close global connection. Call on app shutdown."""
+    global _conn
+    if _conn is not None:
+        try:
+            _conn.close()
+        except Exception as e:
+            print(f'[db] error closing connection: {e}')
+        finally:
+            _conn = None
 
 
 # ─────────────── Migrations ───────────────
@@ -233,24 +256,35 @@ MIGRATIONS = [
 
 
 def migrate(conn: sqlite3.Connection) -> None:
-    cur = conn.execute("SELECT version FROM schema_version") if has_table(conn, 'schema_version') else None
-    current = cur.fetchone()[0] if (cur and (row := cur.fetchone())) else 0
-    # Re-fetch since walrus may have already consumed
-    if has_table(conn, 'schema_version'):
-        row = conn.execute("SELECT MAX(version) FROM schema_version").fetchone()
-        current = row[0] or 0
-    else:
-        current = 0
-    target = len(MIGRATIONS)
-    if current >= target:
-        return
-    print(f'[db] migrating {current} → {target}')
-    for v in range(current, target):
-        sql = MIGRATIONS[v]
-        # SQLite doesn't allow multiple statements in one execute, but executescript does
-        conn.executescript(sql)
-        conn.execute('INSERT INTO schema_version(version) VALUES (?)', (v + 1,))
-    conn.commit()
+    """Run schema migrations. Each migration is atomic."""
+    try:
+        if has_table(conn, 'schema_version'):
+            row = conn.execute("SELECT MAX(version) FROM schema_version").fetchone()
+            current = row[0] or 0
+        else:
+            current = 0
+
+        target = len(MIGRATIONS)
+        if current >= target:
+            return
+
+        print(f'[db] migrating {current} → {target}')
+
+        for v in range(current, target):
+            try:
+                sql = MIGRATIONS[v]
+                # SQLite doesn't allow multiple statements in one execute, but executescript does
+                conn.executescript(sql)
+                conn.execute('INSERT INTO schema_version(version) VALUES (?)', (v + 1,))
+                conn.commit()
+                print(f'[db] migration {v+1} applied successfully')
+            except Exception as e:
+                conn.rollback()
+                print(f'[db] ERROR in migration {v+1}: {e}')
+                raise
+    except Exception as e:
+        print(f'[db] Migration failed: {e}')
+        raise
 
 
 def has_table(conn: sqlite3.Connection, name: str) -> bool:

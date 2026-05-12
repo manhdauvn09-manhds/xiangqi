@@ -49,6 +49,9 @@ async def lifespan(app: FastAPI):
     db.get_conn()
     print('[xq] backend ready - Phase 3')
     yield
+    # Cleanup on shutdown
+    db.close_conn()
+    print('[xq] backend shutdown - database closed')
 
 
 app = FastAPI(title='Cờ Tướng Vương Backend', version='0.3.0', lifespan=lifespan)
