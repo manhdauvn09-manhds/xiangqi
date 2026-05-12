@@ -56,10 +56,14 @@ def execute(sql: str, params: Iterable[Any] = ()) -> int:
     """Insert/update/delete. Trả về lastrowid."""
     with _lock:
         cur = get_conn().execute(sql, params)
-        return cur.lastrowid or cur.rowcount
+        try:
+            return cur.lastrowid or cur.rowcount
+        finally:
+            cur.close()
 
 
 def execute_many(sql: str, params_list: Iterable[Iterable[Any]]) -> None:
+    """Batch insert/update/delete."""
     with _lock:
         get_conn().executemany(sql, params_list)
 
