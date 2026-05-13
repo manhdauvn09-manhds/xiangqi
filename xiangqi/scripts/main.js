@@ -303,71 +303,18 @@ function startLocalGame() {
   else location.hash = '#/play';
 }
 
-// ─────────────── Mobile Drawer Setup ───────────────
-function setupMobileGameDrawer() {
-  const side = document.querySelector('.xq-side');
+// ─────────────── Mobile Game Layout Setup ───────────────
+function setupMobileGameLayout() {
   const moves = document.querySelector('.xq-moves');
+  if (!moves || window.innerWidth >= 768) return;
 
-  if (!side || !moves) return;
-
-  // Create drawer container
-  const drawer = document.createElement('div');
-  drawer.className = 'xq-mobile-drawer';
-  drawer.innerHTML = `
-    <div class="xq-drawer-header">
-      <span>ℹ️ Thông tin trận đấu</span>
-      <button class="xq-drawer-close" aria-label="Close">&times;</button>
-    </div>
-    <div class="xq-drawer-content" id="drawerContent"></div>
-  `;
-
-  // Move side and moves elements into drawer
-  const drawerContent = drawer.querySelector('.xq-drawer-content');
-  drawerContent.appendChild(side);
-  drawerContent.appendChild(moves);
-
-  // Add drawer to page
-  document.body.appendChild(drawer);
-
-  // Create toggle button
-  const toggleBtn = document.createElement('button');
-  toggleBtn.className = 'xq-mobile-drawer-toggle';
-  toggleBtn.setAttribute('aria-label', 'Thông tin');
-  toggleBtn.innerHTML = 'ℹ️';
-  document.body.appendChild(toggleBtn);
-
-  // Toggle drawer
-  toggleBtn.addEventListener('click', () => {
-    drawer.classList.toggle('active');
-    toggleBtn.classList.toggle('active');
+  // Add moves list toggle
+  moves.querySelector('.head').addEventListener('click', () => {
+    moves.classList.toggle('show');
   });
 
-  drawer.querySelector('.xq-drawer-close')?.addEventListener('click', () => {
-    drawer.classList.remove('active');
-    toggleBtn.classList.remove('active');
-  });
-
-  // Close drawer when clicking outside (on overlay area)
-  document.addEventListener('click', (e) => {
-    if (drawer.classList.contains('active') &&
-        !drawer.contains(e.target) &&
-        !toggleBtn.contains(e.target)) {
-      drawer.classList.remove('active');
-      toggleBtn.classList.remove('active');
-    }
-  });
-
-  // Also show drawer on tablet to show info
-  window.addEventListener('resize', () => {
-    if (window.innerWidth >= 768) {
-      // On tablet and above, show elements normally
-      drawerContent.style.display = 'none';
-      side.style.display = '';
-      moves.style.display = '';
-      drawer.style.display = 'none';
-      toggleBtn.style.display = 'none';
-    }
-  });
+  // Optional: Add a dedicated moves toggle button if needed
+  // (The header click toggle above is sufficient)
 }
 
 // ─────────────── Game view ───────────────
@@ -450,12 +397,12 @@ function renderPlay(root) {
           </div>
           <div class="xq-status" id="xqStatus">…</div>
           <div class="xq-actions">
-            <button class="btn btn-sm" id="btnHint" title="${esc(t('btn.hint'))}">💡 ${esc(t('btn.hint'))}</button>
-            <button class="btn btn-sm" id="btnTakeback" title="${esc(t('btn.takeback'))}">↺ ${esc(t('btn.takeback.short'))}</button>
-            <button class="btn btn-sm" id="btnFlip">🔁 ${esc(t('btn.flip'))}</button>
-            <button class="btn btn-sm" id="btnNew">🆕 ${esc(t('btn.new_game'))}</button>
-            <button class="btn btn-sm btn-danger" id="btnResign">🚩 ${esc(t('btn.resign'))}</button>
-            <button class="btn btn-sm btn-ghost" id="btnBackHome">🏠 ${esc(t('btn.back_home'))}</button>
+            <button class="btn btn-sm" id="btnHint" title="${esc(t('btn.hint'))}" data-emoji="💡">💡 ${esc(t('btn.hint'))}</button>
+            <button class="btn btn-sm" id="btnTakeback" title="${esc(t('btn.takeback'))}" data-emoji="↺">↺ ${esc(t('btn.takeback.short'))}</button>
+            <button class="btn btn-sm" id="btnFlip" data-emoji="🔁">🔁 ${esc(t('btn.flip'))}</button>
+            <button class="btn btn-sm" id="btnNew" data-emoji="🆕">🆕 ${esc(t('btn.new_game'))}</button>
+            <button class="btn btn-sm btn-danger" id="btnResign" data-emoji="🚩">🚩 ${esc(t('btn.resign'))}</button>
+            <button class="btn btn-sm btn-ghost" id="btnBackHome" data-emoji="🏠">🏠 ${esc(t('btn.back_home'))}</button>
           </div>
           ${isBlind ? `<div class="alert warn" style="margin:0;font-size:12px;padding:8px 10px">🎴 ${esc(t('variant.blind'))} — ${esc('chạm quân úp để lật, hoặc chọn quân đã lật để đi')}</div>` : ''}
           <div class="xq-player ${cfg.userSide==='r'?'red':''}">
@@ -489,9 +436,9 @@ function renderPlay(root) {
     document.getElementById('confirmOverlay').style.display = 'none';
     document.getElementById('gameContent').style.display = 'contents';
 
-    // Add mobile drawer toggle for responsive layout
+    // Setup mobile game layout with floating buttons
     if (window.innerWidth < 768) {
-      setupMobileGameDrawer();
+      setupMobileGameLayout();
     }
 
     // Start game
