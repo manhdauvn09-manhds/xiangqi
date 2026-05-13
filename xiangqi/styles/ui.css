@@ -189,6 +189,11 @@ main#app {
     "side"
     "moves";
 }
+/* Game content wrapper - display: contents unwraps it for grid layout */
+.xq-game-content {
+  display: contents;
+}
+
 .xq-side       { grid-area: side; }
 .xq-board-stage{ grid-area: board; }
 .xq-moves      { grid-area: moves; }

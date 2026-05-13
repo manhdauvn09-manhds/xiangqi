@@ -420,7 +420,7 @@ function renderPlay(root) {
 
   startBtn?.addEventListener('click', () => {
     document.getElementById('confirmOverlay').style.display = 'none';
-    document.getElementById('gameContent').style.display = 'flex';
+    document.getElementById('gameContent').style.display = 'contents';
 
     // Start game
     currentGame = new GameController(
