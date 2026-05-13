@@ -16,6 +16,7 @@ import { createChatPanel } from './chat-panel.js';
 import { TimeControl, TIME_FORMATS } from '../game/time-control.js';
 import { fakePlayerManager } from '../game/fake-players.js';
 import { createTimeDisplay } from './time-display.js';
+import { updateElo } from '../elo/elo.js';
 
 const ELO_BY_LV = [600, 800, 1000, 1200, 1400, 1600, 1800, 2000, 2200, 2400];
 
@@ -594,6 +595,26 @@ export class GameController {
       if (myResult === 1) profile.wins += 1;
       else if (myResult === 0) profile.losses += 1;
       else profile.draws += 1;
+
+      // Calculate ELO for bot and online (with fake opponent) modes
+      if (this.config.mode === 'bot' || this.config.fakeOpponent) {
+        const myElo = profile.elo || 1200;
+        // Get opponent ELO based on game type
+        let opponentElo = 1200;
+        if (this.config.mode === 'bot' && this.config.botLevel) {
+          opponentElo = ELO_BY_LV[this.config.botLevel - 1];
+        } else if (this.config.fakeOpponent && this.config.opponent?.elo) {
+          opponentElo = this.config.opponent.elo;
+        }
+
+        // Calculate new ELO
+        const eloCalc = updateElo(myElo, opponentElo, myResult, profile.gamesPlayed - 1);
+        profile.elo = eloCalc.newElo;
+        this.eloChange = eloCalc.delta; // Store for result dialog display
+      } else {
+        this.eloChange = 0; // No ELO change for local games
+      }
+
       setProfile(profile);
       const record = {
         id: 'g_' + Date.now(),
@@ -626,9 +647,26 @@ export class GameController {
     }
 
     setTimeout(async () => {
+      // Build result message with ELO change if available
+      let reasonText = `<p>${t(reasonKey)}</p>`;
+      let eloText = '';
+
+      if (this.config.mode === 'bot') {
+        reasonText += `<p style="margin-top:8px" class="muted">${t('side.bot')} Lv ${this.config.botLevel} (~${ELO_BY_LV[(this.config.botLevel||3)-1]} ELO)</p>`;
+      }
+
+      // Add ELO change display
+      if (this.eloChange !== undefined && (this.config.mode === 'bot' || this.config.fakeOpponent)) {
+        const eloSign = this.eloChange > 0 ? '+' : '';
+        const eloColor = this.eloChange > 0 ? '#06d6a0' : '#e63946';
+        eloText = `<p style="margin-top:12px; color:${eloColor}; font-weight:700">
+          <span style="font-size:16px">${eloSign}${this.eloChange}</span> ELO
+        </p>`;
+      }
+
       const ok = await confirm({
         title: t(titleKey),
-        body: `<p>${t(reasonKey)}</p><p style="margin-top:8px" class="muted">${this.config.mode === 'bot' ? t('side.bot') + ' Lv ' + this.config.botLevel + ' (~' + ELO_BY_LV[(this.config.botLevel||3)-1] + ' ELO)' : ''}</p>`,
+        body: reasonText + eloText,
         okText: t('result.play_again'),
         cancelText: t('result.back_home'),
       });
