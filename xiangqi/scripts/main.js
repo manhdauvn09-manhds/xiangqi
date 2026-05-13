@@ -347,7 +347,7 @@ function renderPlay(root) {
           <h2>⚔️ Chuẩn bị trận đấu</h2>
           <div class="confirm-info">
             <div class="confirm-player">
-              <div class="ico">🤖</div>
+              <div class="ico">${esc((opponentName || '?').slice(0,2).toUpperCase())}</div>
               <div>
                 <div class="name">${esc(opponentName)}</div>
                 <div class="meta">${esc(opponentInfo)}</div>

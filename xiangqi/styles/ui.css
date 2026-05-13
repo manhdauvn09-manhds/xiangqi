@@ -322,7 +322,7 @@ main#app {
   inset: 0;
   background: rgba(0, 0, 0, 0.75);
   backdrop-filter: blur(8px);
-  display: flex !important;
+  display: flex;
   align-items: center;
   justify-content: center;
   z-index: 9999;
