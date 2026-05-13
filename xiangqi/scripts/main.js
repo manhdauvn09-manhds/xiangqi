@@ -303,6 +303,73 @@ function startLocalGame() {
   else location.hash = '#/play';
 }
 
+// ─────────────── Mobile Drawer Setup ───────────────
+function setupMobileGameDrawer() {
+  const side = document.querySelector('.xq-side');
+  const moves = document.querySelector('.xq-moves');
+
+  if (!side || !moves) return;
+
+  // Create drawer container
+  const drawer = document.createElement('div');
+  drawer.className = 'xq-mobile-drawer';
+  drawer.innerHTML = `
+    <div class="xq-drawer-header">
+      <span>ℹ️ Thông tin trận đấu</span>
+      <button class="xq-drawer-close" aria-label="Close">&times;</button>
+    </div>
+    <div class="xq-drawer-content" id="drawerContent"></div>
+  `;
+
+  // Move side and moves elements into drawer
+  const drawerContent = drawer.querySelector('.xq-drawer-content');
+  drawerContent.appendChild(side);
+  drawerContent.appendChild(moves);
+
+  // Add drawer to page
+  document.body.appendChild(drawer);
+
+  // Create toggle button
+  const toggleBtn = document.createElement('button');
+  toggleBtn.className = 'xq-mobile-drawer-toggle';
+  toggleBtn.setAttribute('aria-label', 'Thông tin');
+  toggleBtn.innerHTML = 'ℹ️';
+  document.body.appendChild(toggleBtn);
+
+  // Toggle drawer
+  toggleBtn.addEventListener('click', () => {
+    drawer.classList.toggle('active');
+    toggleBtn.classList.toggle('active');
+  });
+
+  drawer.querySelector('.xq-drawer-close')?.addEventListener('click', () => {
+    drawer.classList.remove('active');
+    toggleBtn.classList.remove('active');
+  });
+
+  // Close drawer when clicking outside (on overlay area)
+  document.addEventListener('click', (e) => {
+    if (drawer.classList.contains('active') &&
+        !drawer.contains(e.target) &&
+        !toggleBtn.contains(e.target)) {
+      drawer.classList.remove('active');
+      toggleBtn.classList.remove('active');
+    }
+  });
+
+  // Also show drawer on tablet to show info
+  window.addEventListener('resize', () => {
+    if (window.innerWidth >= 768) {
+      // On tablet and above, show elements normally
+      drawerContent.style.display = 'none';
+      side.style.display = '';
+      moves.style.display = '';
+      drawer.style.display = 'none';
+      toggleBtn.style.display = 'none';
+    }
+  });
+}
+
 // ─────────────── Game view ───────────────
 function renderPlay(root) {
   // Check if resuming a saved game
@@ -421,6 +488,11 @@ function renderPlay(root) {
   startBtn?.addEventListener('click', () => {
     document.getElementById('confirmOverlay').style.display = 'none';
     document.getElementById('gameContent').style.display = 'contents';
+
+    // Add mobile drawer toggle for responsive layout
+    if (window.innerWidth < 768) {
+      setupMobileGameDrawer();
+    }
 
     // Start game
     currentGame = new GameController(

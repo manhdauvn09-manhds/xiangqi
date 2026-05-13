@@ -177,17 +177,19 @@ main#app {
 
 /* In-game layout — fully responsive
    Desktop  ≥1100px:  3 columns (info | board | moves)
-   iPad     768-1099: board on top, info + moves bên dưới chia 2 cột
-   Mobile   <768px:   stack toàn bộ */
+   iPad     768-1099: board takes priority, info + moves compact below
+   Mobile   <768px:   board takes 100% space, side/moves hidden until toggled */
 .xq-game {
   display: grid;
-  gap: 16px;
+  gap: 0;
   align-items: start;
   grid-template-columns: 1fr;
   grid-template-areas:
     "board"
     "side"
     "moves";
+  height: 100vh;
+  overflow: hidden;
 }
 /* Game content wrapper - display: contents unwraps it for grid layout */
 .xq-game-content {
@@ -198,26 +200,147 @@ main#app {
 .xq-board-stage{ grid-area: board; }
 .xq-moves      { grid-area: moves; }
 
+/* Mobile: board takes priority, other elements hidden */
+@media (max-width: 767px) {
+  .xq-game {
+    grid-template-areas: "board";
+    grid-template-rows: 1fr;
+  }
+  .xq-side { display: none; }
+  .xq-moves { display: none; }
+  .xq-board-stage {
+    height: 100%;
+    width: 100%;
+  }
+  /* Drawer button for mobile info */
+  .xq-mobile-drawer-toggle {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 100;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--xq-primary);
+    border: none;
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .xq-mobile-drawer-toggle:active { transform: scale(0.95); }
+  .xq-mobile-drawer-toggle.active {
+    background: var(--xq-jade);
+  }
+  /* Mobile drawer for game info */
+  .xq-mobile-drawer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--xq-bg-surface);
+    border-top: 1px solid var(--xq-border);
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+    transform: translateY(100%);
+    transition: transform .3s ease-out;
+    z-index: 99;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+  }
+  .xq-mobile-drawer.active {
+    transform: translateY(0);
+  }
+  .xq-drawer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    border-bottom: 1px solid var(--xq-border);
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .xq-drawer-close {
+    background: none;
+    border: none;
+    font-size: 28px;
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--xq-text-mute);
+  }
+  .xq-drawer-content {
+    overflow-y: auto;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+}
+
 @media (min-width: 768px) and (max-width: 1099px) {
   .xq-game {
     grid-template-areas:
-      "board board"
-      "side moves";
-    grid-template-columns: 1fr 1fr;
+      "board"
+      "side"
+      "moves";
+    grid-template-rows: 1fr auto auto;
+    height: 100vh;
   }
+  .xq-side { max-height: 140px; overflow-y: auto; }
+  .xq-moves { max-height: 160px; }
+  .xq-board-stage { height: 100%; min-height: 300px; }
 }
 @media (min-width: 1100px) {
   .xq-game {
     grid-template-areas: "side board moves";
     grid-template-columns: 280px minmax(0, 1fr) 320px;
+    grid-template-rows: 1fr;
+    gap: 16px;
+    height: auto;
+    overflow: visible;
   }
 }
 
 .xq-side {
   display: flex; flex-direction: column; gap: 12px;
+  padding: 12px;
+}
+@media (max-width: 767px) {
+  .xq-side {
+    gap: 10px;
+    padding: 12px;
+  }
 }
 @media (min-width: 768px) and (max-width: 1099px) {
-  .xq-side { gap: 10px; }
+  .xq-side {
+    gap: 10px;
+    padding: 12px;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .xq-side > * {
+    flex: 0 0 auto;
+  }
+  .xq-player {
+    flex: 1 1 calc(50% - 5px);
+    min-width: 150px;
+  }
+  .xq-status {
+    flex: 1 1 100%;
+  }
+  .xq-actions {
+    flex: 1 1 100%;
+  }
 }
 .xq-player {
   display: flex; align-items: center; gap: 12px;
@@ -233,10 +356,25 @@ main#app {
   background: linear-gradient(135deg, var(--xq-jade), #00897b);
   color: white;
   font-size: 16px;
+  flex-shrink: 0;
 }
 .xq-player.red .av { background: linear-gradient(135deg, var(--xq-red), #ad1457); }
 .xq-player .name { font-weight: 700; font-size: 14px; }
 .xq-player .meta { font-size: 11px; color: var(--xq-text-mute); margin-top: 2px; }
+
+@media (max-width: 767px) {
+  .xq-player {
+    padding: 10px 12px;
+    gap: 10px;
+  }
+  .xq-player .av {
+    width: 36px;
+    height: 36px;
+    font-size: 13px;
+  }
+  .xq-player .name { font-size: 13px; }
+  .xq-player .meta { font-size: 10px; }
+}
 
 .xq-status {
   padding: 12px 16px;
@@ -254,11 +392,40 @@ main#app {
 }
 .xq-actions .btn { flex: 1; min-width: 80px; }
 
+@media (max-width: 767px) {
+  .xq-actions {
+    gap: 5px;
+  }
+  .xq-actions .btn {
+    min-width: 60px;
+    font-size: 12px;
+    padding: 6px 8px;
+    flex: 0 1 calc(50% - 3px);
+  }
+}
+
 .xq-board-stage {
   width: 100%;
   display: flex;
   justify-content: center;
+  align-items: center;
   min-width: 0;
+  padding: 12px;
+  background: var(--xq-bg-base);
+}
+
+@media (max-width: 767px) {
+  .xq-board-stage {
+    padding: 8px;
+    height: 100%;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1099px) {
+  .xq-board-stage {
+    padding: 12px;
+    min-height: 350px;
+  }
 }
 
 .xq-moves {
@@ -279,6 +446,29 @@ main#app {
 .xq-moves > div:not(.head) {
   flex: 1;
   overflow-y: auto;
+}
+
+@media (max-width: 767px) {
+  .xq-moves {
+    max-height: 200px;
+    padding: 12px;
+  }
+  .xq-moves .head {
+    padding: 0 0 8px 0;
+    margin-bottom: 8px;
+    border-bottom: 1px solid var(--xq-border);
+    font-size: 12px;
+  }
+  .xq-moves table { font-size: 12px; }
+  .xq-moves td { padding: 5px 8px; }
+}
+
+@media (min-width: 768px) and (max-width: 1099px) {
+  .xq-moves {
+    max-height: 140px;
+  }
+  .xq-moves table { font-size: 12px; }
+  .xq-moves td { padding: 5px 8px; }
 }
 .xq-moves table { width: 100%; border-collapse: collapse; font-size: 13px; font-family: ui-monospace, monospace; }
 .xq-moves td { padding: 6px 12px; border-bottom: 1px solid var(--xq-border); }
