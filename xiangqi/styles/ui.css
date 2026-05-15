@@ -232,23 +232,26 @@ main#app {
     display: none;
   }
   .xq-side .xq-actions {
-    position: fixed;
-    bottom: 12px;
-    right: 12px;
+    position: absolute;
+    bottom: 8px;
+    left: 50%;
+    transform: translateX(-50%);
     width: auto;
     height: auto;
-    gap: 6px;
-    flex-direction: column;
+    gap: 8px;
+    flex-direction: row;
     z-index: 100;
     background: transparent;
     padding: 0;
+    justify-content: center;
+    align-items: center;
   }
   .xq-side .xq-actions .btn {
-    min-width: 44px;
-    width: 44px;
-    height: 44px;
+    min-width: 38px;
+    width: 38px;
+    height: 38px;
     padding: 0;
-    font-size: 20px;
+    font-size: 16px;
     display: flex !important;
     align-items: center;
     justify-content: center;
@@ -266,7 +269,7 @@ main#app {
     top: 50%;
     transform: translate(-50%, -50%);
     text-indent: 0;
-    font-size: 18px;
+    font-size: 16px;
   }
   .xq-side .xq-player:last-child {
     display: none;
@@ -311,10 +314,11 @@ main#app {
   .xq-board-stage {
     height: calc(100vh - 60px);
     width: 100%;
-    padding: 8px;
+    padding: 8px 8px 56px 8px;
     display: flex;
     align-items: center;
     justify-content: center;
+    position: relative;
   }
   /* Moves toggle button */
   .xq-mobile-moves-toggle {
