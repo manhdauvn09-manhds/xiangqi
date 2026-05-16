@@ -5,14 +5,30 @@
   padding: 14px;
   box-shadow: var(--xq-shadow-2), inset 0 0 0 1px rgba(0,0,0,0.15);
   position: relative;
-  /*
-    Trừ top bar (52px) + action row (56px) = 108px
-    Board aspect ratio 9:10 → width = height * 9/10
-    min: không vượt 100% width cột, không vượt chiều cao khả dụng, không quá 720px
-  */
-  width: min(100%, calc((100vh - 108px) * 9 / 10), 720px);
   margin: 0 auto;
   box-sizing: border-box;
+  /*
+    Công thức chung (fallback cho trình duyệt không hỗ trợ dvh):
+    - Top bar: 52px, Action row: 56px → UI = 108px
+    - Board ratio 9:10, nên width = height * 0.9
+    - Không vượt 100vw - 24px (padding ngang)
+  */
+  width: min(
+    calc(100vw - 24px),
+    calc((100vh - 120px) * 9 / 10),
+    720px
+  );
+}
+
+/* Dùng 100dvh khi trình duyệt hỗ trợ (tính đúng trừ browser chrome mobile) */
+@supports (height: 100dvh) {
+  .xq-board-wrap {
+    width: min(
+      calc(100vw - 24px),
+      calc((100dvh - 120px) * 9 / 10),
+      720px
+    );
+  }
 }
 
 .xq-board {
@@ -24,25 +40,71 @@
   aspect-ratio: 9 / 10;     /* viewBox 540×600 */
 }
 
-@media (max-width: 600px) {
-  .xq-board-wrap { padding: 8px; border-radius: 12px; }
+/* Mobile (<768px): top bar 60px + actions 56px = 116px */
+@media (max-width: 767px) {
+  .xq-board-wrap {
+    padding: 8px;
+    border-radius: 12px;
+    width: min(
+      calc(100vw - 16px),
+      calc((100vh - 124px) * 9 / 10),
+      480px
+    );
+  }
+  @supports (height: 100dvh) {
+    .xq-board-wrap {
+      width: min(
+        calc(100vw - 16px),
+        calc((100dvh - 124px) * 9 / 10),
+        480px
+      );
+    }
+  }
 }
 
-/* Desktop: trừ top bar 52px + actions 56px = 108px, cộng padding board stage */
-@media (min-width: 1100px) {
-  .xq-board-wrap {
-    width: min(100%, calc((100vh - 120px) * 9 / 10), 680px);
-  }
+/* Mobile nhỏ (<400px) */
+@media (max-width: 400px) {
+  .xq-board-wrap { padding: 5px; border-radius: 8px; }
 }
-/* Tablet */
+
+/* Tablet (768-1099px): top bar 60px + actions 56px = 116px */
 @media (min-width: 768px) and (max-width: 1099px) {
   .xq-board-wrap {
-    width: min(100%, calc((100vh - 108px) * 9 / 10), 580px);
+    width: min(
+      calc(100vw - 24px),
+      calc((100vh - 124px) * 9 / 10),
+      560px
+    );
+  }
+  @supports (height: 100dvh) {
+    .xq-board-wrap {
+      width: min(
+        calc(100vw - 24px),
+        calc((100dvh - 124px) * 9 / 10),
+        560px
+      );
+    }
   }
 }
-/* Mobile nhỏ */
-@media (max-width: 480px) {
-  .xq-board-wrap { padding: 6px; }
+
+/* Desktop (≥1100px): top bar 52px + actions 56px + padding = 120px */
+@media (min-width: 1100px) {
+  .xq-board-wrap {
+    width: min(
+      calc(100% - 24px),
+      calc((100vh - 120px) * 9 / 10),
+      660px
+    );
+  }
+  @supports (height: 100dvh) {
+    .xq-board-wrap {
+      width: min(
+        calc(100% - 24px),
+        calc((100dvh - 120px) * 9 / 10),
+        660px
+      );
+    }
+  }
 }
 
 .xq-board-bg { fill: var(--xq-board-paper); }

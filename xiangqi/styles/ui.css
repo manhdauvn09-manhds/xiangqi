@@ -189,13 +189,16 @@ main#app {
     "side"
     "moves";
   height: 100vh;
+  height: 100dvh; /* dynamic: trừ browser chrome mobile */
   max-height: 100vh;
+  max-height: 100dvh;
   overflow: hidden;
 }
 /* Prevent body scroll during game */
 body:has(.xq-game) {
   overflow: hidden;
   height: 100vh;
+  height: 100dvh;
 }
 /* Game content wrapper - display: contents unwraps it for grid layout */
 .xq-game-content {
