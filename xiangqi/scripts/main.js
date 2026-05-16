@@ -14,6 +14,7 @@ import { renderReplayPage } from './ui/replay-page.js';
 import { renderProfilePage } from './ui/profile-page.js';
 import { renderDailyPage } from './ui/daily-page.js';
 import { renderDailyChessPage } from './ui/daily-chess-page.js';
+import { getStreak, getLevel, getDailyProgress, dateKey } from './puzzles/chess-bank.js';
 import { renderLeaderboardPage } from './ui/leaderboard-page.js';
 import { renderCreateRoomPage } from './ui/create-room-page.js';
 import { renderOnlinePage } from './ui/online-page.js';
@@ -257,10 +258,10 @@ function renderHome(root) {
         <h3>${esc(t('mode.daily'))}</h3>
         <p>${esc(t('daily.find_mate', { n: '?' }))}</p>
       </a>
-      <a class="xq-mode" href="#/chess-daily">
+      <a class="xq-mode" href="#/chess-daily" id="chessDailyCard">
         <div class="ico">♟️</div>
         <h3>Chess Daily</h3>
-        <p>Train with 300+ diverse chess puzzles · Level 1-100</p>
+        <div id="chessDailyProgress"></div>
       </a>
       <a class="xq-mode" href="#/tournament">
         <div class="ico">🏆</div>
@@ -279,6 +280,32 @@ function renderHome(root) {
       </a>
     </section>
   `;
+
+  // Chess Daily progress card
+  const cdProgress = document.getElementById('chessDailyProgress');
+  if (cdProgress) {
+    const streak  = getStreak();
+    const level   = getLevel();
+    const progress = getDailyProgress();
+    const todayKey = dateKey(new Date());
+    const doneToday = progress[todayKey]?.completed;
+    // Streak bar: last 10 days
+    let barHtml = '';
+    for (let i = 9; i >= 0; i--) {
+      const d = new Date(); d.setDate(d.getDate() - i);
+      const k = dateKey(d);
+      const done = progress[k]?.completed;
+      barHtml += `<span style="display:inline-block;width:10px;height:10px;border-radius:2px;
+        background:${done ? '#50fa7b' : 'rgba(255,255,255,0.15)'};margin:1px"></span>`;
+    }
+    cdProgress.innerHTML = `
+      <div style="font-size:11px;color:#aaa;margin-top:2px">
+        ${doneToday ? '✅ Done today' : '🎯 Play now'} ·
+        🔥 ${streak} day${streak!==1?'s':''} · Lv ${level}/100
+      </div>
+      <div style="margin-top:4px">${barHtml}</div>
+    `;
+  }
 
   document.getElementById('ctaResumeGame')?.addEventListener('click', () => {
     sessionStorage.removeItem('xq_pending_game');
