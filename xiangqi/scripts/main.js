@@ -13,6 +13,7 @@ import { renderHistoryPage } from './ui/history-page.js';
 import { renderReplayPage } from './ui/replay-page.js';
 import { renderProfilePage } from './ui/profile-page.js';
 import { renderDailyPage } from './ui/daily-page.js';
+import { renderDailyChessPage } from './ui/daily-chess-page.js';
 import { renderLeaderboardPage } from './ui/leaderboard-page.js';
 import { renderCreateRoomPage } from './ui/create-room-page.js';
 import { renderOnlinePage } from './ui/online-page.js';
@@ -200,6 +201,7 @@ function applyRoute() {
   if (hash.startsWith('#/history'))     return renderHistoryPage(root);
   if (hash.startsWith('#/replay/'))     return renderReplayPage(root, hash.slice('#/replay/'.length));
   if (hash.startsWith('#/profile'))     return renderProfilePage(root);
+  if (hash.startsWith('#/chess-daily')) return renderDailyChessPage(root);
   if (hash.startsWith('#/daily'))       return renderDailyPage(root);
   if (hash.startsWith('#/leaderboard')) return renderLeaderboardPage(root);
   if (hash.startsWith('#/create-room')) return renderCreateRoomPage(root);
@@ -254,6 +256,11 @@ function renderHome(root) {
         <div class="ico">🎯</div>
         <h3>${esc(t('mode.daily'))}</h3>
         <p>${esc(t('daily.find_mate', { n: '?' }))}</p>
+      </a>
+      <a class="xq-mode" href="#/chess-daily">
+        <div class="ico">♟️</div>
+        <h3>Chess Daily</h3>
+        <p>Train with 300+ diverse chess puzzles · Level 1-100</p>
       </a>
       <a class="xq-mode" href="#/tournament">
         <div class="ico">🏆</div>
