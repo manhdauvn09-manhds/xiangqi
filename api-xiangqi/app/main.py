@@ -16,13 +16,17 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import re
 import secrets
 import time
+import urllib.parse
 import uuid
 from contextlib import asynccontextmanager
 from datetime import date, datetime
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -33,6 +37,7 @@ from . import auth, db, elo
 from .rate_limit import (
     api_limiter, auth_limiter, move_limiter,
     check_rate_limit, check_ws_rate, get_client_ip,
+    login_failure_tracker, check_email_reset_rate,
 )
 from .anticheat import anticheat, check_elo_anomaly
 from .tournaments import tournament_mgr, TournamentFormat, TournamentStatus
@@ -46,11 +51,11 @@ from . import audit
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     db.get_conn()
-    print('[xq] backend ready - Phase 3')
+    logger.info('[xq] backend ready - Phase 3')
     yield
     # Cleanup on shutdown
     db.close_conn()
-    print('[xq] backend shutdown - database closed')
+    logger.info('[xq] backend shutdown - database closed')
 
 
 app = FastAPI(title='Cờ Tướng Vương Backend', version='0.3.0', lifespan=lifespan)
@@ -59,6 +64,11 @@ import os
 # CORS: restrict to known origins. Default to localhost for dev
 CORS_ORIGINS_STR = os.getenv('CORS_ORIGINS', 'http://localhost:3000,http://localhost:5173')
 CORS_ORIGINS = [o.strip() for o in CORS_ORIGINS_STR.split(',') if o.strip()]
+
+# Không cho phép wildcard khi credentials=True — sẽ bị browser block và tạo lỗ hổng CSRF
+if '*' in CORS_ORIGINS:
+    logger.error('CORS_ORIGINS chứa wildcard "*" với allow_credentials=True — không hợp lệ, xóa "*"')
+    CORS_ORIGINS = [o for o in CORS_ORIGINS if o != '*']
 
 app.add_middleware(
     CORSMiddleware,
@@ -195,13 +205,23 @@ async def register(body: RegisterIn, req: Request):
 
 @app.post('/api/auth/login')
 async def login(body: LoginIn, req: Request):
+    # Kiểm tra account lockout trước khi query DB (tránh timing attack)
+    if login_failure_tracker.is_locked(body.email):
+        audit.log_auth('login', body.email, False, get_client_ip(req), 'account_locked')
+        raise HTTPException(429, 'account_temporarily_locked')
+
     user = auth.get_user_by_email(body.email)
     if not user or not user.get('password_hash'):
+        login_failure_tracker.record_failure(body.email)
         audit.log_auth('login', body.email, False, get_client_ip(req), 'invalid_credentials')
         raise HTTPException(401, 'bad_credentials')
     if not auth.verify_password(body.password, user['password_hash']):
+        login_failure_tracker.record_failure(body.email)
         audit.log_auth('login', body.email, False, get_client_ip(req), 'password_mismatch')
         raise HTTPException(401, 'bad_credentials')
+
+    # Đăng nhập thành công — xóa failure record
+    login_failure_tracker.clear(body.email)
     token = auth.create_jwt(user['id'])
     db.execute('UPDATE users SET last_seen_at = ? WHERE id = ?', (int(time.time()), user['id']))
     audit.log_auth('login', body.email, True, get_client_ip(req), f'user_id={user["id"]}')
@@ -294,6 +314,9 @@ class ForgotPasswordIn(BaseModel):
 @app.post('/api/auth/forgot-password')
 async def forgot_password(body: ForgotPasswordIn):
     """Send password reset email. Always returns OK to not leak emails."""
+    # Rate limit per email: max 3 lần/giờ — tránh email bombing
+    if not check_email_reset_rate(body.email):
+        raise HTTPException(429, 'too_many_reset_requests')
     email_service.request_password_reset(body.email)
     return {'ok': True, 'message': 'reset_email_sent_if_exists'}
 
@@ -344,23 +367,49 @@ class PatchMe(BaseModel):
     avatar_url: str | None = None
 
 
+def _validate_avatar_url(url: str) -> str | None:
+    """Chỉ cho phép http/https URL, max 300 chars. Trả None nếu không hợp lệ."""
+    url = url.strip()[:300]
+    try:
+        parsed = urllib.parse.urlparse(url)
+        if parsed.scheme not in ('http', 'https'):
+            return None
+        if not parsed.netloc:
+            return None
+        return url
+    except Exception:
+        return None
+
+
+# Whitelist cột được phép update — tránh SQL injection qua field name động
+_PATCH_ME_ALLOWED_COLS = {'display_name', 'lang', 'theme', 'avatar_url'}
+
+
 @app.patch('/api/me')
 async def patch_me(body: PatchMe, req: Request):
     user = require_user(req)
-    fields = []
-    params = []
+    updates: dict[str, object] = {}
+
     if body.display_name is not None:
-        fields.append('display_name = ?'); params.append(body.display_name.strip())
+        updates['display_name'] = body.display_name.strip()
     if body.lang in ('vi', 'en'):
-        fields.append('lang = ?'); params.append(body.lang)
+        updates['lang'] = body.lang
     if body.theme in ('light', 'dark', 'auto'):
-        fields.append('theme = ?'); params.append(body.theme)
+        updates['theme'] = body.theme
     if body.avatar_url is not None:
-        fields.append('avatar_url = ?'); params.append(body.avatar_url[:300])
-    if not fields:
+        valid_url = _validate_avatar_url(body.avatar_url)
+        if valid_url is None:
+            raise HTTPException(400, 'invalid_avatar_url')
+        updates['avatar_url'] = valid_url
+
+    if not updates:
         return {'ok': True}
-    params.append(user['id'])
-    db.execute(f"UPDATE users SET {', '.join(fields)} WHERE id = ?", params)
+
+    # Chỉ cho phép các cột trong whitelist
+    assert all(k in _PATCH_ME_ALLOWED_COLS for k in updates), 'unexpected column'
+    set_clause = ', '.join(f'{col} = ?' for col in updates)
+    params = list(updates.values()) + [user['id']]
+    db.execute(f"UPDATE users SET {set_clause} WHERE id = ?", params)
     return {'ok': True, 'user': _public_user(auth.get_user_by_id(user['id']))}
 
 
@@ -1001,6 +1050,12 @@ async def ws_endpoint(ws: WebSocket):
         while True:
             raw = await ws.receive_text()
 
+            # Giới hạn kích thước message — tránh memory exhaustion
+            if len(raw) > 10_240:  # 10KB
+                audit.log_security_event('ws_oversized', user_id, f'Message too large: {len(raw)} bytes')
+                await _send(user_id, {'type': 'error', 'code': 'message_too_large'})
+                continue
+
             # Rate limit WebSocket messages
             if not check_ws_rate(f'ws:{user_id}'):
                 audit.log_security_event('ws_rate_limit', user_id, 'WebSocket rate limit exceeded')
@@ -1063,7 +1118,7 @@ async def ws_endpoint(ws: WebSocket):
                 if not ok:
                     await _send(user_id, {'type': 'error', 'code': 'illegal_move', 'detail': err})
                     # Log suspicious illegal move attempts
-                    print(f'[anticheat] ILLEGAL move from uid={user_id} game={gid}: {err}')
+                    logger.warning('[anticheat] ILLEGAL move uid=%s game=%s: %s', user_id, gid, err)
                     continue
 
                 # Record move timing for anti-cheat
@@ -1176,7 +1231,7 @@ async def ws_endpoint(ws: WebSocket):
                     _archive_live_game(g, winner=result['winner'], reason=result['reason'])
                 else:
                     # Client claims game ended but server disagrees — log
-                    print(f'[anticheat] Client claimed game.end but server disagrees: {gid}')
+                    logger.warning('[anticheat] Client claimed game.end but server disagrees: %s', gid)
                     await _send(user_id, {'type': 'error', 'code': 'game_not_ended'})
 
     except WebSocketDisconnect:
@@ -1185,7 +1240,7 @@ async def ws_endpoint(ws: WebSocket):
         try: await ws.close(code=4003)
         except: pass
     except Exception as ex:
-        print('[ws] error', ex)
+        logger.exception('[ws] unhandled error: %s', ex)
         try: await ws.close()
         except: pass
     finally:
@@ -1261,7 +1316,8 @@ def _archive_live_game(g: dict, winner: str | None, reason: str):
                 'VALUES (?, ?, ?, ?, 1, ?)',
                 (gid, uid, ac['suspicion_score'], json.dumps(ac['reasons']), int(time.time()))
             )
-            print(f'[anticheat] FLAGGED user={uid} game={gid} score={ac["suspicion_score"]} reasons={ac["reasons"]}')
+            logger.warning('[anticheat] FLAGGED user=%s game=%s score=%s reasons=%s',
+                           uid, gid, ac['suspicion_score'], ac['reasons'])
     anticheat.end_game(gid)
 
     GAMES.pop(gid, None)

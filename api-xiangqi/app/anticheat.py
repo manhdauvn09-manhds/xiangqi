@@ -10,11 +10,17 @@ Real production systems would also log data for manual review.
 """
 from __future__ import annotations
 
+import logging
 import math
 import time
 from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Any
+
+logger = logging.getLogger(__name__)
+
+_PROFILE_MAX_AGE_SECONDS = 6 * 3600  # xóa profile sau 6 giờ (game kết thúc)
+_PROFILE_MAX_COUNT = 500             # giới hạn số game đang theo dõi
 
 
 @dataclass
@@ -48,13 +54,16 @@ class AntiCheatEngine:
 
     def __init__(self):
         self._profiles: dict[str, dict[int, PlayerGameProfile]] = {}  # game_id → {uid → profile}
+        self._created_at: dict[str, float] = {}  # game_id → creation timestamp
 
     def start_game(self, game_id: str, red_uid: int, black_uid: int):
         """Initialize tracking for a new game."""
+        self._cleanup()  # Dọn profile cũ trước khi thêm mới
         self._profiles[game_id] = {
             red_uid: PlayerGameProfile(user_id=red_uid),
             black_uid: PlayerGameProfile(user_id=black_uid),
         }
+        self._created_at[game_id] = time.monotonic()
 
     def record_move(self, game_id: str, user_id: int, move_time_ms: float,
                     is_capture: bool = False, is_check: bool = False):
@@ -133,16 +142,35 @@ class AntiCheatEngine:
         return min(1.0, score), reasons
 
     def end_game(self, game_id: str):
-        """Clean up after game analysis."""
+        """Clean up sau khi game kết thúc và đã analyze."""
         self._profiles.pop(game_id, None)
+        self._created_at.pop(game_id, None)
 
-    def cleanup_stale(self, max_age_seconds: int = 7200):
-        """Remove profiles for games older than max_age."""
-        # In a real system, we'd track creation time. For now, just cap the dict size.
-        if len(self._profiles) > 1000:
-            oldest = list(self._profiles.keys())[:500]
-            for k in oldest:
-                del self._profiles[k]
+    def _cleanup(self):
+        """Xóa profile cũ (>6 giờ) và giới hạn số lượng tối đa."""
+        now = time.monotonic()
+        # Xóa profile hết hạn theo thời gian
+        expired = [
+            gid for gid, ts in self._created_at.items()
+            if now - ts > _PROFILE_MAX_AGE_SECONDS
+        ]
+        for gid in expired:
+            self._profiles.pop(gid, None)
+            self._created_at.pop(gid, None)
+        if expired:
+            logger.debug('[anticheat] cleanup: removed %d expired game profiles', len(expired))
+
+        # Hard cap: nếu vẫn vượt giới hạn, xóa theo FIFO
+        if len(self._profiles) > _PROFILE_MAX_COUNT:
+            overflow = list(self._profiles.keys())[:len(self._profiles) - _PROFILE_MAX_COUNT]
+            for gid in overflow:
+                self._profiles.pop(gid, None)
+                self._created_at.pop(gid, None)
+            logger.warning('[anticheat] memory cap hit: removed %d overflow profiles', len(overflow))
+
+    def cleanup_stale(self, max_age_seconds: int = _PROFILE_MAX_AGE_SECONDS):
+        """Public API — gọi _cleanup (backward compatible)."""
+        self._cleanup()
 
 
 # ── Singleton ──

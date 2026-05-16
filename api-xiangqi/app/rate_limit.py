@@ -81,6 +81,59 @@ ws_limiter = RateLimiter(rate=20.0, burst=50)
 # Game moves: 5 moves/s (enough for fast play)
 move_limiter = RateLimiter(rate=5.0, burst=10)
 
+# Per-email password reset: max 3 lần / giờ
+_email_reset_limiter = RateLimiter(rate=1/1200.0, burst=3)  # 1 token/20 phút, burst 3
+
+
+def check_email_reset_rate(email: str) -> bool:
+    """Trả False nếu email đã vượt giới hạn yêu cầu reset password (3 lần/giờ)."""
+    allowed, _ = _email_reset_limiter.allow(f'reset:{email.lower()}')
+    return allowed
+
+
+# ── Per-account login failure tracker ──────────────────────
+
+_LOGIN_MAX_FAILURES = 5
+_LOGIN_LOCKOUT_SECONDS = 15 * 60  # 15 phút
+
+
+class _LoginFailureTracker:
+    """Track số lần đăng nhập thất bại theo email. Lock sau N lần trong cửa sổ thời gian."""
+
+    def __init__(self):
+        # email_lower → (count, first_failure_ts)
+        self._failures: dict[str, tuple[int, float]] = {}
+
+    def is_locked(self, email: str) -> bool:
+        """Trả True nếu account đang bị tạm khóa."""
+        key = email.lower()
+        entry = self._failures.get(key)
+        if not entry:
+            return False
+        count, first_ts = entry
+        if time.monotonic() - first_ts > _LOGIN_LOCKOUT_SECONDS:
+            # Cửa sổ đã hết — reset
+            del self._failures[key]
+            return False
+        return count >= _LOGIN_MAX_FAILURES
+
+    def record_failure(self, email: str) -> None:
+        """Ghi nhận thất bại. Không gọi khi đăng nhập thành công."""
+        key = email.lower()
+        now = time.monotonic()
+        entry = self._failures.get(key)
+        if not entry or now - entry[1] > _LOGIN_LOCKOUT_SECONDS:
+            self._failures[key] = (1, now)
+        else:
+            self._failures[key] = (entry[0] + 1, entry[1])
+
+    def clear(self, email: str) -> None:
+        """Xóa failure record khi đăng nhập thành công."""
+        self._failures.pop(email.lower(), None)
+
+
+login_failure_tracker = _LoginFailureTracker()
+
 
 def get_client_ip(req: Request) -> str:
     """Extract client IP, respecting X-Forwarded-For in production."""

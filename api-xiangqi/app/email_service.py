@@ -10,12 +10,18 @@ The actual email sending is stubbed with console logging.
 from __future__ import annotations
 
 import hashlib
+import logging
 import secrets
 import time
 from dataclasses import dataclass
 from typing import Any
 
 from . import auth, db
+
+logger = logging.getLogger(__name__)
+
+# Rate limit: mỗi user chỉ được tạo 1 token / 60 giây
+_TOKEN_RATE_WINDOW = 60  # seconds
 
 # ── Token Store ──────────────────────────
 
@@ -38,16 +44,26 @@ class TokenStore:
 
     def __init__(self):
         self._tokens: dict[str, Token] = {}
+        # Theo dõi thời điểm tạo token gần nhất theo user_id+purpose
+        self._last_created: dict[tuple[int, str], float] = {}
 
-    def create(self, user_id: int, purpose: str) -> str:
-        """Create a new token. Returns the raw token string."""
+    def create(self, user_id: int, purpose: str) -> str | None:
+        """Create a new token. Returns raw token, hoặc None nếu rate limited."""
+        key = (user_id, purpose)
+        now = time.time()
+        last = self._last_created.get(key, 0)
+        if now - last < _TOKEN_RATE_WINDOW:
+            logger.warning('Token rate limit: user_id=%s purpose=%s', user_id, purpose)
+            return None  # Caller tự quyết định trả lỗi hay im lặng
+
         raw = secrets.token_urlsafe(32)
         hashed = self._hash(raw)
         ttl = TOKEN_TTL_VERIFY if purpose == 'verify' else TOKEN_TTL_RESET
         self._tokens[hashed] = Token(
             token=hashed, user_id=user_id, purpose=purpose,
-            created_at=time.time(), ttl=ttl,
+            created_at=now, ttl=ttl,
         )
+        self._last_created[key] = now
         self._cleanup()
         return raw
 
@@ -103,18 +119,14 @@ token_store = TokenStore()
 def send_verification_email(email: str, token: str, base_url: str = ''):
     """Send email verification link. STUB: logs to console."""
     verify_url = f'{base_url}/games/xiangqi/#/verify?token={token}'
-    print(f'[email] VERIFICATION to {email}:')
-    print(f'  Link: {verify_url}')
-    print(f'  (In production, this would send a real email)')
+    logger.info('[email] VERIFICATION to %s — link: %s', email, verify_url)
     # In production: use aiosmtplib or httpx to call SendGrid/SES API
 
 
 def send_password_reset_email(email: str, token: str, base_url: str = ''):
     """Send password reset link. STUB: logs to console."""
     reset_url = f'{base_url}/games/xiangqi/#/reset-password?token={token}'
-    print(f'[email] PASSWORD RESET to {email}:')
-    print(f'  Link: {reset_url}')
-    print(f'  (In production, this would send a real email)')
+    logger.info('[email] PASSWORD RESET to %s — link: %s', email, reset_url)
 
 
 # ═════════════════════════════════════════════
@@ -122,13 +134,15 @@ def send_password_reset_email(email: str, token: str, base_url: str = ''):
 # ═════════════════════════════════════════════
 
 def request_email_verification(user_id: int) -> str | None:
-    """Create verification token and send email. Returns token (for testing)."""
+    """Create verification token and send email. Returns token (for testing), None nếu rate limited."""
     user = auth.get_user_by_id(user_id)
     if not user:
         return None
     # Invalidate old tokens
     token_store.invalidate_user(user_id, 'verify')
     raw = token_store.create(user_id, 'verify')
+    if raw is None:
+        return None  # Rate limited — caller im lặng để tránh lộ thông tin
     send_verification_email(user['email'], raw)
     return raw
 
@@ -146,12 +160,14 @@ def verify_email(raw_token: str) -> tuple[bool, str]:
 
 
 def request_password_reset(email: str) -> str | None:
-    """Create reset token and send email. Returns token (for testing)."""
+    """Create reset token and send email. Returns token (for testing), None nếu not found / rate limited."""
     user = auth.get_user_by_email(email)
     if not user:
         return None  # Don't reveal if email exists
     token_store.invalidate_user(user['id'], 'reset')
     raw = token_store.create(user['id'], 'reset')
+    if raw is None:
+        return None  # Rate limited — im lặng để không lộ thông tin
     send_password_reset_email(email, raw)
     return raw
 

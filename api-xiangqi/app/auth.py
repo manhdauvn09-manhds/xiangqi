@@ -1,8 +1,10 @@
 """Auth: scrypt password hashing + JWT."""
 import hashlib
 import hmac
+import logging
 import os
 import secrets
+import sys
 import time
 from typing import Any
 
@@ -10,7 +12,19 @@ import jwt
 
 from . import db
 
-JWT_SECRET = os.getenv('XQ_JWT_SECRET') or secrets.token_hex(32)
+logger = logging.getLogger(__name__)
+
+_jwt_secret_env = os.getenv('XQ_JWT_SECRET')
+_is_production = os.getenv('XQ_ENV', '').lower() in ('production', 'prod')
+
+if _is_production and not _jwt_secret_env:
+    logger.critical('XQ_JWT_SECRET phải được set trong môi trường production. Dừng server.')
+    sys.exit(1)
+
+if not _jwt_secret_env:
+    logger.warning('XQ_JWT_SECRET không được set — dùng secret ngẫu nhiên (chỉ hợp lệ cho dev/single-process)')
+
+JWT_SECRET: str = _jwt_secret_env or secrets.token_hex(32)
 JWT_TTL_DAYS = int(os.getenv('XQ_JWT_TTL_DAYS', '30'))
 JWT_ALG = 'HS256'
 
