@@ -394,6 +394,7 @@ function renderPlay(root) {
       </div>
 
       <div class="xq-game-content" style="display:none" id="gameContent">
+        <!-- TOP BAR: opponent left · status center · user right -->
         <div class="xq-side">
           <div class="xq-player ${cfg.userSide==='b'?'red':''}">
             <div class="av">${isOnline ? esc((cfg.opponent?.displayName || '?').slice(0,2).toUpperCase()) : '🤖'}</div>
@@ -403,15 +404,7 @@ function renderPlay(root) {
             </div>
           </div>
           <div class="xq-status" id="xqStatus">…</div>
-          <div class="xq-actions">
-            <button class="btn btn-sm" id="btnHint" title="${esc(t('btn.hint'))}" data-emoji="💡">💡 ${esc(t('btn.hint'))}</button>
-            <button class="btn btn-sm" id="btnTakeback" title="${esc(t('btn.takeback'))}" data-emoji="↺">↺ ${esc(t('btn.takeback.short'))}</button>
-            <button class="btn btn-sm" id="btnFlip" data-emoji="🔁">🔁 ${esc(t('btn.flip'))}</button>
-            <button class="btn btn-sm" id="btnNew" data-emoji="🆕">🆕 ${esc(t('btn.new_game'))}</button>
-            <button class="btn btn-sm btn-danger" id="btnResign" data-emoji="🚩">🚩 ${esc(t('btn.resign'))}</button>
-            <button class="btn btn-sm btn-ghost" id="btnBackHome" data-emoji="🏠">🏠 ${esc(t('btn.back_home'))}</button>
-          </div>
-          ${isBlind ? `<div class="alert warn" style="margin:0;font-size:12px;padding:8px 10px">🎴 ${esc(t('variant.blind'))} — ${esc('chạm quân úp để lật, hoặc chọn quân đã lật để đi')}</div>` : ''}
+          ${isBlind ? `<div class="alert warn xq-blind-badge">🎴 Blind</div>` : ''}
           <div class="xq-player ${cfg.userSide==='r'?'red':''}">
             <div class="av">${esc((profile.name||'You').slice(0,2).toUpperCase())}</div>
             <div>
@@ -420,8 +413,18 @@ function renderPlay(root) {
             </div>
           </div>
         </div>
+        <!-- BOARD + ACTIONS BELOW BOARD -->
         <div class="xq-board-stage">
           <div class="xq-board-wrap" id="xqBoardHost"></div>
+          <div class="xq-actions">
+            <button class="btn btn-sm" id="btnHint" title="${esc(t('btn.hint'))}" data-emoji="💡">💡 ${esc(t('btn.hint'))}</button>
+            <button class="btn btn-sm" id="btnTakeback" title="${esc(t('btn.takeback'))}" data-emoji="↺">↺ ${esc(t('btn.takeback.short'))}</button>
+            <button class="btn btn-sm" id="btnFlip" data-emoji="🔁">🔁 ${esc(t('btn.flip'))}</button>
+            <button class="btn btn-sm" id="btnNew" data-emoji="🆕">🆕 ${esc(t('btn.new_game'))}</button>
+            <button class="btn btn-sm btn-danger" id="btnResign" data-emoji="🚩">🚩 ${esc(t('btn.resign'))}</button>
+            <button class="btn btn-sm btn-ghost" id="btnBackHome" data-emoji="🏠">🏠 ${esc(t('btn.back_home'))}</button>
+            <button class="btn btn-sm btn-ghost" id="btnFullscreen" data-emoji="⛶" title="Fullscreen">⛶</button>
+          </div>
         </div>
         <div class="xq-moves" id="xqMovesPanel">
           <div class="head">${esc(t('log.title'))}</div>
@@ -465,6 +468,28 @@ function renderPlay(root) {
       },
       cfg
     );
+
+    // Fullscreen button handler
+    const btnFS = document.getElementById('btnFullscreen');
+    if (btnFS) {
+      btnFS.addEventListener('click', () => {
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen?.();
+          btnFS.setAttribute('data-emoji', '✕');
+          btnFS.title = 'Exit Fullscreen';
+        } else {
+          document.exitFullscreen?.();
+          btnFS.setAttribute('data-emoji', '⛶');
+          btnFS.title = 'Fullscreen';
+        }
+      });
+      document.addEventListener('fullscreenchange', () => {
+        if (!document.fullscreenElement) {
+          btnFS.setAttribute('data-emoji', '⛶');
+          btnFS.title = 'Fullscreen';
+        }
+      });
+    }
   });
 }
 

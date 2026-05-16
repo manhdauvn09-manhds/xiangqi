@@ -202,12 +202,13 @@ main#app {
 
 /* ══════════════════════════════════════════════════════
    GAME LAYOUT: Mobile + Tablet (< 1100px)
-   Top bar (52px) = player info
-   Board = fills 100vh minus top+bottom bars
-   Bottom bar (52px) = action buttons
+   TOP BAR (60px fixed): opponent · status · user
+   BOARD STAGE: fills remaining height, flex-col
+     └─ board canvas (flex:1, max square)
+     └─ actions row (6 circular buttons, centered below board)
+   MOVES: slide-up drawer
    ══════════════════════════════════════════════════════ */
 @media (max-width: 1099px) {
-  /* Grid: board only, side/moves handled via fixed positioning */
   .xq-game {
     grid-template-areas: "board";
     grid-template-columns: 1fr;
@@ -216,11 +217,11 @@ main#app {
     overflow: hidden;
   }
 
-  /* TOP BAR: fixed, shows both players + status */
+  /* TOP BAR: fixed 60px — opponent | status | user */
   .xq-side {
     position: fixed;
     top: 0; left: 0; right: 0;
-    height: 52px;
+    height: 60px;
     display: flex;
     flex-direction: row;
     align-items: center;
@@ -239,14 +240,14 @@ main#app {
     border: none; border-radius: 6px;
   }
   .xq-side .xq-player .av {
-    width: 28px; height: 28px;
-    font-size: 11px; border-radius: 6px; flex-shrink: 0;
+    width: 30px; height: 30px;
+    font-size: 11px; border-radius: 8px; flex-shrink: 0;
   }
   .xq-side .xq-player .name { font-size: 12px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .xq-side .xq-player .meta { font-size: 10px; white-space: nowrap; }
   .xq-side .xq-status {
     flex: 0 0 auto;
-    padding: 3px 8px;
+    padding: 4px 10px;
     font-size: 11px;
     border-radius: 6px;
     background: var(--xq-bg-glass);
@@ -255,38 +256,60 @@ main#app {
     color: var(--xq-gold);
     font-weight: 600;
   }
-  /* Hide second player card (space-constrained; opponent shown left side) */
-  .xq-side .xq-player:last-child { display: none; }
-  .xq-side .alert { display: none !important; }
+  .xq-blind-badge { font-size: 10px; padding: 2px 6px; }
+  .xq-side .alert:not(.xq-blind-badge) { display: none !important; }
 
-  /* BOTTOM BAR: fixed, action buttons as circular icons */
-  .xq-side .xq-actions {
-    position: fixed;
-    bottom: 0; left: 0; right: 0;
-    height: 52px;
+  /* BOARD STAGE: fills 100vh minus top bar, flex-col */
+  .xq-board-stage {
+    grid-area: board;
+    width: 100%;
+    height: 100vh;
+    padding-top: 60px; /* below top bar */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    background: var(--xq-bg-base);
+    gap: 0;
+  }
+
+  /* Board canvas: takes available space, stays square */
+  .xq-board-stage .xq-board-wrap {
+    flex: 1;
+    width: 100%;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ACTIONS ROW: centered below board, NOT fixed */
+  .xq-board-stage .xq-actions {
+    flex: 0 0 auto;
+    width: 100%;
     display: flex;
     flex-direction: row;
     align-items: center;
     justify-content: center;
     gap: 10px;
-    padding: 0 12px;
+    padding: 8px 12px;
     background: var(--xq-bg-base);
     border-top: 1px solid var(--xq-border);
-    z-index: 50;
   }
-  .xq-side .xq-actions .btn {
+  .xq-board-stage .xq-actions .btn {
     width: 40px; height: 40px; min-width: 40px;
     padding: 0;
     border-radius: 50%;
     flex: 0 0 auto;
-    font-size: 0; /* hide text */
+    font-size: 0;
     display: flex !important;
     align-items: center;
     justify-content: center;
     position: relative;
     overflow: hidden;
   }
-  .xq-side .xq-actions .btn::after {
+  .xq-board-stage .xq-actions .btn::after {
     content: attr(data-emoji);
     font-size: 18px;
     line-height: 1;
@@ -295,31 +318,17 @@ main#app {
     transform: translate(-50%, -50%);
   }
 
-  /* BOARD: fills space between top and bottom bars */
-  .xq-board-stage {
-    grid-area: board;
-    width: 100%;
-    height: 100vh;
-    padding: 52px 8px 52px 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-sizing: border-box;
-    background: var(--xq-bg-base);
-  }
-
-  /* MOVES LOG: slide-up drawer above bottom bar */
+  /* MOVES LOG: slide-up drawer */
   .xq-moves {
     position: fixed;
-    bottom: 52px; left: 0; right: 0;
-    max-height: 40vh;
-    margin: 0;
-    border-radius: 16px 16px 0 0;
+    bottom: 0; left: 0; right: 0;
+    max-height: 45vh;
     z-index: 49;
     transform: translateY(100%);
     transition: transform .3s ease-out;
     background: var(--xq-bg-surface);
     border: 1px solid var(--xq-border);
+    border-radius: 16px 16px 0 0;
     overflow: hidden;
     display: flex;
     flex-direction: column;
@@ -327,25 +336,22 @@ main#app {
   .xq-moves.show { transform: translateY(0); }
   .xq-moves .head {
     padding: 12px 14px;
-    cursor: pointer;
-    user-select: none;
+    cursor: pointer; user-select: none;
     background: var(--xq-bg-surface);
-    font-weight: 700;
-    text-align: center;
-    font-size: 13px;
+    font-weight: 700; text-align: center; font-size: 13px;
     border-top: 2px solid var(--xq-primary);
     flex-shrink: 0;
   }
-  .xq-moves .head::before { content: "▲ "; font-size: 11px; font-weight: bold; }
+  .xq-moves .head::before { content: "▲ "; font-size: 11px; }
   .xq-moves.show .head::before { content: "▼ "; }
   .xq-moves > div:not(.head) { flex: 1; overflow-y: auto; }
   .xq-moves table { font-size: 12px; }
   .xq-moves td { padding: 5px 8px; }
 
-  /* Moves toggle button */
+  /* Moves toggle */
   .xq-mobile-moves-toggle {
     position: fixed;
-    bottom: 60px; right: 12px;
+    bottom: 12px; right: 12px;
     width: 36px; height: 36px;
     border-radius: 50%;
     background: var(--xq-primary);
