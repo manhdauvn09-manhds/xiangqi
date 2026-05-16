@@ -5,9 +5,12 @@
   padding: 14px;
   box-shadow: var(--xq-shadow-2), inset 0 0 0 1px rgba(0,0,0,0.15);
   position: relative;
-  /* Bàn rộng linh hoạt theo viewport.
-     min(...) chọn giá trị nhỏ nhất giữa: 100% column, 92vh*9/10 (đủ cao), 720px (cap) */
-  width: min(100%, calc(92vh * 9 / 10), 720px);
+  /*
+    Trừ top bar (52px) + action row (56px) = 108px
+    Board aspect ratio 9:10 → width = height * 9/10
+    min: không vượt 100% width cột, không vượt chiều cao khả dụng, không quá 720px
+  */
+  width: min(100%, calc((100vh - 108px) * 9 / 10), 720px);
   margin: 0 auto;
   box-sizing: border-box;
 }
@@ -25,17 +28,21 @@
   .xq-board-wrap { padding: 8px; border-radius: 12px; }
 }
 
-/* Trong layout 3 cột (≥1100px): bàn được phép to ~ tối đa 720px hoặc theo cao */
+/* Desktop: trừ top bar 52px + actions 56px = 108px, cộng padding board stage */
 @media (min-width: 1100px) {
   .xq-board-wrap {
-    width: min(100%, calc(85vh * 9 / 10), 720px);
+    width: min(100%, calc((100vh - 120px) * 9 / 10), 680px);
   }
 }
-/* iPad — bàn full width của row trên */
+/* Tablet */
 @media (min-width: 768px) and (max-width: 1099px) {
   .xq-board-wrap {
-    width: min(100%, 620px);
+    width: min(100%, calc((100vh - 108px) * 9 / 10), 580px);
   }
+}
+/* Mobile nhỏ */
+@media (max-width: 480px) {
+  .xq-board-wrap { padding: 6px; }
 }
 
 .xq-board-bg { fill: var(--xq-board-paper); }
