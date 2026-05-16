@@ -696,10 +696,9 @@ export class GameController {
         cancelText: t('btn.cancel'),
       });
       if (!ok) return;
-      // If game is ongoing, resign first
-      if (this.config.mode === 'online') {
-        this.endGame({ ended: true, winner: OPP[this.userSide], reason: 'resign' });
-      }
+      // If game is ongoing, resign first (count as loss for all modes)
+      this.endGame({ ended: true, winner: OPP[this.userSide], reason: 'resign' });
+      return; // endGame will handle navigation after showing result
     }
     this.goHome();
   }
