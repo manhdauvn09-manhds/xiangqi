@@ -299,19 +299,14 @@ export class GameController {
     this.legalForSelected = pseudo.filter(m => {
       applyMove(this.board, m);
       const movedSide = OPP[this.board.side];
-      const ok = !isCheck(this.board, movedSide) && !isFacingGenerals(this.board);
+      let ok = !isCheck(this.board, movedSide) && !isFacingGenerals(this.board);
 
-      // Check if move would create 3rd repetition
+      // Chặn nước đi tạo thế lặp lần 3
       if (ok) {
         const fen = toFEN(this.board);
-        let fenCount = 0;
-        for (const f of this.fenHistory) {
-          if (f === fen) fenCount++;
-        }
-        // If would create 3rd repetition, reject move
-        if (fenCount >= 2) {
-          ok = false;
-        }
+        let count = 0;
+        for (const f of this.fenHistory) { if (f === fen) count++; }
+        if (count >= 2) ok = false; // sẽ là lần thứ 3 → không hợp lệ
       }
 
       undoMove(this.board);

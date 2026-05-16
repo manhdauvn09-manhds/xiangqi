@@ -81,6 +81,7 @@ export default {
   'result.by_stalemate':    'do đối phương hết nước',
   'result.by_resign':       'do đầu hàng',
   'result.by_60_move':      'do 60 nước không bắt quân',
+  'result.by_threefold_repetition': 'do lặp thế cờ 3 lần',
   'result.play_again':      'Chơi lại',
   'result.back_home':       'Về trang chủ',
 

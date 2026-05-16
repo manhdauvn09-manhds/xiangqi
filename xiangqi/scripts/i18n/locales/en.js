@@ -42,6 +42,7 @@ export default {
   'result.by_stalemate': 'opponent has no legal moves',
   'result.by_resign': 'by resignation',
   'result.by_60_move': 'by 60-move rule',
+  'result.by_threefold_repetition': 'by threefold repetition (same position 3×)',
   'result.play_again': 'Play again', 'result.back_home': 'Back to home',
 
   'log.title': 'Move log', 'log.empty': 'No moves yet',

@@ -379,16 +379,39 @@ function evaluatePieceActivity(board, side) {
 
 /** Enhanced evaluation wrapper for levels 8-10 */
 export function evaluateEnhanced(board, side, level) {
-  // Standard evaluation
   let score = evaluate(board, side);
+  if (level < 8) return score;
 
-  // Add enhanced factors for levels 8-10
-  if (level >= 8) {
-    score += evaluatePassedPawns(board, side);
-    score += evaluatePawnStructure(board, side);
-    score += enhancedKingSafety(board, side);
-    score += evaluatePieceActivity(board, side);
+  // Weight scale theo level: L8=1.0, L9=1.3, L10=1.6
+  const w = level === 10 ? 1.6 : level === 9 ? 1.3 : 1.0;
+
+  score += Math.round(evaluatePassedPawns(board, side)  * w);
+  score += Math.round(evaluatePawnStructure(board, side) * w);
+  score += Math.round(enhancedKingSafety(board, side)   * w);
+  score += Math.round(evaluatePieceActivity(board, side) * w);
+
+  // Level 10: thêm bonus mobility (số nước có thể đi)
+  if (level >= 10) {
+    const { generateLegalMoves } = /** @type {any} */ (board._genMoves || {});
+    // Áp dụng mobility bonus đơn giản qua đếm quân chủ động
+    score += mobilityBonus(board, side);
   }
 
   return score;
+}
+
+/** Bonus theo số quân đang hoạt động (không bị chặn) */
+function mobilityBonus(board, side) {
+  const opp = side === 'r' ? 'b' : 'r';
+  let myActive = 0, oppActive = 0;
+  for (let f = 0; f < BOARD_W; f++) {
+    for (let r = 0; r < BOARD_H; r++) {
+      const p = board.squares[f][r];
+      if (!p) continue;
+      // Đếm quân trên cột không bị chặn
+      if (p.side === side && (p.type === 'R' || p.type === 'C' || p.type === 'N')) myActive++;
+      if (p.side === opp  && (p.type === 'R' || p.type === 'C' || p.type === 'N')) oppActive++;
+    }
+  }
+  return (myActive - oppActive) * 8;
 }

@@ -17,15 +17,23 @@ function moveEq(a, b) {
                  && a.to.file === b.to.file && a.to.rank === b.to.rank;
 }
 
-/** Move ordering: TT bestMove → MVV/LVA → killer */
-function orderMoves(board, moves, ttBestMove, killer) {
+/** Move ordering: TT bestMove → captures (MVV/LVA) → history → killer */
+function orderMoves(board, moves, ttBestMove, killer, history) {
   const scored = moves.map(m => {
     const attacker = pieceAt(board, m.from.file, m.from.rank);
     const target   = pieceAt(board, m.to.file, m.to.rank);
     let s = 0;
     if (moveEq(m, ttBestMove)) s += 100000;
-    else if (moveEq(m, killer)) s += 9000;
-    if (target) s += MATERIAL[target.type] * 8 - (MATERIAL[attacker?.type] || 0);
+    else if (target) {
+      // MVV/LVA: ưu tiên bắt quân giá trị cao bằng quân giá trị thấp
+      s += 10000 + MATERIAL[target.type] * 8 - (MATERIAL[attacker?.type] || 0);
+    } else if (moveEq(m, killer)) {
+      s += 9000;
+    } else if (history) {
+      // History heuristic: nước từng gây cutoff được ưu tiên
+      const key = `${m.from.file}${m.from.rank}${m.to.file}${m.to.rank}`;
+      s += Math.min(8000, history[key] || 0);
+    }
     return { m, s };
   });
   scored.sort((a, b) => b.s - a.s);
@@ -79,7 +87,7 @@ function negamax(board, depth, alpha, beta, side, deadline, ctx) {
   }
 
   const killer = ctx.killers[depth];
-  const ordered = orderMoves(board, moves, ttBestMove, killer);
+  const ordered = orderMoves(board, moves, ttBestMove, killer, ctx.history);
   let best = -INF;
   let bestMove = null;
   for (const m of ordered) {
@@ -91,8 +99,14 @@ function negamax(board, depth, alpha, beta, side, deadline, ctx) {
     if (v > best) { best = v; bestMove = m; }
     if (v > alpha) alpha = v;
     if (alpha >= beta) {
-      // killer move heuristic: lưu nước cắt cành non-capture để sắp xếp tốt lần sau
-      if (!pieceAt(board, m.to.file, m.to.rank)) ctx.killers[depth] = m;
+      const isCapture = !!pieceAt(board, m.to.file, m.to.rank);
+      if (!isCapture) {
+        // Killer move
+        ctx.killers[depth] = m;
+        // History heuristic: tăng score theo depth (nước ở depth sâu hơn quan trọng hơn)
+        const key = `${m.from.file}${m.from.rank}${m.to.file}${m.to.rank}`;
+        ctx.history[key] = (ctx.history[key] || 0) + depth * depth;
+      }
       break;
     }
   }
@@ -131,6 +145,7 @@ export function searchBestMove(board, opts = {}) {
     enhancedEval: !!opts.enhancedEval,
     level: opts.level || 7,
     killers: new Array(maxDepth + 2).fill(null),
+    history: {},  // history heuristic: { moveKey → score }
   };
 
   for (let d = 1; d <= maxDepth; d++) {
