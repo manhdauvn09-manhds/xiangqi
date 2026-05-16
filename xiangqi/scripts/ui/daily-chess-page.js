@@ -1,751 +1,493 @@
-// Daily Chess Puzzle Training Mode
-// Full UI with puzzle board, move input, hints, analysis, progress tracking
-
-import { t } from '../i18n/i18n.js';
-import { getDailyChessPuzzle, completePuzzle, skipPuzzle, getSkippedPuzzles, getLevel, getStreak, dateKey } from '../puzzles/chess-bank.js';
-import { Board } from '../core/board.js';
-import { toFEN, fromFEN, isValidMove, applyMove, undoMove } from '../core/board-ops.js';
+/**
+ * Daily Chess Puzzle — Interactive board with 6 states
+ * Uses chess-mini.js for FEN/SAN logic
+ */
+import { getDailyChessPuzzle, getLevel, getStreak, completePuzzle, skipPuzzle as savePuzzleSkip } from '../puzzles/chess-bank.js';
+import { parseFen, PIECE_SYMBOLS, sqToCoord, coordToSq, applyMoveSan, checkUserMove, getMoveSquares, getMovablePieces } from '../chess/chess-mini.js';
 import { toast } from './toast.js';
 
-let currentPuzzle = null;
-let currentBoard = null;
-let moveHistory = [];
-let hintShown = false;
-let puzzleStartTime = 0;
+// ─── Board colors ───────────────────────────────────────────
+const LIGHT      = '#f0d9b5';
+const DARK       = '#b58863';
+const HL_SELECT  = 'rgba(20,85,255,0.45)';
+const HL_HINT    = 'rgba(255,210,0,0.65)';
+const HL_CORRECT = 'rgba(50,205,50,0.55)';
+const HL_WRONG   = 'rgba(220,50,50,0.55)';
+const HL_LAST    = 'rgba(155,199,0,0.4)';
 
 export function renderDailyChessPage(root) {
+  const puzzle = getDailyChessPuzzle(new Date());
+  if (!puzzle) {
+    root.innerHTML = `<div style="padding:40px;text-align:center;color:#fff"><h2>No puzzle available</h2></div>`;
+    return;
+  }
+
+  const startTime = Date.now();
+  let position   = parseFen(puzzle.fen);
+  let stepIndex  = 0;        // which solution move user needs to play
+  let selected   = null;     // { file, rank } currently selected piece
+  let hintUsed   = false;
+  let highlights = {};       // sq → color overlay
+  let lastMove   = null;     // { from:'e2', to:'e4' }
+  let isFlipped  = false;
+  let solved     = false;
+
+  // ─── Root ─────────────────────────────────────────────────
   root.innerHTML = '';
-
-  // Get today's puzzle
-  currentPuzzle = getDailyChessPuzzle(new Date());
-  if (!currentPuzzle) {
-    root.innerHTML = `<div class="xq-daily-error">${t('error_no_puzzle')}</div>`;
-    return;
-  }
-
-  // Initialize board from FEN
-  currentBoard = new Board();
-  fromFEN(currentBoard, currentPuzzle.fen);
-  moveHistory = [];
-  hintShown = false;
-  puzzleStartTime = Date.now();
-
-  // Main layout
-  const page = document.createElement('div');
-  page.className = 'xq-daily-page';
-
-  // Header with progress
-  const header = createHeader();
-  page.appendChild(header);
-
-  // Main content
-  const content = document.createElement('div');
-  content.className = 'xq-daily-content';
-
-  // Board and puzzle info
-  const boardSection = createBoardSection();
-  content.appendChild(boardSection);
-
-  // Controls
-  const controls = createControls();
-  content.appendChild(controls);
-
-  page.appendChild(content);
-  root.appendChild(page);
-
-  // Add CSS styles
-  if (!document.getElementById('daily-chess-styles')) {
-    const style = document.createElement('style');
-    style.id = 'daily-chess-styles';
-    style.textContent = getDailyChessStyles();
-    document.head.appendChild(style);
-  }
-}
-
-function createHeader() {
-  const header = document.createElement('div');
-  header.className = 'xq-daily-header';
-
-  const title = document.createElement('h1');
-  title.className = 'xq-daily-title';
-  title.textContent = '♟️ ' + t('daily_chess_title');
-
-  const progress = document.createElement('div');
-  progress.className = 'xq-daily-progress';
-
-  const streak = getStreak();
-  const level = getLevel();
-
-  const streakText = document.createElement('div');
-  streakText.className = 'xq-daily-streak';
-  streakText.innerHTML = `<span class="xq-streak-label">${t('streak')}:</span> <span class="xq-streak-value">${streak}</span>`;
-
-  const levelText = document.createElement('div');
-  levelText.className = 'xq-daily-level';
-  levelText.innerHTML = `<span class="xq-level-label">${t('level')}:</span> <span class="xq-level-value">${level}/100</span>`;
-
-  progress.appendChild(streakText);
-  progress.appendChild(levelText);
-
-  header.appendChild(title);
-  header.appendChild(progress);
-
-  return header;
-}
-
-function createBoardSection() {
-  const section = document.createElement('div');
-  section.className = 'xq-daily-board-section';
-
-  // Puzzle info
-  const info = document.createElement('div');
-  info.className = 'xq-daily-info';
-
-  const title = document.createElement('h2');
-  title.className = 'xq-puzzle-title';
-  title.textContent = currentPuzzle.title;
-
-  const meta = document.createElement('div');
-  meta.className = 'xq-puzzle-meta';
-  meta.innerHTML = `
-    <span class="xq-puzzle-opening">${currentPuzzle.opening}</span>
-    <span class="xq-puzzle-rating">Rating: ${currentPuzzle.rating}</span>
-    <span class="xq-puzzle-theme">${currentPuzzle.theme}</span>
+  root.style.cssText = `
+    background:#1a1a2e; min-height:100vh;
+    display:flex; flex-direction:column;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; color:#fff;
   `;
 
-  const explanation = document.createElement('p');
-  explanation.className = 'xq-puzzle-explanation';
-  explanation.textContent = currentPuzzle.explanation_en; // TODO: support language toggle
+  // ── Header ─────────────────────────────────────────────────
+  const header = mk('div', `
+    display:flex; justify-content:space-between; align-items:center;
+    padding:10px 16px;
+    background:rgba(255,255,255,0.05);
+    border-bottom:1px solid rgba(255,255,255,0.1);
+    flex-shrink:0;
+  `);
+  header.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px">
+      <a href="#/" style="color:#aaa;font-size:22px;text-decoration:none;line-height:1">←</a>
+      <div>
+        <div style="font-weight:700;font-size:14px">♟️ Chess Daily</div>
+        <div style="font-size:11px;color:#aaa">${esc(puzzle.opening)} · ${esc(puzzle.theme)}</div>
+      </div>
+    </div>
+    <div style="text-align:right;font-size:12px;color:#aaa">
+      <div>🔥 <b style="color:#fff">${getStreak()}</b> day streak</div>
+      <div>Level <b style="color:#fff">${getLevel()}/100</b></div>
+    </div>
+  `;
 
-  info.appendChild(title);
-  info.appendChild(meta);
-  info.appendChild(explanation);
+  // ── Banner ─────────────────────────────────────────────────
+  const banner = mk('div', `
+    padding:9px 16px; font-size:13px; font-weight:600; text-align:center;
+    flex-shrink:0; min-height:38px; display:flex; align-items:center; justify-content:center;
+    transition:background 0.3s, color 0.3s;
+  `);
 
-  // Board visualization
-  const boardContainer = document.createElement('div');
-  boardContainer.className = 'xq-daily-board-container';
-  boardContainer.id = 'xq-daily-board';
+  // ── Puzzle info chips ──────────────────────────────────────
+  const infoBar = mk('div', 'padding:6px 16px; display:flex; gap:6px; flex-wrap:wrap; flex-shrink:0;');
+  infoBar.innerHTML = `
+    <span style="background:rgba(255,255,255,0.1);padding:2px 8px;border-radius:4px;font-size:12px">
+      ⭐ ${puzzle.rating}
+    </span>
+    <span style="background:rgba(255,255,255,0.1);padding:2px 8px;border-radius:4px;font-size:12px">
+      ${esc(puzzle.title)}
+    </span>
+  `;
 
-  renderBoard(boardContainer);
+  // ── Board area ─────────────────────────────────────────────
+  const boardWrap = mk('div', `
+    flex:1; display:flex; align-items:center; justify-content:center;
+    padding:8px; min-height:0; position:relative;
+  `);
 
-  // Move input and controls
-  const inputArea = document.createElement('div');
-  inputArea.className = 'xq-daily-input-area';
+  // ── Analysis (hidden until solved) ─────────────────────────
+  const analysisEl = mk('div', `
+    padding:0 16px; max-height:0; overflow:hidden;
+    transition:max-height 0.4s ease; flex-shrink:0;
+  `);
 
-  const moveInput = document.createElement('input');
-  moveInput.type = 'text';
-  moveInput.className = 'xq-move-input';
-  moveInput.placeholder = t('enter_move');
-  moveInput.id = 'xq-move-input';
+  // ── Action buttons ─────────────────────────────────────────
+  const actBar = mk('div', `
+    display:flex; justify-content:center; gap:8px;
+    padding:10px 16px 16px; flex-shrink:0;
+    border-top:1px solid rgba(255,255,255,0.08);
+    flex-wrap:wrap;
+  `);
+  const btnHint = btn('💡 Hint',  '#f4c430', '#000');
+  const btnSkip = btn('⏭️ Skip',  'rgba(255,255,255,0.12)', '#fff');
+  const btnFlip = btn('🔁 Flip',  'rgba(255,255,255,0.08)', '#fff');
+  const btnFS   = btn('⛶',        'rgba(255,255,255,0.08)', '#fff');
+  actBar.append(btnHint, btnSkip, btnFlip, btnFS);
 
-  moveInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      handleMoveInput(moveInput.value, moveInput);
-    }
-  });
+  // ── Assemble ──────────────────────────────────────────────
+  root.append(header, banner, infoBar, boardWrap, analysisEl, actBar);
 
-  const submitBtn = document.createElement('button');
-  submitBtn.className = 'xq-btn-submit';
-  submitBtn.textContent = t('submit_move');
-  submitBtn.onclick = () => handleMoveInput(moveInput.value, moveInput);
+  // Build & render board
+  const { boardEl, renderPosition } = buildBoard();
+  boardWrap.appendChild(boardEl);
+  setStatus('playing');
+  renderPosition(position, highlights, lastMove);
 
-  inputArea.appendChild(moveInput);
-  inputArea.appendChild(submitBtn);
-
-  section.appendChild(info);
-  section.appendChild(boardContainer);
-  section.appendChild(inputArea);
-
-  return section;
-}
-
-function createControls() {
-  const controls = document.createElement('div');
-  controls.className = 'xq-daily-controls';
-
-  // Hint button
-  const hintBtn = document.createElement('button');
-  hintBtn.className = 'xq-btn-hint';
-  hintBtn.innerHTML = '💡 ' + t('hint');
-  hintBtn.onclick = showHint;
-
-  // Skip button
-  const skipBtn = document.createElement('button');
-  skipBtn.className = 'xq-btn-skip';
-  skipBtn.innerHTML = '↺ ' + t('skip');
-  skipBtn.onclick = showSkipDialog;
-
-  // Reset button
-  const resetBtn = document.createElement('button');
-  resetBtn.className = 'xq-btn-reset';
-  resetBtn.innerHTML = '🔁 ' + t('reset');
-  resetBtn.onclick = resetPuzzle;
-
-  // Home button
-  const homeBtn = document.createElement('button');
-  homeBtn.className = 'xq-btn-home';
-  homeBtn.innerHTML = '🏠 ' + t('home');
-  homeBtn.onclick = () => window.location.hash = '#/';
-
-  controls.appendChild(hintBtn);
-  controls.appendChild(skipBtn);
-  controls.appendChild(resetBtn);
-  controls.appendChild(homeBtn);
-
-  return controls;
-}
-
-function renderBoard(container) {
-  container.innerHTML = '';
-
-  const board = document.createElement('div');
-  board.className = 'xq-chess-board';
-
-  // Render 8x8 board
-  for (let rank = 7; rank >= 0; rank--) {
-    for (let file = 0; file < 8; file++) {
-      const square = document.createElement('div');
-      const squareName = String.fromCharCode(97 + file) + (rank + 1);
-      square.className = 'xq-square ' + ((rank + file) % 2 === 0 ? 'light' : 'dark');
-      square.dataset.square = squareName;
-
-      // Add piece if exists
-      const piece = currentBoard.squares[rank * 8 + file];
-      if (piece) {
-        const pieceEl = document.createElement('div');
-        pieceEl.className = 'xq-piece ' + getPieceClass(piece);
-        pieceEl.textContent = getPieceSymbol(piece);
-        square.appendChild(pieceEl);
-      }
-
-      square.onclick = () => selectSquare(square, squareName);
-      board.appendChild(square);
-    }
-  }
-
-  container.appendChild(board);
-}
-
-function getPieceClass(piece) {
-  const classes = {
-    'K': 'king-w', 'Q': 'queen-w', 'R': 'rook-w', 'B': 'bishop-w', 'N': 'knight-w', 'P': 'pawn-w',
-    'k': 'king-b', 'q': 'queen-b', 'r': 'rook-b', 'b': 'bishop-b', 'n': 'knight-b', 'p': 'pawn-b'
+  // ─── Button handlers ───────────────────────────────────────
+  btnHint.onclick = () => {
+    if (solved) return;
+    hintUsed = true;
+    const sq = getMoveSquares(puzzle.solution[stepIndex], position);
+    if (!sq) return;
+    highlights = { [sq.from]: HL_HINT, [sq.to]: HL_HINT };
+    renderPosition(position, highlights, lastMove);
+    setStatus('playing', `💡 Best move: ${esc(puzzle.solution[stepIndex])}`);
+    btnHint.disabled = true;
+    btnHint.style.opacity = '0.4';
   };
-  return classes[piece] || '';
-}
 
-function getPieceSymbol(piece) {
-  const symbols = {
-    'K': '♔', 'Q': '♕', 'R': '♖', 'B': '♗', 'N': '♘', 'P': '♙',
-    'k': '♚', 'q': '♛', 'r': '♜', 'b': '♝', 'n': '♞', 'p': '♟'
+  btnSkip.onclick = () => showSkip();
+
+  btnFlip.onclick = () => {
+    isFlipped = !isFlipped;
+    rebuildBoard();
   };
-  return symbols[piece] || '';
-}
 
-function selectSquare(squareEl, squareName) {
-  // Deselect all
-  document.querySelectorAll('.xq-square.selected').forEach(s => s.classList.remove('selected'));
-  squareEl.classList.add('selected');
-}
-
-function handleMoveInput(moveStr, inputEl) {
-  if (!moveStr.trim()) return;
-
-  // Parse move (e.g., "e2e4" or "e4")
-  const move = parseMove(moveStr.trim().toLowerCase());
-  if (!move) {
-    toast('Invalid move format');
-    return;
-  }
-
-  // Validate move is legal
-  if (!isValidMove(currentBoard, move)) {
-    toast('Illegal move');
-    return;
-  }
-
-  // Apply move
-  applyMove(currentBoard, move);
-  moveHistory.push(move);
-  inputEl.value = '';
-
-  // Refresh board
-  renderBoard(document.getElementById('xq-daily-board'));
-
-  // Check if move is correct (is it the next move in solution?)
-  const nextSolutionMove = currentPuzzle.solution[moveHistory.length - 1];
-  if (moveToString(move) === nextSolutionMove) {
-    // Correct move
-    if (moveHistory.length === currentPuzzle.solution.length) {
-      // Puzzle solved!
-      showSuccess();
+  btnFS.onclick = () => {
+    if (!document.fullscreenElement) {
+      root.requestFullscreen?.().catch(() => {});
+      btnFS.textContent = '✕';
     } else {
-      toast('Correct! Continue...');
+      document.exitFullscreen?.();
+      btnFS.textContent = '⛶';
     }
-  } else {
-    // Wrong move
-    showWrong(nextSolutionMove);
-  }
-}
-
-function parseMove(moveStr) {
-  // Support "e2e4" format
-  if (moveStr.length === 4) {
-    const fromSquare = moveStr.substring(0, 2);
-    const toSquare = moveStr.substring(2, 4);
-    const from = (8 - parseInt(fromSquare[1])) * 8 + (fromSquare.charCodeAt(0) - 97);
-    const to = (8 - parseInt(toSquare[1])) * 8 + (toSquare.charCodeAt(0) - 97);
-    return { from, to, promotion: '' };
-  }
-  return null;
-}
-
-function moveToString(move) {
-  const fromFile = String.fromCharCode(97 + (move.from % 8));
-  const fromRank = 8 - Math.floor(move.from / 8);
-  const toFile = String.fromCharCode(97 + (move.to % 8));
-  const toRank = 8 - Math.floor(move.to / 8);
-  return fromFile + fromRank + toFile + toRank;
-}
-
-function showHint() {
-  if (hintShown) {
-    toast(t('hint_already_shown'));
-    return;
-  }
-
-  hintShown = true;
-  const nextMove = currentPuzzle.solution[moveHistory.length];
-  if (nextMove) {
-    toast(`Hint: Next move is ${nextMove}`);
-
-    // Highlight the hint
-    const hintText = document.querySelector('.xq-move-input');
-    if (hintText) {
-      hintText.placeholder = `Hint: ${nextMove}`;
-      hintText.style.color = '#FFD700';
-    }
-  }
-}
-
-function showSkipDialog() {
-  const confirmed = confirm(t('confirm_skip'));
-  if (confirmed) {
-    skipPuzzle(currentPuzzle.id);
-    toast(t('puzzle_skipped'));
-    // Reload for next puzzle
-    setTimeout(() => {
-      window.location.reload();
-    }, 500);
-  }
-}
-
-function resetPuzzle() {
-  currentBoard = new Board();
-  fromFEN(currentBoard, currentPuzzle.fen);
-  moveHistory = [];
-  hintShown = false;
-  document.getElementById('xq-move-input').value = '';
-  renderBoard(document.getElementById('xq-daily-board'));
-  toast(t('puzzle_reset'));
-}
-
-function showSuccess() {
-  const elapsedTime = Date.now() - puzzleStartTime;
-  completePuzzle(currentPuzzle.id, hintShown, elapsedTime);
-
-  // Create result dialog
-  const dialog = document.createElement('div');
-  dialog.className = 'xq-result-dialog success';
-
-  const title = document.createElement('h2');
-  title.textContent = '✓ ' + t('puzzle_solved');
-
-  const message = document.createElement('p');
-  message.textContent = t('well_done');
-
-  const timeText = document.createElement('p');
-  timeText.className = 'xq-result-time';
-  timeText.textContent = `Time: ${(elapsedTime / 1000).toFixed(1)}s`;
-
-  const hintText = document.createElement('p');
-  if (hintShown) {
-    hintText.textContent = `(Used hint)`;
-    hintText.className = 'xq-result-hint-used';
-  }
-
-  // Show analysis
-  const analysis = document.createElement('div');
-  analysis.className = 'xq-result-analysis';
-  analysis.innerHTML = '<h3>Analysis:</h3>';
-  currentPuzzle.analysis.forEach(step => {
-    const stepEl = document.createElement('div');
-    stepEl.className = 'xq-analysis-step';
-    stepEl.innerHTML = `<strong>${step.move}</strong>: ${step.text_en}`;
-    analysis.appendChild(stepEl);
-  });
-
-  const nextBtn = document.createElement('button');
-  nextBtn.className = 'xq-btn-next';
-  nextBtn.textContent = t('next_puzzle');
-  nextBtn.onclick = () => {
-    window.location.reload();
   };
+  document.addEventListener('fullscreenchange', () => {
+    if (!document.fullscreenElement) btnFS.textContent = '⛶';
+  }, { once: false });
 
-  dialog.appendChild(title);
-  dialog.appendChild(message);
-  if (hintShown) dialog.appendChild(hintText);
-  dialog.appendChild(timeText);
-  dialog.appendChild(analysis);
-  dialog.appendChild(nextBtn);
+  // ─── Board click ───────────────────────────────────────────
+  function onSquareClick(sq) {
+    if (solved) return;
+    const coord = sqToCoord(sq);
 
-  showDialog(dialog);
+    if (selected) {
+      const fromSq = coordToSq(selected.file, selected.rank);
+      if (sq === fromSq) {
+        selected = null; highlights = {};
+        renderPosition(position, highlights, lastMove);
+        return;
+      }
+      doMove(selected, coord);
+    } else {
+      const movable = getMovablePieces(position);
+      if (movable.includes(sq)) {
+        selected = coord;
+        highlights = { [sq]: HL_SELECT };
+        renderPosition(position, highlights, lastMove);
+      }
+    }
+  }
+
+  // ─── Move logic ────────────────────────────────────────────
+  function doMove(fromCoord, toCoord) {
+    selected = null;
+    const san = puzzle.solution[stepIndex];
+    const correct = checkUserMove(fromCoord, toCoord, san, position);
+
+    if (correct) {
+      const from = coordToSq(fromCoord.file, fromCoord.rank);
+      const to   = coordToSq(toCoord.file,   toCoord.rank);
+      lastMove = { from, to };
+      position = applyMoveSan(san, position);
+      stepIndex++;
+      highlights = {};
+      renderPosition(position, highlights, lastMove);
+
+      if (stepIndex >= puzzle.solution.length) {
+        onSolved();
+      } else {
+        setStatus('playing', '✓ Correct! Opponent is thinking…');
+        btnHint.disabled = true;
+        setTimeout(playOpponent, 750);
+      }
+    } else {
+      const from = coordToSq(fromCoord.file, fromCoord.rank);
+      const to   = coordToSq(toCoord.file,   toCoord.rank);
+      highlights = { [from]: HL_WRONG, [to]: HL_WRONG };
+      renderPosition(position, highlights, lastMove);
+      setStatus('wrong');
+      setTimeout(() => {
+        if (!solved) {
+          highlights = {};
+          renderPosition(position, highlights, lastMove);
+          setStatus('playing');
+        }
+      }, 1400);
+    }
+  }
+
+  function playOpponent() {
+    if (stepIndex >= puzzle.solution.length) return;
+    const san = puzzle.solution[stepIndex];
+    const sq = getMoveSquares(san, position);
+    if (sq) lastMove = sq;
+    position = applyMoveSan(san, position);
+    stepIndex++;
+    highlights = {};
+    renderPosition(position, highlights, lastMove);
+    if (stepIndex >= puzzle.solution.length) {
+      onSolved();
+    } else {
+      btnHint.disabled = false;
+      btnHint.style.opacity = '1';
+      setStatus('playing');
+    }
+  }
+
+  function onSolved() {
+    solved = true;
+    completePuzzle(puzzle.id, hintUsed, Date.now() - startTime);
+    setStatus('correct');
+    toast('Puzzle solved! 🎉');
+    btnHint.style.display = 'none';
+    btnSkip.style.display = 'none';
+    showAnalysis();
+  }
+
+  // ─── Status banner ─────────────────────────────────────────
+  function setStatus(s, msg) {
+    if (s === 'correct') {
+      banner.style.cssText += ';background:rgba(50,205,50,0.15);color:#50fa7b;';
+      banner.textContent = '✅ Excellent! Puzzle solved!';
+    } else if (s === 'wrong') {
+      banner.style.cssText += ';background:rgba(220,50,50,0.15);color:#ff6b6b;';
+      banner.textContent = '❌ Not the best — try again!';
+    } else {
+      banner.style.cssText += ';background:rgba(255,255,255,0.04);color:#f4c430;';
+      banner.textContent = msg || (position.turn === 'w' ? '🎯 White to move' : '🎯 Black to move');
+    }
+  }
+
+  // ─── Analysis panel ────────────────────────────────────────
+  function showAnalysis() {
+    let html = `<div style="padding:12px 0;border-top:1px solid rgba(255,255,255,0.1)">
+      <div style="font-weight:700;font-size:13px;color:#f4c430;margin-bottom:10px">
+        📖 Step-by-step
+      </div>`;
+    puzzle.analysis.forEach(s => {
+      html += `<div style="display:flex;gap:10px;margin-bottom:10px;align-items:flex-start">
+        <span style="background:#667eea;color:#fff;padding:2px 7px;border-radius:4px;
+                     font-size:11px;font-weight:700;flex-shrink:0">${s.step}</span>
+        <div>
+          <div style="font-weight:600;font-size:13px">${esc(s.move)}</div>
+          <div style="font-size:11px;color:#aaa">${esc(s.text_en)}</div>
+        </div>
+      </div>`;
+    });
+    html += `<div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+      <button onclick="location.hash='#/'"
+        style="padding:8px 16px;background:rgba(255,255,255,0.1);color:#fff;
+               border:1px solid rgba(255,255,255,0.15);border-radius:6px;cursor:pointer;font-size:13px">
+        🏠 Home
+      </button>
+      <button id="btnNextPuzzle"
+        style="padding:8px 16px;background:#667eea;color:#fff;
+               border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600">
+        Next Puzzle →
+      </button>
+    </div></div>`;
+    analysisEl.innerHTML = html;
+    analysisEl.style.maxHeight = '600px';
+    analysisEl.style.padding = '0 16px';
+    document.getElementById('btnNextPuzzle')?.addEventListener('click', () => {
+      toast('Loading next puzzle…');
+      setTimeout(() => location.hash = '#/', 500);
+    });
+  }
+
+  // ─── Skip dialog ───────────────────────────────────────────
+  function showSkip() {
+    const ov = mk('div', `
+      position:fixed;inset:0;background:rgba(0,0,0,0.75);
+      display:flex;align-items:center;justify-content:center;
+      z-index:9999;padding:20px;
+    `);
+    ov.innerHTML = `
+      <div style="background:#1e1e2e;border:1px solid rgba(255,255,255,0.15);
+                  border-radius:12px;padding:24px;max-width:300px;width:100%;text-align:center">
+        <div style="font-size:36px;margin-bottom:10px">⏭️</div>
+        <h3 style="margin:0 0 8px;font-size:15px">Skip this puzzle?</h3>
+        <p style="color:#aaa;font-size:12px;margin:0 0 20px;line-height:1.5">
+          Puzzle saved to <b style="color:#fff">Later</b> list.<br>
+          You can revisit anytime.
+        </p>
+        <div style="display:flex;gap:8px">
+          <button id="sc" style="flex:1;padding:9px;background:rgba(255,255,255,0.1);
+            color:#fff;border:1px solid rgba(255,255,255,0.2);border-radius:6px;cursor:pointer">
+            Cancel
+          </button>
+          <button id="sx" style="flex:1;padding:9px;background:#f39c12;
+            color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600">
+            Skip & Save
+          </button>
+        </div>
+      </div>`;
+    document.body.appendChild(ov);
+    ov.querySelector('#sc').onclick = () => ov.remove();
+    ov.querySelector('#sx').onclick = () => {
+      ov.remove();
+      savePuzzleSkip(puzzle.id);
+      toast('Saved for later ⏭️');
+      setTimeout(() => location.hash = '#/', 600);
+    };
+  }
+
+  // ─── Board builder ─────────────────────────────────────────
+  function buildBoard() {
+    const avail = Math.min(
+      window.innerWidth  - 32,
+      window.innerHeight - 280,
+      480
+    );
+    const cellSz  = Math.max(32, Math.floor(avail / 8));
+    const boardSz = cellSz * 8;
+
+    const grid = mk('div', `
+      display:grid;
+      grid-template-columns:repeat(8,${cellSz}px);
+      grid-template-rows:repeat(8,${cellSz}px);
+      border:2px solid rgba(255,255,255,0.2);
+      border-radius:4px;
+      overflow:hidden;
+      cursor:pointer;
+      flex-shrink:0;
+    `);
+
+    for (let ri = 0; ri < 8; ri++) {
+      for (let fi = 0; fi < 8; fi++) {
+        const displayRank = isFlipped ? 7 - ri : ri;
+        const displayFile = isFlipped ? 7 - fi : fi;
+        const sq = coordToSq(displayFile, displayRank);
+        const isLight = (displayFile + displayRank) % 2 === 0;
+        const cell = mk('div', `
+          width:${cellSz}px;height:${cellSz}px;
+          display:flex;align-items:center;justify-content:center;
+          font-size:${Math.floor(cellSz * 0.72)}px;
+          background:${isLight ? LIGHT : DARK};
+          user-select:none;cursor:pointer;position:relative;
+        `);
+        cell.dataset.sq = sq;
+
+        // Rank label (left edge)
+        if (fi === 0) {
+          const lbl = mk('span', `
+            position:absolute;top:2px;left:3px;
+            font-size:${Math.floor(cellSz*0.22)}px;font-weight:700;
+            color:${isLight ? DARK : LIGHT};pointer-events:none;z-index:3;line-height:1;
+          `);
+          lbl.textContent = 8 - displayRank;
+          cell.appendChild(lbl);
+        }
+        // File label (bottom edge)
+        if (ri === 7) {
+          const lbl = mk('span', `
+            position:absolute;bottom:2px;right:3px;
+            font-size:${Math.floor(cellSz*0.22)}px;font-weight:700;
+            color:${isLight ? DARK : LIGHT};pointer-events:none;z-index:3;line-height:1;
+          `);
+          lbl.textContent = String.fromCharCode(97 + displayFile);
+          cell.appendChild(lbl);
+        }
+
+        cell.addEventListener('click', () => onSquareClick(cell.dataset.sq));
+        grid.appendChild(cell);
+      }
+    }
+
+    function renderPosition(pos, hls, last) {
+      grid.querySelectorAll('[data-sq]').forEach(cell => {
+        const sq = cell.dataset.sq;
+        const { file, rank } = sqToCoord(sq);
+        const isLight = (file + rank) % 2 === 0;
+        const piece = pos.board[rank][file];
+
+        // Clear old overlays (keep labels)
+        cell.querySelectorAll('.hl-layer').forEach(e => e.remove());
+
+        // Piece text
+        const existing = cell.querySelector('.piece-text');
+        if (existing) existing.remove();
+        if (piece) {
+          const pt = mk('span', `
+            position:absolute;z-index:2;
+            font-size:${Math.floor(cellSz * 0.72)}px;
+            line-height:1;pointer-events:none;
+            color:${piece === piece.toUpperCase() ? '#fff' : '#111'};
+            text-shadow:${piece === piece.toUpperCase()
+              ? '0 1px 3px rgba(0,0,0,0.9),0 0 6px rgba(0,0,0,0.5)'
+              : '0 1px 2px rgba(255,255,255,0.6)'};
+          `);
+          pt.className = 'piece-text';
+          pt.textContent = PIECE_SYMBOLS[piece] || '';
+          cell.appendChild(pt);
+        }
+
+        cell.style.background = isLight ? LIGHT : DARK;
+
+        // Last move highlight
+        if (last && (sq === last.from || sq === last.to)) addHl(cell, HL_LAST);
+
+        // Highlight overlay
+        if (hls[sq]) addHl(cell, hls[sq]);
+      });
+    }
+
+    return { boardEl: grid, renderPosition };
+  }
+
+  function rebuildBoard() {
+    boardWrap.innerHTML = '';
+    const built = buildBoard();
+    boardWrap.appendChild(built.boardEl);
+    built.renderPosition(position, highlights, lastMove);
+    // Re-assign renderPosition closure — trick: swap via outer scope
+    Object.assign(renderPosition_ref, { fn: built.renderPosition });
+  }
+
+  // We need a stable reference for renderPosition across rebuilds
+  const renderPosition_ref = { fn: null };
+  // Initial assignment already done via destructuring above
+  // Use wrapper:
+  function renderPosition(pos, hls, last) {
+    return renderPosition_ref.fn?.(pos, hls, last);
+  }
+
+  // Fix initial ref
+  const { boardEl, renderPosition: rp } = (() => {
+    // Already built, just re-expose
+    return { boardEl: boardWrap.firstChild, renderPosition: null };
+  })();
+  // Patch: the buildBoard() already ran and returned, we need to wire renderPosition
+  // Let's redo this cleanly:
+  boardWrap.innerHTML = '';
+  const builtInitial = buildBoard();
+  boardWrap.appendChild(builtInitial.boardEl);
+  renderPosition_ref.fn = builtInitial.renderPosition;
+  builtInitial.renderPosition(position, highlights, lastMove);
+  setStatus('playing');
 }
 
-function showWrong(correctMove) {
-  // Undo the wrong move
-  undoMove(currentBoard);
-  moveHistory.pop();
-  renderBoard(document.getElementById('xq-daily-board'));
-
-  const dialog = document.createElement('div');
-  dialog.className = 'xq-result-dialog wrong';
-
-  const title = document.createElement('h2');
-  title.textContent = '✗ ' + t('wrong_move');
-
-  const message = document.createElement('p');
-  message.textContent = `${t('correct_move_is')} ${correctMove}`;
-
-  const retryBtn = document.createElement('button');
-  retryBtn.className = 'xq-btn-retry';
-  retryBtn.textContent = t('try_again');
-  retryBtn.onclick = () => closeDialog();
-
-  dialog.appendChild(title);
-  dialog.appendChild(message);
-  dialog.appendChild(retryBtn);
-
-  showDialog(dialog);
+// ─── DOM helpers ────────────────────────────────────────────
+function mk(tag, css) {
+  const e = document.createElement(tag);
+  if (css) e.style.cssText = css.trim();
+  return e;
 }
 
-function showDialog(dialog) {
-  const overlay = document.createElement('div');
-  overlay.className = 'xq-dialog-overlay';
-  overlay.onclick = (e) => {
-    if (e.target === overlay) closeDialog();
-  };
-
-  overlay.appendChild(dialog);
-  document.body.appendChild(overlay);
-
-  window.closeDialog = () => {
-    overlay.remove();
-  };
+function btn(label, bg, color) {
+  const b = mk('button', `
+    padding:8px 14px;background:${bg};color:${color};
+    border:1px solid rgba(255,255,255,0.12);border-radius:8px;
+    cursor:pointer;font-size:13px;font-weight:600;white-space:nowrap;
+  `);
+  b.textContent = label;
+  b.onmouseover = () => b.style.opacity = '0.8';
+  b.onmouseout  = () => b.style.opacity = '1';
+  return b;
 }
 
-function getDailyChessStyles() {
-  return `
-    .xq-daily-page {
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: #333;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    }
-
-    .xq-daily-header {
-      padding: 20px;
-      background: rgba(255, 255, 255, 0.95);
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .xq-daily-title {
-      margin: 0;
-      font-size: 24px;
-      font-weight: 600;
-    }
-
-    .xq-daily-progress {
-      display: flex;
-      gap: 30px;
-      font-size: 16px;
-      font-weight: 500;
-    }
-
-    .xq-streak-value, .xq-level-value {
-      color: #667eea;
-      font-weight: 700;
-      font-size: 18px;
-    }
-
-    .xq-daily-content {
-      flex: 1;
-      overflow-y: auto;
-      padding: 20px;
-    }
-
-    .xq-daily-board-section {
-      background: rgba(255, 255, 255, 0.95);
-      border-radius: 12px;
-      padding: 20px;
-      margin-bottom: 20px;
-    }
-
-    .xq-daily-info {
-      margin-bottom: 20px;
-    }
-
-    .xq-puzzle-title {
-      margin: 0 0 10px 0;
-      font-size: 20px;
-      color: #333;
-    }
-
-    .xq-puzzle-meta {
-      display: flex;
-      gap: 15px;
-      margin-bottom: 10px;
-      font-size: 13px;
-    }
-
-    .xq-puzzle-opening, .xq-puzzle-rating, .xq-puzzle-theme {
-      background: #f0f0f0;
-      padding: 4px 8px;
-      border-radius: 4px;
-      color: #666;
-    }
-
-    .xq-puzzle-explanation {
-      margin: 10px 0 0 0;
-      color: #555;
-      line-height: 1.5;
-    }
-
-    .xq-daily-board-container {
-      margin: 20px 0;
-      display: flex;
-      justify-content: center;
-    }
-
-    .xq-chess-board {
-      display: grid;
-      grid-template-columns: repeat(8, 60px);
-      grid-template-rows: repeat(8, 60px);
-      gap: 0;
-      border: 2px solid #333;
-      background: #8B7355;
-    }
-
-    .xq-square {
-      width: 60px;
-      height: 60px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      font-size: 40px;
-      position: relative;
-    }
-
-    .xq-square.light {
-      background: #F0D9B5;
-    }
-
-    .xq-square.dark {
-      background: #B58863;
-    }
-
-    .xq-square.selected {
-      background: #BACA44 !important;
-    }
-
-    .xq-piece {
-      user-select: none;
-      line-height: 1;
-    }
-
-    .xq-daily-input-area {
-      display: flex;
-      gap: 10px;
-      margin: 20px 0;
-    }
-
-    .xq-move-input {
-      flex: 1;
-      padding: 12px;
-      border: 2px solid #ddd;
-      border-radius: 6px;
-      font-size: 16px;
-      font-weight: 500;
-      transition: border-color 0.2s;
-    }
-
-    .xq-move-input:focus {
-      outline: none;
-      border-color: #667eea;
-      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-    }
-
-    .xq-btn-submit {
-      padding: 12px 24px;
-      background: #667eea;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      font-size: 16px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-
-    .xq-btn-submit:hover {
-      background: #5568d3;
-    }
-
-    .xq-daily-controls {
-      display: flex;
-      gap: 12px;
-      margin-top: 20px;
-      flex-wrap: wrap;
-    }
-
-    .xq-daily-controls button {
-      flex: 1;
-      min-width: 120px;
-      padding: 12px 16px;
-      background: rgba(255, 255, 255, 0.95);
-      border: 2px solid #667eea;
-      border-radius: 6px;
-      font-size: 14px;
-      font-weight: 600;
-      color: #667eea;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .xq-daily-controls button:hover {
-      background: #667eea;
-      color: white;
-      transform: translateY(-2px);
-    }
-
-    .xq-dialog-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0, 0, 0, 0.5);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
-    }
-
-    .xq-result-dialog {
-      background: white;
-      border-radius: 12px;
-      padding: 30px;
-      max-width: 500px;
-      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-      text-align: center;
-    }
-
-    .xq-result-dialog h2 {
-      margin: 0 0 15px 0;
-      font-size: 24px;
-    }
-
-    .xq-result-dialog.success h2 {
-      color: #27ae60;
-    }
-
-    .xq-result-dialog.wrong h2 {
-      color: #e74c3c;
-    }
-
-    .xq-result-analysis {
-      text-align: left;
-      background: #f8f8f8;
-      padding: 15px;
-      border-radius: 6px;
-      margin: 15px 0;
-    }
-
-    .xq-analysis-step {
-      padding: 8px 0;
-      font-size: 14px;
-      border-bottom: 1px solid #e0e0e0;
-    }
-
-    .xq-analysis-step:last-child {
-      border-bottom: none;
-    }
-
-    .xq-result-time {
-      color: #666;
-      font-size: 14px;
-    }
-
-    .xq-result-hint-used {
-      color: #f39c12;
-      font-size: 12px;
-      font-style: italic;
-    }
-
-    .xq-btn-next, .xq-btn-retry {
-      padding: 12px 24px;
-      background: #667eea;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      font-size: 16px;
-      font-weight: 600;
-      cursor: pointer;
-      margin-top: 15px;
-      transition: background 0.2s;
-    }
-
-    .xq-btn-next:hover, .xq-btn-retry:hover {
-      background: #5568d3;
-    }
-
-    .xq-daily-error {
-      text-align: center;
-      padding: 40px;
-      color: white;
-      font-size: 18px;
-    }
-
-    @media (max-width: 768px) {
-      .xq-chess-board {
-        grid-template-columns: repeat(8, 40px);
-        grid-template-rows: repeat(8, 40px);
-      }
-
-      .xq-square {
-        width: 40px;
-        height: 40px;
-        font-size: 28px;
-      }
-
-      .xq-daily-controls {
-        flex-direction: column;
-      }
-
-      .xq-daily-controls button {
-        min-width: auto;
-      }
-
-      .xq-daily-progress {
-        flex-direction: column;
-        gap: 8px;
-      }
-    }
+function addHl(cell, color) {
+  const d = document.createElement('div');
+  d.className = 'hl-layer';
+  d.style.cssText = `
+    position:absolute;inset:0;background:${color};
+    pointer-events:none;z-index:1;
   `;
+  cell.appendChild(d);
+}
+
+function esc(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
