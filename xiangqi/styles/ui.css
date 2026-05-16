@@ -366,82 +366,95 @@ main#app {
 
 /* ══════════════════════════════════════════════════════
    GAME LAYOUT: Desktop (≥ 1100px)
-   3-column: side (280px) | board | moves (320px)
+   TOP BAR: fixed 52px (same as mobile — player info)
+   BOARD STAGE: fills center, flex-col: board + actions below
+   RIGHT PANEL: moves log (slide-in or fixed)
    ══════════════════════════════════════════════════════ */
 @media (min-width: 1100px) {
   .xq-game {
-    grid-template-areas: "side board moves";
-    grid-template-columns: 280px minmax(0, 1fr) 320px;
+    grid-template-areas: "board moves";
+    grid-template-columns: minmax(0, 1fr) 280px;
     grid-template-rows: 1fr;
-    gap: 16px;
+    gap: 0;
     height: 100vh;
     align-items: stretch;
+    padding-top: 52px; /* top bar height */
+    box-sizing: border-box;
   }
+  /* TOP BAR: same as mobile — fixed, compact */
   .xq-side {
-    display: flex; flex-direction: column; gap: 12px;
-    padding: 16px 12px;
-    overflow-y: auto;
-  }
-  .xq-board-stage {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 12px;
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 52px;
+    display: flex; flex-direction: row; align-items: center;
+    gap: 8px; padding: 0 16px;
     background: var(--xq-bg-base);
+    border-bottom: 1px solid var(--xq-border);
+    z-index: 50; overflow: hidden;
   }
+  .xq-side .xq-player {
+    flex: 1; min-width: 0;
+    display: flex; align-items: center; gap: 8px;
+    background: transparent; border: none; padding: 4px 8px;
+  }
+  .xq-side .xq-player .av  { width: 30px; height: 30px; font-size: 11px; border-radius: 8px; flex-shrink: 0; }
+  .xq-side .xq-player .name { font-size: 13px; font-weight: 700; }
+  .xq-side .xq-player .meta { font-size: 11px; color: var(--xq-text-mute); }
+  .xq-side .xq-status {
+    flex: 0 0 auto; padding: 4px 12px; font-size: 12px;
+    border-radius: 6px; background: var(--xq-bg-glass);
+    border: 1px solid var(--xq-border); color: var(--xq-gold); font-weight: 600;
+  }
+  /* BOARD STAGE: flex-col → board on top, actions below */
+  .xq-board-stage {
+    grid-area: board;
+    width: 100%; height: 100%;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    background: var(--xq-bg-base);
+    padding: 12px 12px 0 12px;
+    box-sizing: border-box;
+  }
+  .xq-board-stage .xq-board-wrap {
+    flex: 1; min-height: 0;
+    display: flex; align-items: center; justify-content: center;
+    width: 100%;
+  }
+  /* ACTIONS ROW: compact circular buttons below board */
+  .xq-board-stage .xq-actions {
+    flex: 0 0 auto; width: 100%;
+    display: flex; flex-direction: row;
+    align-items: center; justify-content: center;
+    gap: 10px; padding: 8px 16px;
+    border-top: 1px solid var(--xq-border);
+  }
+  .xq-board-stage .xq-actions .btn {
+    width: 38px; height: 38px; min-width: 38px;
+    padding: 0; border-radius: 50%; flex: 0 0 auto;
+    font-size: 0; display: flex !important;
+    align-items: center; justify-content: center;
+    position: relative; overflow: hidden;
+  }
+  .xq-board-stage .xq-actions .btn::after {
+    content: attr(data-emoji); font-size: 17px;
+    line-height: 1; position: absolute;
+    left: 50%; top: 50%; transform: translate(-50%,-50%);
+  }
+  /* MOVES: right panel */
   .xq-moves {
+    grid-area: moves;
     background: var(--xq-bg-surface);
-    border: 1px solid var(--xq-border);
-    border-radius: 12px;
+    border-left: 1px solid var(--xq-border);
     overflow: hidden;
-    max-height: calc(100vh - 32px);
-    display: flex;
-    flex-direction: column;
-    margin: 16px 0;
+    display: flex; flex-direction: column;
   }
   .xq-moves .head {
-    padding: 10px 14px;
+    padding: 12px 14px;
     border-bottom: 1px solid var(--xq-border);
-    font-size: 13px;
-    font-weight: 700;
-    flex-shrink: 0;
+    font-size: 13px; font-weight: 700; flex-shrink: 0;
   }
   .xq-moves > div:not(.head) { flex: 1; overflow-y: auto; }
   .xq-mobile-moves-toggle { display: none !important; }
-}
-
-/* ── Desktop: side panel elements ── */
-@media (min-width: 1100px) {
-  .xq-player {
-    display: flex; align-items: center; gap: 12px;
-    padding: 12px 14px;
-    background: var(--xq-bg-surface);
-    border: 1px solid var(--xq-border);
-    border-radius: 12px;
-  }
-  .xq-player .av {
-    width: 44px; height: 44px; border-radius: 12px;
-    display: flex; align-items: center; justify-content: center;
-    font-weight: 700;
-    background: linear-gradient(135deg, var(--xq-jade), #00897b);
-    color: white; font-size: 16px; flex-shrink: 0;
-  }
-  .xq-player.red .av { background: linear-gradient(135deg, var(--xq-red), #ad1457); }
-  .xq-player .name { font-weight: 700; font-size: 14px; }
-  .xq-player .meta { font-size: 11px; color: var(--xq-text-mute); margin-top: 2px; }
-  .xq-status {
-    padding: 12px 16px;
-    background: var(--xq-bg-glass);
-    border: 1px solid var(--xq-border);
-    border-radius: 10px;
-    font-size: 14px; font-weight: 600;
-    color: var(--xq-gold);
-    text-align: center;
-  }
-  .xq-actions { display: flex; gap: 6px; flex-wrap: wrap; }
-  .xq-actions .btn { flex: 1; min-width: 80px; }
 }
 .xq-moves table { width: 100%; border-collapse: collapse; font-size: 13px; font-family: ui-monospace, monospace; }
 .xq-moves td { padding: 6px 12px; border-bottom: 1px solid var(--xq-border); }
