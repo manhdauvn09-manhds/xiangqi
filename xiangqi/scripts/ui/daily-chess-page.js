@@ -105,11 +105,17 @@ export function renderDailyChessPage(root) {
 
   root.append(header, banner, infoBar, boardWrap, analysisEl, actBar);
 
-  // ── Build board (called on init + flip) ────────────────────
+  // ── Build board (called on init + flip + fullscreen) ──────────
   function rebuildBoard() {
     boardWrap.innerHTML = '';
-    const avail   = Math.min(window.innerWidth - 32, window.innerHeight - 260, 480);
-    const cellSz  = Math.max(32, Math.floor(avail / 8));
+    const isFS = !!document.fullscreenElement;
+    const pct  = isFS ? 0.95 : 0.80;
+    // Board is square: fit inside available width & height
+    const uiH  = isFS ? 0 : 210; // header + banner + info + actions + history
+    const availW = window.innerWidth  * pct;
+    const availH = window.innerHeight * pct - uiH;
+    const boardSz = Math.max(240, Math.floor(Math.min(availW, availH)));
+    const cellSz  = Math.floor(boardSz / 8);
 
     const grid = document.createElement('div');
     grid.style.cssText = `
@@ -222,6 +228,13 @@ export function renderDailyChessPage(root) {
   rebuildBoard();
   setBanner('playing');
 
+  // Resize: rebuild board when window size changes
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(rebuildBoard, 150);
+  });
+
   // ── Handlers ──────────────────────────────────────────────
   btnHint.onclick = () => {
     if (solved) return;
@@ -252,7 +265,11 @@ export function renderDailyChessPage(root) {
     }
   };
   document.addEventListener('fullscreenchange', () => {
-    if (!document.fullscreenElement) btnFS.textContent = '⛶';
+    const isFS = !!document.fullscreenElement;
+    btnFS.textContent = isFS ? '✕' : '⛶';
+    // Rebuild board at new size
+    rebuildBoard();
+    setBanner('playing');
   });
 
   // ── Square click ──────────────────────────────────────────
