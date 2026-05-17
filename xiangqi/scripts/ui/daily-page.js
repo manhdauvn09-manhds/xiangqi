@@ -57,11 +57,13 @@ export function renderDailyPage(root) {
         <div class="daily-actions">
           <button class="btn" id="btnHint">💡 ${esc(t('btn.hint'))}</button>
           <button class="btn" id="btnReset">↺ ${esc(t('btn.reset'))}</button>
+          <button class="btn" id="btnSolution">📖 Xem giải</button>
         </div>
         <div class="hint-box hidden" id="hintBox"></div>
         <div class="muted small" style="text-align:center; margin-top:8px;">
           ${esc(t('daily.attempts'))}: <span id="attemptCount">0</span>
         </div>
+        <div id="solutionBox" style="display:none;margin-top:12px;background:rgba(255,255,255,0.05);border-radius:8px;padding:12px;border-left:3px solid #f4c430;"></div>
       </div>
     </div>
   `;
@@ -148,6 +150,8 @@ export function renderDailyPage(root) {
     st[puzzle.dateKey] = 'solved';
     setStreak(st);
     root.querySelector('#dailyStatus').innerHTML = `✅ <strong>${esc(t('daily.solved'))}</strong> · ${attempts} ${esc(t('daily.tries'))} · ${elapsed}s`;
+    // Tự động hiện giải thích sau khi giải
+    showSolution(true);
     setTimeout(async () => {
       await confirm({
         title: '🎉 ' + t('daily.solved'),
@@ -155,7 +159,41 @@ export function renderDailyPage(root) {
         okText: t('btn.close'),
         cancelText: t('btn.back_home'),
       });
-    }, 400);
+    }, 800);
+  }
+
+  function showSolution(afterSolve = false) {
+    const box = root.querySelector('#solutionBox');
+    if (!box) return;
+    if (box.style.display !== 'none') { box.style.display = 'none'; return; }
+
+    const analysis = puzzle.analysis || [];
+    let html = `<div style="font-weight:700;font-size:13px;color:#f4c430;margin-bottom:10px">
+      ${afterSolve ? '🎉 Cách giải' : '📖 Cách giải (spoiler)'}
+    </div>`;
+
+    if (analysis.length) {
+      analysis.forEach(a => {
+        html += `<div style="display:flex;gap:10px;margin-bottom:8px;align-items:flex-start">
+          <span style="background:#667eea;color:#fff;padding:2px 7px;border-radius:4px;
+                       font-size:11px;font-weight:700;flex-shrink:0;min-width:24px;text-align:center">${a.step}</span>
+          <div>
+            <div style="font-weight:600;font-size:13px">${esc(a.move)}</div>
+            <div style="font-size:12px;color:#aaa;line-height:1.4">${esc(a.vi)}</div>
+          </div>
+        </div>`;
+      });
+    } else {
+      // fallback: show solution moves
+      (puzzle.solution || []).forEach((mv, i) => {
+        html += `<div style="margin-bottom:6px;font-size:13px">
+          <span style="color:#f4c430;font-weight:700">Nước ${i+1}:</span> <code>${esc(mv)}</code>
+        </div>`;
+      });
+    }
+
+    box.innerHTML = html;
+    box.style.display = 'block';
   }
 
   // Hint
@@ -169,6 +207,10 @@ export function renderDailyPage(root) {
   root.querySelector('#btnReset')?.addEventListener('click', () => {
     if (solved) return;
     location.reload();
+  });
+
+  root.querySelector('#btnSolution')?.addEventListener('click', () => {
+    showSolution(false);
   });
 }
 
