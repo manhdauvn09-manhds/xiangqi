@@ -10,10 +10,26 @@ export const PIECE_SYMBOLS = {
 
 /** Parse FEN string → position object */
 export function parseFen(fen) {
+  if (!fen || typeof fen !== 'string') {
+    console.error('Invalid FEN:', fen);
+    throw new Error(`Invalid FEN: ${fen}`);
+  }
+
   const parts = fen.split(' ');
   const rows = parts[0].split('/');
+
+  if (rows.length !== 8) {
+    console.error(`FEN must have 8 ranks, got ${rows.length}:`, fen);
+    throw new Error(`FEN must have 8 ranks, got ${rows.length}`);
+  }
+
   const board = [];
   for (let r = 0; r < 8; r++) {
+    if (!rows[r]) {
+      console.error(`Missing rank ${r} in FEN:`, fen);
+      throw new Error(`Missing rank ${r} in FEN`);
+    }
+
     board[r] = [];
     let f = 0;
     for (const ch of rows[r]) {

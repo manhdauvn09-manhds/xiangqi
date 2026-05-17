@@ -38,7 +38,23 @@ export function renderDailyChessPage(root) {
   }
 
   const startTime = Date.now();
-  let pos        = parseFen(puzzle.fen);
+  let pos;
+  try {
+    pos = parseFen(puzzle.fen);
+  } catch (err) {
+    console.error('Failed to parse puzzle FEN:', {
+      puzzleId: puzzle.id,
+      fen: puzzle.fen,
+      error: err.message,
+      errorStack: err.stack
+    });
+    root.innerHTML = `<div style="padding:40px;text-align:center;color:#fff">
+      <h2>Error loading puzzle</h2>
+      <p>${err.message}</p>
+      <p style="color:#aaa;font-size:12px;margin-top:20px">Puzzle: ${puzzle.id}<br>FEN: ${puzzle.fen}</p>
+    </div>`;
+    return;
+  }
   let step       = 0;
   let selected   = null;
   let hintUsed   = false;
