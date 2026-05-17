@@ -413,7 +413,7 @@ export const CHESS_PUZZLES = [
   {
     "id": "puzzle_026",
     "title": "Rook vs Rook and Pawn",
-    "fen": "8/4k3/8/4P3/8/8/R6r w - - 0 1",
+    "fen": "8/8/4k3/8/4P3/8/8/R6r w - - 0 1",
     "solution": ["e6", "Re1", "Ra7"],
     "rating": 1500,
     "theme": "endgame,rook",
@@ -429,7 +429,7 @@ export const CHESS_PUZZLES = [
   {
     "id": "puzzle_027",
     "title": "Rook Endgame: Active King",
-    "fen": "8/8/5k2/8/4R3/8/2r3K1 w - - 0 1",
+    "fen": "8/8/8/5k2/8/4R3/8/2r3K1 w - - 0 1",
     "solution": ["Re6", "Kg5", "Rc2"],
     "rating": 1400,
     "theme": "endgame,rook,activity",
@@ -445,7 +445,7 @@ export const CHESS_PUZZLES = [
   {
     "id": "puzzle_028",
     "title": "Back Rank Mate: Rook",
-    "fen": "6k1/5ppp/8/8/8/8/R1Q4K w - - 0 1",
+    "fen": "6k1/5ppp/8/8/8/8/8/R1Q4K w - - 0 1",
     "solution": ["Qc8", "Kg7", "Qg8"],
     "rating": 1100,
     "theme": "mate,backrank",
@@ -477,7 +477,7 @@ export const CHESS_PUZZLES = [
   {
     "id": "puzzle_030",
     "title": "Rook Cut-off",
-    "fen": "8/4k3/8/4R3/8/8/r6K w - - 0 1",
+    "fen": "8/4k3/8/4R3/8/8/8/r6K w - - 0 1",
     "solution": ["Re7", "Kf6", "Rxa7"],
     "rating": 1280,
     "theme": "endgame,rook",
@@ -495,7 +495,7 @@ export const CHESS_PUZZLES = [
   {
     "id": "puzzle_031",
     "title": "Queen Checkmate",
-    "fen": "6k1/5ppp/8/8/8/8/Q5K1 w - - 0 1",
+    "fen": "6k1/5ppp/8/8/8/8/Q5K1/8 w - - 0 1",
     "solution": ["Qa8", "Kf7", "Qh8"],
     "rating": 1300,
     "theme": "endgame,queen,mate",
@@ -511,7 +511,7 @@ export const CHESS_PUZZLES = [
   {
     "id": "puzzle_032",
     "title": "Queen vs Rook",
-    "fen": "8/8/4k3/8/4Q3/8/r6K w - - 0 1",
+    "fen": "8/8/4k3/8/4Q3/8/8/r6K w - - 0 1",
     "solution": ["Qe6", "Kb5", "Qb6"],
     "rating": 1350,
     "theme": "endgame,queen",
@@ -591,7 +591,7 @@ function generateAdditionalPuzzles() {
     { title: 'Positional Rook Lift', fen: '8/5k2/8/4R3/8/8/r6K w - - 0 1', solution: ['Re7', 'Kg6', 'Rxf7'], rating: 1280 },
     { title: 'Tactics After e5', fen: 'r1bqkb1r/pppppppp/2n2n2/8/4P3/2N1BP2/PPP3PP/R2QKB1R w KQkq - 0 1', solution: ['e5', 'Ne4', 'd5'], rating: 1190 },
     { title: 'Crushing Attack', fen: 'r1bqkb1r/pppp1ppp/2n2n2/4p3/4P3/3P1N2/PPP2PPP/RNBQKB1R w KQkq - 0 1', solution: ['Bf4', 'exf4', 'Nd4'], rating: 1310 },
-    { title: 'Smothered Mate Pattern', fen: '6k1/5ppp/8/8/8/8/Q5K1 w - - 0 1', solution: ['Qa8', 'Kf7', 'Qh8'], rating: 1400 },
+    { title: 'Smothered Mate Pattern', fen: '6k1/5ppp/8/8/8/8/Q5K1/8 w - - 0 1', solution: ['Qa8', 'Kf7', 'Qh8'], rating: 1400 },
   ];
 
   // Add duplicates with variations to reach 310+
