@@ -1,0 +1,1869 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cờ Tướng Vương — Developer Documentation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        header h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        header .subtitle {
+            color: #666;
+            font-size: 1.1em;
+            margin-bottom: 20px;
+        }
+
+        header .meta {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+
+        header .meta-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        header .meta-label {
+            color: #999;
+            font-size: 0.85em;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        header .meta-value {
+            color: #333;
+            font-weight: 500;
+            margin-top: 5px;
+        }
+
+        .section {
+            background: white;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .section-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            font-size: 1.3em;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+        }
+
+        .section-header:hover {
+            background: linear-gradient(135deg, #5568d3 0%, #6a3a8f 100%);
+        }
+
+        .section-header .toggle {
+            font-size: 1.5em;
+            transition: transform 0.3s;
+        }
+
+        .section.closed .section-header .toggle {
+            transform: rotate(-90deg);
+        }
+
+        .section-content {
+            padding: 30px;
+            max-height: 2000px;
+            overflow: hidden;
+            transition: max-height 0.3s ease, padding 0.3s ease;
+        }
+
+        .section.closed .section-content {
+            max-height: 0;
+            padding: 0 30px;
+        }
+
+        h2 {
+            color: #667eea;
+            margin-top: 0;
+            margin-bottom: 20px;
+        }
+
+        h3 {
+            color: #764ba2;
+            margin-top: 25px;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        h4 {
+            color: #666;
+            margin-top: 18px;
+            margin-bottom: 10px;
+        }
+
+        .file-tree {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.9em;
+            line-height: 1.8;
+            overflow-x: auto;
+            white-space: pre;
+            color: #333;
+        }
+
+        .code-block {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.9em;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+
+        .code-inline {
+            background: #f0f0f0;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.9em;
+            color: #c7254e;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+
+        table th {
+            background: #f8f9fa;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #667eea;
+            border-bottom: 2px solid #ddd;
+        }
+
+        table td {
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .feature-list {
+            list-style: none;
+            margin: 15px 0;
+        }
+
+        .feature-list li {
+            padding: 10px;
+            margin: 8px 0;
+            background: #f8f9fa;
+            border-radius: 4px;
+            border-left: 4px solid #667eea;
+            padding-left: 15px;
+        }
+
+        .feature-list li:before {
+            content: "✓ ";
+            color: #28a745;
+            font-weight: bold;
+            margin-right: 8px;
+        }
+
+        .issue-list {
+            list-style: none;
+            margin: 15px 0;
+        }
+
+        .issue-list li {
+            padding: 12px;
+            margin: 10px 0;
+            background: #fff3cd;
+            border-radius: 4px;
+            border-left: 4px solid #ffc107;
+            padding-left: 15px;
+        }
+
+        .issue-list li .number {
+            font-weight: 600;
+            color: #ff6b6b;
+            margin-right: 10px;
+        }
+
+        .issue-list li .title {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .issue-list li .description {
+            color: #666;
+            font-size: 0.95em;
+            margin-top: 5px;
+        }
+
+        .flow-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 15px 0;
+        }
+
+        .flow-box .step {
+            margin: 8px 0;
+            padding-left: 25px;
+            position: relative;
+        }
+
+        .flow-box .step:before {
+            content: "→ ";
+            position: absolute;
+            left: 0;
+            color: #2196f3;
+            font-weight: bold;
+        }
+
+        .endpoint {
+            background: #f0f8ff;
+            border-left: 4px solid #2196f3;
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-family: 'Monaco', monospace;
+            font-size: 0.9em;
+        }
+
+        .endpoint .method {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-weight: 600;
+            margin-right: 8px;
+            font-size: 0.85em;
+        }
+
+        .endpoint .method.get {
+            background: #61affe;
+            color: white;
+        }
+
+        .endpoint .method.post {
+            background: #49cc90;
+            color: white;
+        }
+
+        .endpoint .method.patch {
+            background: #fca130;
+            color: white;
+        }
+
+        .endpoint .method.delete {
+            background: #f93e3e;
+            color: white;
+        }
+
+        .endpoint .method.ws {
+            background: #9c27b0;
+            color: white;
+        }
+
+        .route-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+
+        .route-table th {
+            background: #f8f9fa;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid #ddd;
+        }
+
+        .route-table td {
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .route-table .route {
+            font-family: 'Monaco', monospace;
+            font-size: 0.9em;
+            color: #667eea;
+        }
+
+        .route-table .method {
+            display: inline-block;
+            padding: 3px 6px;
+            border-radius: 3px;
+            font-weight: 600;
+            font-size: 0.75em;
+            margin-right: 5px;
+        }
+
+        .route-table .method.get {
+            background: #61affe;
+            color: white;
+        }
+
+        .route-table .method.post {
+            background: #49cc90;
+            color: white;
+        }
+
+        .route-table .method.patch {
+            background: #fca130;
+            color: white;
+        }
+
+        .route-table .method.ws {
+            background: #9c27b0;
+            color: white;
+        }
+
+        .key-import {
+            background: #f5f5f5;
+            border: 1px solid #ddd;
+            padding: 12px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-family: 'Monaco', monospace;
+            font-size: 0.85em;
+        }
+
+        .tip {
+            background: #e8f5e9;
+            border-left: 4px solid #4caf50;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 15px 0;
+        }
+
+        .tip strong {
+            color: #2e7d32;
+        }
+
+        .warning {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 15px 0;
+        }
+
+        .warning strong {
+            color: #856404;
+        }
+
+        .critical {
+            background: #ffebee;
+            border-left: 4px solid #f44336;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 15px 0;
+        }
+
+        .critical strong {
+            color: #c62828;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            margin: 15px 0;
+        }
+
+        .grid-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #667eea;
+        }
+
+        .grid-item h4 {
+            margin-top: 0;
+        }
+
+        .footer {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            text-align: center;
+            color: #666;
+            margin-top: 30px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .footer a {
+            color: #667eea;
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin: 0 5px;
+        }
+
+        .status-complete {
+            background: #c8e6c9;
+            color: #2e7d32;
+        }
+
+        .status-inprogress {
+            background: #fff9c4;
+            color: #f57f17;
+        }
+
+        .status-todo {
+            background: #ffccbc;
+            color: #d84315;
+        }
+
+        @media print {
+            .section.closed .section-content {
+                max-height: 5000px !important;
+                padding: 30px !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <h1>🎮 Cờ Tướng Vương</h1>
+            <p class="subtitle">Chinese Chess (Xiangqi) & Western Chess Daily Puzzle Platform</p>
+
+            <div class="meta">
+                <div class="meta-item">
+                    <span class="meta-label">Status</span>
+                    <span class="meta-value">Phase 7 MVP <span class="status-badge status-complete">COMPLETE</span></span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Frontend</span>
+                    <span class="meta-value">ES Modules, No Build Tool</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Backend</span>
+                    <span class="meta-value">FastAPI + SQLite + WebSocket</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Deployment</span>
+                    <span class="meta-value">Docker (Nginx + API) on VPS</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Domain</span>
+                    <span class="meta-value">xiangqi.games-core.com</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Server</span>
+                    <span class="meta-value">62.238.28.106 (Cloudflare CDN)</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- 1. Architecture Overview -->
+        <div class="section">
+            <div class="section-header">
+                <span>📐 Architecture Overview</span>
+                <span class="toggle">▼</span>
+            </div>
+            <div class="section-content">
+                <h3>System Architecture</h3>
+                <p>Cờ Tướng Vương là một nền tảng chơi cờ tướng (Xiangqi) với chế độ Puzzle hàng ngày, tính năng Bot AI nhiều cấp độ, và hệ thống Leaderboard ELO.</p>
+
+                <div class="flow-box">
+                    <h4>Request Flow</h4>
+                    <div class="step"><strong>User Browser</strong> → HTML/JS (ES Modules)</div>
+                    <div class="step"><strong>Frontend</strong> → Hash Router (#/daily, #/play, etc.)</div>
+                    <div class="step"><strong>Game Controller</strong> → Board logic + Move validation</div>
+                    <div class="step"><strong>Backend API</strong> → FastAPI (REST + WebSocket)</div>
+                    <div class="step"><strong>Database</strong> → SQLite (games, users, elo)</div>
+                    <div class="step"><strong>Authentication</strong> → JWT + Google OAuth</div>
+                </div>
+
+                <h3>Key Subsystems</h3>
+                <div class="grid-2">
+                    <div class="grid-item">
+                        <h4>🎯 Daily Puzzle Mode</h4>
+                        <p><strong>Xiangqi Daily:</strong> 14 thực cấp độ ≥3 nước<br>
+                        <strong>Chess Daily:</strong> 310 puzzle × 100 level</p>
+                    </div>
+                    <div class="grid-item">
+                        <h4>🤖 AI Engine</h4>
+                        <p><strong>Xiangqi AI:</strong> Negamax + History Heuristic (L1-10)<br>
+                        <strong>Chess AI:</strong> chess-mini.js eval</p>
+                    </div>
+                    <div class="grid-item">
+                        <h4>🔐 Security</h4>
+                        <p>JWT + OAuth, Rate limiting, Anticheat memory management, Login failure tracking</p>
+                    </div>
+                    <div class="grid-item">
+                        <h4>🌐 Networking</h4>
+                        <p>WebSocket for real-time game sync, REST API for data, Google Sign-In integration</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. File Structure & Modules -->
+        <div class="section">
+            <div class="section-header">
+                <span>📁 File Structure & Module Hierarchy</span>
+                <span class="toggle">▼</span>
+            </div>
+            <div class="section-content">
+                <h3>Frontend Structure (xiangqi/scripts)</h3>
+                <div class="file-tree">xiangqi/
+├── scripts/
+│   ├── main.js                   ← Entry point, hash router, topbar binding
+│   ├── ai/
+│   │   ├── eval.js              ← Position evaluation (Xiangqi)
+│   │   ├── search.js            ← Negamax + iterative deepening
+│   │   ├── ai.worker.js         ← Web Worker setup (LEVEL_CONFIG)
+│   │   ├── pst.js               ← Piece-square tables
+│   │   └── openings.js          ← Opening book
+│   ├── chess/
+│   │   └── chess-mini.js        ← Chess engine (parseFen, applyMove, etc)
+│   ├── core/
+│   │   ├── board.js             ← Board state management
+│   │   ├── constants.js         ← Piece types, files, ranks
+│   │   ├── moves.js             ← Move generation + validation
+│   │   ├── rules.js             ← Xiangqi rules (check, stalemate)
+│   │   ├── notation.js          ← ICCS notation parsing
+│   │   └── zobrist.js           ← Hash keys for position
+│   ├── elo/
+│   │   └── elo.js               ← ELO rating calculation
+│   ├── game/
+│   │   ├── fake-players.js      ← Bot AI (random moves, TODO: minimax)
+│   │   ├── online-queue.js      ← Matchmaking queue state
+│   │   ├── time-control.js      ← Clock management
+│   │   └── tournament.js        ← Tournament bracket logic
+│   ├── i18n/
+│   │   ├── i18n.js              ← i18n engine (vi/en)
+│   │   └── locales/
+│   │       ├── vi.js            ← Vietnamese strings
+│   │       └── en.js            ← English strings
+│   ├── net/
+│   │   ├── api.js               ← REST API calls (fetch wrapper)
+│   │   └── ws-client.js         ← WebSocket client
+│   ├── puzzles/
+│   │   ├── bank.js              ← Xiangqi daily puzzles (14 bài)
+│   │   └── chess-bank.js        ← Chess daily puzzles (310 bài × 100 levels)
+│   ├── storage/
+│   │   └── local.js             ← localStorage wrapper (profile, settings)
+│   ├── sound/
+│   │   └── sound.js             ← Audio playback
+│   ├── theme/
+│   │   └── theme.js             ← Dark/light mode toggle
+│   ├── ui/
+│   │   ├── game-controller.js   ← Main game logic + ELO update
+│   │   ├── daily-page.js        ← Xiangqi daily puzzle UI
+│   │   ├── daily-chess-page.js  ← Chess daily puzzle UI (TODO: 100 levels)
+│   │   ├── board-renderer.js    ← Board drawing + highlights
+│   │   ├── auth-modal.js        ← Login/signup modal
+│   │   ├── ai-modal.js          ← AI mode selection
+│   │   ├── find-match-modal.js  ← Matchmaking modal
+│   │   ├── history-page.js      ← Game history viewer
+│   │   ├── leaderboard-page.js  ← ELO rankings
+│   │   ├── profile-page.js      ← User profile
+│   │   ├── settings-page.js     ← App settings
+│   │   ├── replay-page.js       ← Game replay viewer
+│   │   ├── tournament-page.js   ← Tournament brackets
+│   │   ├── create-room-page.js  ← Custom challenge creation
+│   │   ├── online-page.js       ← Online game UI
+│   │   ├── chat-panel.js        ← Game chat
+│   │   ├── time-display.js      ← Clock UI
+│   │   ├── time-select-modal.js ← Time control picker
+│   │   ├── toast.js             ← Notification system
+│   │   └── ...
+│   └── variants/
+│       └── blind.js             ← Blind chess variant
+├── styles/
+│   ├── ui.css                   ← Layout + responsive design
+│   └── board.css                ← Board sizing (100dvh)
+├── index.html                   ← Entry HTML
+└── service-worker.js            ← PWA offline support
+                </div>
+
+                <h3>Backend Structure (api-xiangqi/app)</h3>
+                <div class="file-tree">api-xiangqi/
+├── app/
+│   ├── main.py                  ← FastAPI app + routes + WebSocket
+│   ├── auth.py                  ← JWT, password hashing, 2FA
+│   ├── db.py                    ← SQLite connection + schema
+│   ├── elo.py                   ← ELO rating updates
+│   ├── rate_limit.py            ← Rate limiting (IP-based)
+│   ├── email_service.py         ← Email sending (password reset)
+│   ├── anticheat.py             ← Move validation + win-rate anomaly
+│   ├── audit.py                 ← Security audit logging
+│   ├── oauth.py                 ← Google OAuth handler
+│   ├── xiangqi_engine.py        ← Xiangqi move validation (server-side)
+│   ├── tournaments.py           ← Tournament management
+│   ├── http_client.py           ← Async HTTP helper
+│   └── __init__.py
+├── tests/
+│   └── test_security.py         ← 25 automated security tests
+├── server.py                    ← Standalone server entry
+└── scripts/
+    └── rotate-jwt-secret.py     ← Secret rotation (production)
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Key Imports & Entry Points -->
+        <div class="section">
+            <div class="section-header">
+                <span>🔗 Key Imports & Entry Points</span>
+                <span class="toggle">▼</span>
+            </div>
+            <div class="section-content">
+                <h3>Frontend Entry Point (main.js)</h3>
+                <table class="route-table">
+                    <thead>
+                        <tr>
+                            <th>Import</th>
+                            <th>Module</th>
+                            <th>Purpose</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>GameController</code></td>
+                            <td><code>ui/game-controller.js</code></td>
+                            <td>Main game instance, move validation, ELO updates</td>
+                        </tr>
+                        <tr>
+                            <td><code>renderDailyPage</code></td>
+                            <td><code>ui/daily-page.js</code></td>
+                            <td>Xiangqi daily puzzle UI renderer</td>
+                        </tr>
+                        <tr>
+                            <td><code>renderDailyChessPage</code></td>
+                            <td><code>ui/daily-chess-page.js</code></td>
+                            <td>Chess daily puzzle UI renderer (needs 100-level redesign)</td>
+                        </tr>
+                        <tr>
+                            <td><code>getDailyProgress, getLevel, getStreak</code></td>
+                            <td><code>puzzles/chess-bank.js</code></td>
+                            <td>Chess daily state management + localStorage</td>
+                        </tr>
+                        <tr>
+                            <td><code>theme.init(), i18n.init()</code></td>
+                            <td><code>theme/theme.js, i18n/i18n.js</code></td>
+                            <td>Dark mode + i18n initialization</td>
+                        </tr>
+                        <tr>
+                            <td><code>isAuthed, getUser, loadMe</code></td>
+                            <td><code>net/api.js</code></td>
+                            <td>Auth state management</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Frontend Hash Routes</h3>
+                <table class="route-table">
+                    <thead>
+                        <tr>
+                            <th>Route</th>
+                            <th>Component</th>
+                            <th>Feature</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>#/</code> or <code>#/home</code></td>
+                            <td>Home page</td>
+                            <td>Navigation hub</td>
+                        </tr>
+                        <tr>
+                            <td><code>#/daily</code></td>
+                            <td><code>renderDailyPage()</code></td>
+                            <td>Xiangqi daily puzzle (14 bài, ≥3 nước)</td>
+                        </tr>
+                        <tr>
+                            <td><code>#/chess-daily</code></td>
+                            <td><code>renderDailyChessPage()</code></td>
+                            <td>Chess daily puzzle (310 bài × 100 levels) ⚠️ NEEDS REDESIGN</td>
+                        </tr>
+                        <tr>
+                            <td><code>#/play</code></td>
+                            <td><code>GameController</code></td>
+                            <td>PvE vs Bot (levels 1-10)</td>
+                        </tr>
+                        <tr>
+                            <td><code>#/online</code></td>
+                            <td><code>renderOnlinePage()</code></td>
+                            <td>PvP matchmaking</td>
+                        </tr>
+                        <tr>
+                            <td><code>#/profile</code></td>
+                            <td><code>renderProfilePage()</code></td>
+                            <td>User stats + ELO ranking</td>
+                        </tr>
+                        <tr>
+                            <td><code>#/leaderboard</code></td>
+                            <td><code>renderLeaderboardPage()</code></td>
+                            <td>Global ELO rankings</td>
+                        </tr>
+                        <tr>
+                            <td><code>#/history</code></td>
+                            <td><code>renderHistoryPage()</code></td>
+                            <td>Past games list</td>
+                        </tr>
+                        <tr>
+                            <td><code>#/replay/:id</code></td>
+                            <td><code>renderReplayPage()</code></td>
+                            <td>Game replay viewer</td>
+                        </tr>
+                        <tr>
+                            <td><code>#/settings</code></td>
+                            <td><code>renderSettingsPage()</code></td>
+                            <td>Sound, theme, language</td>
+                        </tr>
+                        <tr>
+                            <td><code>#/tournament</code></td>
+                            <td><code>renderTournamentPage()</code></td>
+                            <td>Tournament brackets</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Critical Game Flow Functions</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Function</th>
+                            <th>Location</th>
+                            <th>Responsibility</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>makeMove(moveStr)</code></td>
+                            <td><code>game-controller.js</code></td>
+                            <td>Apply move to board, validate, update UI, trigger AI</td>
+                        </tr>
+                        <tr>
+                            <td><code>endGame(result, reason)</code></td>
+                            <td><code>game-controller.js</code></td>
+                            <td>Calculate ELO, save to DB, show result modal</td>
+                        </tr>
+                        <tr>
+                            <td><code>drawBoard()</code></td>
+                            <td><code>board-renderer.js</code></td>
+                            <td>Render pieces, highlights, coordinates</td>
+                        </tr>
+                        <tr>
+                            <td><code>evaluatePosition(pos, depth, isAI)</code></td>
+                            <td><code>ai/eval.js</code></td>
+                            <td>Evaluate position for minimax search</td>
+                        </tr>
+                        <tr>
+                            <td><code>negamax(depth, alpha, beta)</code></td>
+                            <td><code>ai/search.js</code></td>
+                            <td>Alpha-beta pruning search</td>
+                        </tr>
+                        <tr>
+                            <td><code>completePuzzle(puzzleId)</code></td>
+                            <td><code>puzzles/chess-bank.js</code></td>
+                            <td>Save puzzle solve to localStorage + upload to backend</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 4. Backend API Endpoints -->
+        <div class="section">
+            <div class="section-header">
+                <span>🔌 Backend API Endpoints & WebSocket</span>
+                <span class="toggle">▼</span>
+            </div>
+            <div class="section-content">
+                <h3>Authentication & User</h3>
+                <table class="route-table">
+                    <thead>
+                        <tr>
+                            <th>Endpoint</th>
+                            <th>Method</th>
+                            <th>Purpose</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>/auth/register</code></td>
+                            <td><span class="method post">POST</span></td>
+                            <td>Create account (email + password)</td>
+                        </tr>
+                        <tr>
+                            <td><code>/auth/login</code></td>
+                            <td><span class="method post">POST</span></td>
+                            <td>JWT token (with rate limit: 5 failures/15min)</td>
+                        </tr>
+                        <tr>
+                            <td><code>/auth/logout</code></td>
+                            <td><span class="method post">POST</span></td>
+                            <td>Revoke token</td>
+                        </tr>
+                        <tr>
+                            <td><code>/auth/google</code></td>
+                            <td><span class="method post">POST</span></td>
+                            <td>Google OAuth (token_id → JWT)</td>
+                        </tr>
+                        <tr>
+                            <td><code>/auth/verify-email/:token</code></td>
+                            <td><span class="method get">GET</span></td>
+                            <td>Email verification link</td>
+                        </tr>
+                        <tr>
+                            <td><code>/auth/forgot-password</code></td>
+                            <td><span class="method post">POST</span></td>
+                            <td>Request password reset (3 req/hour)</td>
+                        </tr>
+                        <tr>
+                            <td><code>/auth/reset-password/:token</code></td>
+                            <td><span class="method post">POST</span></td>
+                            <td>Reset password with token</td>
+                        </tr>
+                        <tr>
+                            <td><code>/me</code></td>
+                            <td><span class="method get">GET</span></td>
+                            <td>Get current user profile</td>
+                        </tr>
+                        <tr>
+                            <td><code>/me</code></td>
+                            <td><span class="method patch">PATCH</span></td>
+                            <td>Update profile (avatar, displayName, etc)</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Games & ELO</h3>
+                <table class="route-table">
+                    <thead>
+                        <tr>
+                            <th>Endpoint</th>
+                            <th>Purpose</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="method post">POST</span> <code>/games</code></td>
+                            <td>Create new game record</td>
+                        </tr>
+                        <tr>
+                            <td><span class="method patch">PATCH</span> <code>/games/:id</code></td>
+                            <td>Update game (moves, result)</td>
+                        </tr>
+                        <tr>
+                            <td><span class="method get">GET</span> <code>/games/:id</code></td>
+                            <td>Get game details</td>
+                        </tr>
+                        <tr>
+                            <td><span class="method get">GET</span> <code>/games?limit=20&offset=0</code></td>
+                            <td>Game history (paginated)</td>
+                        </tr>
+                        <tr>
+                            <td><span class="method get">GET</span> <code>/elo/rank</code></td>
+                            <td>Get user's ELO rank (global percentile)</td>
+                        </tr>
+                        <tr>
+                            <td><span class="method get">GET</span> <code>/leaderboard?limit=100</code></td>
+                            <td>Top players by ELO</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Daily Puzzles</h3>
+                <table class="route-table">
+                    <thead>
+                        <tr>
+                            <th>Endpoint</th>
+                            <th>Purpose</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="method post">POST</span> <code>/puzzles/daily/complete</code></td>
+                            <td>Mark Xiangqi daily puzzle as solved</td>
+                        </tr>
+                        <tr>
+                            <td><span class="method post">POST</span> <code>/puzzles/chess/complete</code></td>
+                            <td>Mark Chess daily puzzle as solved</td>
+                        </tr>
+                        <tr>
+                            <td><span class="method get">GET</span> <code>/puzzles/chess/progress</code></td>
+                            <td>Get Chess daily progress (level, streak)</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>WebSocket Events</h3>
+                <div class="endpoint">
+                    <span class="method ws">WS</span> <code>ws://api.xiangqi.games/ws?token=JWT_TOKEN</code>
+                </div>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Event (Client → Server)</th>
+                            <th>Payload</th>
+                            <th>Purpose</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>find-match</code></td>
+                            <td><code>{ timeControl: "5|0" }</code></td>
+                            <td>Enter matchmaking queue</td>
+                        </tr>
+                        <tr>
+                            <td><code>move</code></td>
+                            <td><code>{ move: "e0e9" }</code></td>
+                            <td>Send move (server validates)</td>
+                        </tr>
+                        <tr>
+                            <td><code>resign</code></td>
+                            <td><code>{}</code></td>
+                            <td>Resign game</td>
+                        </tr>
+                        <tr>
+                            <td><code>message</code></td>
+                            <td><code>{ text: "..." }</code></td>
+                            <td>Send chat message</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Event (Server → Client)</th>
+                            <th>Payload</th>
+                            <th>Purpose</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>matched</code></td>
+                            <td><code>{ opponent: {...}, gameId: "..." }</code></td>
+                            <td>Matchmaking found opponent</td>
+                        </tr>
+                        <tr>
+                            <td><code>move</code></td>
+                            <td><code>{ move: "e0e9", by: "opponent" }</code></td>
+                            <td>Opponent made move</td>
+                        </tr>
+                        <tr>
+                            <td><code>game-end</code></td>
+                            <td><code>{ result: "win|loss|draw", reason: "..." }</code></td>
+                            <td>Game finished, ELO calculated</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 5. Current Features -->
+        <div class="section">
+            <div class="section-header">
+                <span>✅ Completed Features (Phase 7)</span>
+                <span class="toggle">▼</span>
+            </div>
+            <div class="section-content">
+                <h3>Frontend Features</h3>
+                <ul class="feature-list">
+                    <li><strong>Daily Puzzle - Xiangqi:</strong> 14 thực cấp độ ≥3 nước, solution viewer</li>
+                    <li><strong>Daily Puzzle - Chess:</strong> 310 puzzles × 100 levels (basic UI, needs redesign)</li>
+                    <li><strong>Board Rendering:</strong> Mobile/tablet/desktop responsive (100dvh without scroll)</li>
+                    <li><strong>Fullscreen Mode:</strong> ⛶ button for immersive play</li>
+                    <li><strong>PvE vs Bot:</strong> Levels 1-10 with difficulty scaling</li>
+                    <li><strong>3-Fold Repetition:</strong> FEN history tracking, auto-draw</li>
+                    <li><strong>ELO Rating:</strong> Real-time ELO calculation + global leaderboard</li>
+                    <li><strong>Game History:</strong> Replay viewer with move-by-move navigation</li>
+                    <li><strong>Authentication:</strong> JWT + Google OAuth + Email verification</li>
+                    <li><strong>i18n Support:</strong> Vietnamese (vi) + English (en)</li>
+                    <li><strong>Dark Mode:</strong> Toggle light/dark theme</li>
+                    <li><strong>Sound Effects:</strong> Move, capture, checkmate sounds (toggle in settings)</li>
+                </ul>
+
+                <h3>Backend Features</h3>
+                <ul class="feature-list">
+                    <li><strong>REST API:</strong> User management, game records, ELO leaderboard</li>
+                    <li><strong>WebSocket:</strong> Real-time game sync, matchmaking, chat</li>
+                    <li><strong>Rate Limiting:</strong> IP-based per endpoint (default 100 req/min)</li>
+                    <li><strong>Anticheat:</strong> Move validation, win-rate anomaly detection</li>
+                    <li><strong>Security:</strong> SQL whitelist, JWT secret rotation, CSP headers</li>
+                    <li><strong>Email Service:</strong> Password reset, email verification (Mailtrap)</li>
+                    <li><strong>Tournaments:</strong> Bracket management (single/double elimination)</li>
+                    <li><strong>Logging:</strong> RotatingFileHandler (10MB × 10 files), structured logs</li>
+                </ul>
+
+                <h3>Security Hardening</h3>
+                <ul class="feature-list">
+                    <li><strong>JWT Secret:</strong> sys.exit(1) if missing in production</li>
+                    <li><strong>Avatar URL Validation:</strong> http/https only, max 300 chars</li>
+                    <li><strong>SQL Injection Prevention:</strong> Whitelist-based column filtering</li>
+                    <li><strong>WebSocket Security:</strong> 10KB message limit, move_data structure validation</li>
+                    <li><strong>Login Brute Force:</strong> Lock after 5 failures/15 minutes</li>
+                    <li><strong>Email Reset Limit:</strong> 3 requests/hour</li>
+                    <li><strong>Cloudflare IP Detection:</strong> Validate X-Forwarded-For from CF IPs only</li>
+                    <li><strong>Security Headers:</strong> Referrer-Policy, X-Frame-Options, CSP</li>
+                    <li><strong>25 Security Tests:</strong> Automated via pytest (all passing)</li>
+                </ul>
+
+                <div class="tip">
+                    <strong>✅ How to Verify:</strong> Run <code>cd api-xiangqi && python -m pytest tests/test_security.py -v</code> — Expected: 25 passed
+                </div>
+            </div>
+        </div>
+
+        <!-- 6. Outstanding Issues -->
+        <div class="section">
+            <div class="section-header">
+                <span>⚠️ Outstanding Issues & TODO Items</span>
+                <span class="toggle">▼</span>
+            </div>
+            <div class="section-content">
+                <ul class="issue-list">
+                    <li>
+                        <span class="number">#1</span>
+                        <div class="title">Chess Daily — 100 Levels UI & Tutorial</div>
+                        <div class="description">
+                            <strong>Status:</strong> <span class="status-badge status-todo">CRITICAL</span><br>
+                            <strong>File:</strong> <code>xiangqi/scripts/ui/daily-chess-page.js</code><br>
+                            <strong>Issue:</strong> Current UI shows tiny "Lv 1/100" text. Needs:<br>
+                            • Tier display (Tân thủ 1-15 → Đại kiện tướng 96-100)<br>
+                            • Progress bar (visual level indication)<br>
+                            • Tutorial modal (first visit, ? button to re-read)<br>
+                            <strong>Impact:</strong> User doesn't understand 100-level progression
+                        </div>
+                    </li>
+
+                    <li>
+                        <span class="number">#2</span>
+                        <div class="title">Chess Puzzle Quality — 310 Low-Quality Puzzles</div>
+                        <div class="description">
+                            <strong>Status:</strong> <span class="status-badge status-todo">CRITICAL</span><br>
+                            <strong>File:</strong> <code>xiangqi/scripts/puzzles/chess-bank.js</code><br>
+                            <strong>Issue:</strong> 310 puzzles auto-generated from 5 templates → many duplicates, unrealistic FENs<br>
+                            <strong>Required:</strong> Real puzzle bank with correct FEN + verified solutions<br>
+                            <strong>Impact:</strong> Users get bored, learn nothing
+                        </div>
+                    </li>
+
+                    <li>
+                        <span class="number">#3</span>
+                        <div class="title">Xiangqi Daily — Puzzle Validation</div>
+                        <div class="description">
+                            <strong>Status:</strong> <span class="status-badge status-todo">IMPORTANT</span><br>
+                            <strong>File:</strong> <code>xiangqi/scripts/puzzles/bank.js</code><br>
+                            <strong>Issue:</strong> 14 puzzles haven't been tested with AI engine<br>
+                            • Some FEN may have coordinate errors (xiangqi uses files a-i, ranks 0-9)<br>
+                            • Solution may not work as intended<br>
+                            <strong>Required:</strong> Manual test each puzzle, verify solution execution<br>
+                            <strong>Impact:</strong> User can't solve puzzle due to wrong FEN/solution
+                        </div>
+                    </li>
+
+                    <li>
+                        <span class="number">#4</span>
+                        <div class="title">Bot AI — FakePlayers Still Use Random Moves</div>
+                        <div class="description">
+                            <strong>Status:</strong> <span class="status-badge status-inprogress">IN PROGRESS</span><br>
+                            <strong>File:</strong> <code>xiangqi/scripts/game/fake-players.js</code><br>
+                            <strong>Issue:</strong> All AI levels (1-10) use randomMove() — no intelligent play<br>
+                            <strong>Plan:</strong> L5+ should use minimax search from ai/search.js<br>
+                            <strong>Impact:</strong> Bot difficulty doesn't match claimed levels
+                        </div>
+                    </li>
+
+                    <li>
+                        <span class="number">#5</span>
+                        <div class="title">Bot AI — Search Depth Not Scaling</div>
+                        <div class="description">
+                            <strong>Status:</strong> <span class="status-badge status-todo">IMPORTANT</span><br>
+                            <strong>File:</strong> <code>xiangqi/scripts/ai/ai.worker.js</code><br>
+                            <strong>Issue:</strong> All levels use constant depth (L9, L10 should be deeper)<br>
+                            <strong>Current:</strong> L9 depth=6, L10 depth=6<br>
+                            <strong>Needed:</strong> L9 depth=7, L10 depth=8<br>
+                            <strong>Impact:</strong> Higher levels don't feel harder
+                        </div>
+                    </li>
+
+                    <li>
+                        <span class="number">#6</span>
+                        <div class="title">Mobile/iPad Layout — Real Device Verification</div>
+                        <div class="description">
+                            <strong>Status:</strong> <span class="status-badge status-inprogress">NEEDS TESTING</span><br>
+                            <strong>File:</strong> <code>xiangqi/styles/board.css</code><br>
+                            <strong>Issue:</strong> Board sizing fix deployed but not tested on actual iPhone/iPad<br>
+                            <strong>Checklist:</strong><br>
+                            • iPhone 12 (390×844): no scroll, board visible<br>
+                            • iPad (768×1024): no scroll, board centered<br>
+                            • Landscape mode: board fits without scroll<br>
+                            <strong>Impact:</strong> Mobile users may see broken layout
+                        </div>
+                    </li>
+                </ul>
+
+                <div class="critical">
+                    <strong>🔴 CRITICAL PATH:</strong> Fix #1 + #2 → User retention improves significantly. Chess Daily is the highest traffic feature.
+                </div>
+            </div>
+        </div>
+
+        <!-- 7. Deployment Process -->
+        <div class="section">
+            <div class="section-header">
+                <span>🚀 Deployment Process & Server Setup</span>
+                <span class="toggle">▼</span>
+            </div>
+            <div class="section-content">
+                <h3>Server Information</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Component</th>
+                            <th>Details</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Host</strong></td>
+                            <td><code>xiangqi-server = root@62.238.28.106</code></td>
+                        </tr>
+                        <tr>
+                            <td><strong>SSH Key</strong></td>
+                            <td><code>~/.ssh/id_ed25519</code></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Domain</strong></td>
+                            <td><code>xiangqi.games-core.com</code> (Cloudflare CDN, SSL: Full)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Frontend Path</strong></td>
+                            <td><code>/root/xiangqi-deploy/nginx/html/</code></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Backend Path</strong></td>
+                            <td><code>/root/xiangqi-deploy/api-xiangqi/app/</code></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Docker Nginx</strong></td>
+                            <td><code>xq-nginx</code> (port 8700), cache-control: no-cache</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Docker API</strong></td>
+                            <td><code>xq-api</code> (port 8787)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Git Remote</strong></td>
+                            <td><code>https://github.com/manhdauvn09-manhds/xiangqi.git</code></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Frontend Deployment Steps</h3>
+                <div class="flow-box">
+                    <div class="step">Make changes locally in <code>xiangqi/</code></div>
+                    <div class="step">Test locally: Open <code>xiangqi/index.html</code> in browser or start a local server</div>
+                    <div class="step">Commit to git: <code>git add &lt;files&gt; && git commit -m "message" && git push origin main</code></div>
+                    <div class="step">SCP to server: <code>scp -i ~/.ssh/id_ed25519 &lt;file&gt; xiangqi-server:/root/xiangqi-deploy/nginx/html/&lt;path&gt;</code></div>
+                    <div class="step">Reload Nginx: <code>ssh -i ~/.ssh/id_ed25519 xiangqi-server "docker exec xq-nginx nginx -s reload"</code></div>
+                    <div class="step">Test: Open xiangqi.games-core.com in browser, verify changes</div>
+                </div>
+
+                <h3>Backend Deployment Steps</h3>
+                <div class="flow-box">
+                    <div class="step">Make changes in <code>api-xiangqi/app/</code></div>
+                    <div class="step">Run security tests: <code>cd api-xiangqi && python -m pytest tests/test_security.py -v</code></div>
+                    <div class="step">Commit: <code>git add api-xiangqi/ && git commit -m "message" && git push origin main</code></div>
+                    <div class="step">SCP files: <code>scp -i ~/.ssh/id_ed25519 api-xiangqi/app/*.py xiangqi-server:/root/xiangqi-deploy/api-xiangqi/app/</code></div>
+                    <div class="step">Restart Docker: <code>ssh -i ~/.ssh/id_ed25519 xiangqi-server "docker restart xq-api"</code></div>
+                    <div class="step">Check logs: <code>ssh xiangqi-server "docker logs xq-api | tail -20"</code></div>
+                </div>
+
+                <div class="warning">
+                    <strong>⚠️ Important Rules:</strong><br>
+                    • <strong>No <code>git pull</code> on server</strong> — server doesn't have git repo, use SCP only<br>
+                    • <strong>Always push Git BEFORE SCP</strong> — maintain git history<br>
+                    • <strong>Don't use <code>--no-verify</code></strong> — respect pre-commit hooks<br>
+                    • <strong>No long SSH sessions</strong> — just SCP + restart, close session<br>
+                </div>
+
+                <h3>Cloudflare Configuration</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Setting</th>
+                            <th>Value</th>
+                            <th>Purpose</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>SSL Mode</strong></td>
+                            <td>Full (not Flexible)</td>
+                            <td>HTTPS end-to-end encryption</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Caching</strong></td>
+                            <td>Cache-Control: no-cache</td>
+                            <td>Browser caches but validates with origin</td>
+                        </tr>
+                        <tr>
+                            <td><strong>IP Header</strong></td>
+                            <td>X-Forwarded-For from CF IPs only</td>
+                            <td>Rate limiting relies on this (no spoofing)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Rate Limiting</strong></td>
+                            <td>Check against CF IP list</td>
+                            <td>Prevent spoofed client IPs</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 8. Development Guidelines -->
+        <div class="section">
+            <div class="section-header">
+                <span>📝 Development Guidelines & Code Standards</span>
+                <span class="toggle">▼</span>
+            </div>
+            <div class="section-content">
+                <h3>Code Style</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Aspect</th>
+                            <th>Rule</th>
+                            <th>Example</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Language</strong></td>
+                            <td>Output in Vietnamese (Tiếng Việt)</td>
+                            <td>Comments, commit messages → English, UI → Vietnamese</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Frontend</strong></td>
+                            <td>ES modules, no build tool, no TypeScript</td>
+                            <td><code>import { fn } from './module.js';</code></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Backend</strong></td>
+                            <td>FastAPI + SQLite, Python 3.10+</td>
+                            <td>Type hints, async/await for I/O</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Git Commits</strong></td>
+                            <td>format(type): description (English)</td>
+                            <td><code>feat: add chess daily 100 levels</code></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Git Add</strong></td>
+                            <td>Explicit files only, no <code>git add -A</code></td>
+                            <td><code>git add file1.js file2.js</code></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Secrets</strong></td>
+                            <td>Never commit .env, API keys, JWT secrets</td>
+                            <td>Use environment variables, .gitignore</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Xiangqi Notation</strong></td>
+                            <td>ICCS: files a-i, ranks 0-9, e.g. e0e9</td>
+                            <td><code>const move = "e0e9";</code></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Chess Notation</strong></td>
+                            <td>SAN: e.g. Nf3, Bxf7, O-O</td>
+                            <td><code>const move = "Nf3";</code></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Frontend Patterns</h3>
+                <div class="code-block">
+// ✓ DO: Clear module exports
+export function renderPage(root) {
+  root.innerHTML = '...';
+  // Setup handlers
+}
+
+// ✓ DO: Event delegation
+document.addEventListener('click', (e) => {
+  if (e.target.matches('[data-action="move"]')) {
+    handleMove(e);
+  }
+});
+
+// ✗ DON'T: Global state mutation without tracking
+board.position = newPos; // Bad, no undo
+
+// ✓ DO: Return new state
+const newBoard = applyMove(board, move);
+                </div>
+
+                <h3>Backend Patterns</h3>
+                <div class="code-block">
+# ✓ DO: Type hints
+from typing import Optional
+def get_user(user_id: int) -> Optional[User]:
+    ...
+
+# ✓ DO: Rate limit with decorator
+@api_limiter()
+@app.post("/games")
+async def create_game(req: CreateGameRequest):
+    ...
+
+# ✓ DO: Use logger, not print
+logger.info("[xq] Game created", extra={"game_id": game_id})
+
+# ✗ DON'T: Bare except
+try:
+    ...
+except:  # Bad, catches KeyboardInterrupt too
+    ...
+
+# ✓ DO: Specific exceptions
+try:
+    ...
+except (ValueError, KeyError) as e:
+    logger.error(f"Invalid move: {e}")
+                </div>
+
+                <h3>Testing Checklist Before Deployment</h3>
+                <div class="flow-box">
+                    <div class="step">Run security tests: <code>pytest tests/test_security.py -v</code> (expected: 25 passed)</div>
+                    <div class="step">Test in browser: Open affected routes, check for console errors</div>
+                    <div class="step">Test responsive: iPhone (390px), iPad (768px), desktop (1280px)</div>
+                    <div class="step">Test on staging/dev domain first, then production</div>
+                    <div class="step">Monitor server logs after deploy: <code>docker logs xq-api | tail -50</code></div>
+                    <div class="step">Check error rate in monitoring dashboard</div>
+                </div>
+
+                <h3>Common Tasks & Commands</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Task</th>
+                            <th>Command</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Start local frontend server</td>
+                            <td><code>python -m http.server 8000 --directory xiangqi/</code></td>
+                        </tr>
+                        <tr>
+                            <td>Start local backend</td>
+                            <td><code>cd api-xiangqi && python server.py</code></td>
+                        </tr>
+                        <tr>
+                            <td>Run all security tests</td>
+                            <td><code>cd api-xiangqi && pytest tests/test_security.py -v</code></td>
+                        </tr>
+                        <tr>
+                            <td>Check server logs</td>
+                            <td><code>ssh xiangqi-server "docker logs -f xq-api"</code></td>
+                        </tr>
+                        <tr>
+                            <td>SSH into server</td>
+                            <td><code>ssh -i ~/.ssh/id_ed25519 xiangqi-server</code></td>
+                        </tr>
+                        <tr>
+                            <td>List deployed files</td>
+                            <td><code>ssh xiangqi-server "ls -la /root/xiangqi-deploy/nginx/html/"</code></td>
+                        </tr>
+                        <tr>
+                            <td>View current branch</td>
+                            <td><code>git branch -v</code></td>
+                        </tr>
+                        <tr>
+                            <td>Push to main</td>
+                            <td><code>git push origin main</code></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 9. Security Considerations -->
+        <div class="section">
+            <div class="section-header">
+                <span>🔒 Security Considerations & Best Practices</span>
+                <span class="toggle">▼</span>
+            </div>
+            <div class="section-content">
+                <h3>Key Security Features (Phase 7)</h3>
+                <ul class="feature-list">
+                    <li><strong>JWT Secret:</strong> Rotated quarterly. Production requires env var (sys.exit if missing)</li>
+                    <li><strong>Password Hashing:</strong> bcrypt with salt rounds configurable</li>
+                    <li><strong>Rate Limiting:</strong> Per IP per endpoint, customizable per route</li>
+                    <li><strong>Anticheat:</strong> Win-rate anomaly detection (>70% win rate with short moves)</li>
+                    <li><strong>Move Validation:</strong> Server-side validation via xiangqi_engine.py</li>
+                    <li><strong>SQL Injection Prevention:</strong> Whitelist-based column filtering (_PATCH_ME_ALLOWED_COLS)</li>
+                    <li><strong>CORS:</strong> Restricted origins (no wildcard with credentials=True)</li>
+                    <li><strong>HTTPS Only:</strong> Cloudflare SSL mode = Full</li>
+                    <li><strong>CSP Headers:</strong> Prevent XSS, clickjacking</li>
+                </ul>
+
+                <h3>Authorization & Authentication</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Mechanism</th>
+                            <th>Implementation</th>
+                            <th>Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>JWT Token</strong></td>
+                            <td><code>Authorization: Bearer &lt;token&gt;</code></td>
+                            <td>Expires in 24 hours, refresh not implemented</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Google OAuth</strong></td>
+                            <td>token_id → JWT conversion</td>
+                            <td>Redirect after successful auth</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Email Verification</strong></td>
+                            <td>Token link (48h validity)</td>
+                            <td>Rate limit: 1 email per 60 seconds</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Password Reset</strong></td>
+                            <td>Token link (1h validity)</td>
+                            <td>Rate limit: 3 requests per hour per user</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Data Protection</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Data Type</th>
+                            <th>Protection</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Passwords</strong></td>
+                            <td>bcrypt hashing, never logged</td>
+                        </tr>
+                        <tr>
+                            <td><strong>JWT Secrets</strong></td>
+                            <td>Environment variable, rotated quarterly</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Email</strong></td>
+                            <td>SQLite, encrypted connections only</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Game Moves</strong></td>
+                            <td>Server-validated, anticheat checked</td>
+                        </tr>
+                        <tr>
+                            <td><strong>ELO Ratings</strong></td>
+                            <td>Public leaderboard, private details in profile</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Security Audit Checklist (25 Tests)</h3>
+                <div class="tip">
+                    <strong>✓ Run:</strong> <code>cd api-xiangqi && python -m pytest tests/test_security.py -v</code><br>
+                    All 25 tests should PASS before deploying to production
+                </div>
+
+                <h3>Common Vulnerabilities Mitigated</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Vulnerability</th>
+                            <th>Mitigation</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>SQL Injection</strong></td>
+                            <td>Whitelist column names, parameterized queries</td>
+                        </tr>
+                        <tr>
+                            <td><strong>XSS (Cross-Site Scripting)</strong></td>
+                            <td>CSP headers, input sanitization, no eval()</td>
+                        </tr>
+                        <tr>
+                            <td><strong>CSRF (Cross-Site Request Forgery)</strong></td>
+                            <td>CORS restrictions, no wildcard origins</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Brute Force</strong></td>
+                            <td>Login failure tracker (5 failures → 15min lock)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Rate Limiting</strong></td>
+                            <td>Per-IP per-endpoint, customizable limits</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Anticheat</strong></td>
+                            <td>Move validation, win-rate anomaly detection</td>
+                        </tr>
+                        <tr>
+                            <td><strong>DDoS</strong></td>
+                            <td>Cloudflare protection, rate limiting</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="warning">
+                    <strong>⚠️ Never:</strong><br>
+                    • Commit secrets (.env, API keys)<br>
+                    • Use print() for sensitive data (use logger instead)<br>
+                    • Trust client-side validation alone (server must validate)<br>
+                    • Use --no-verify for hooks<br>
+                    • Enable wildcard CORS with credentials<br>
+                </div>
+            </div>
+        </div>
+
+        <!-- 10. Chess Daily Puzzle Engine & Fixes -->
+        <div class="section">
+            <div class="section-header">
+                <span>♟️ Chess Daily Puzzle Engine (Recent Fixes)</span>
+                <span class="toggle">▼</span>
+            </div>
+            <div class="section-content">
+                <h3>Overview</h3>
+                <p>Chess Daily mode provides Western chess puzzles (310+ positions) with automatic daily rotation and player progression.</p>
+
+                <h3>Recent Bug Fixes (2026-05-18)</h3>
+                <div class="success">
+                    <strong>✅ Fixed:</strong> 6 malformed FEN strings causing navigation failure
+                    <ul>
+                        <li><code>puzzle_026</code> - Rook vs Rook and Pawn (missing rank 8)</li>
+                        <li><code>puzzle_027</code> - Rook Endgame: Active King (missing rank 8)</li>
+                        <li><code>puzzle_028</code> - Back Rank Mate (missing rank 1)</li>
+                        <li><code>puzzle_030</code> - Rook Cut-off (missing rank 1)</li>
+                        <li><code>puzzle_031</code> - Queen Checkmate (missing rank 1)</li>
+                        <li><code>puzzle_032</code> - Queen vs Rook (missing rank 1)</li>
+                    </ul>
+                </div>
+
+                <h3>FEN Validation</h3>
+                <p><strong>All FEN strings must have exactly 8 ranks</strong> (Western chess = 8x8 board)</p>
+                <pre><code>// Valid FEN: 8 ranks separated by '/'
+"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+              ↑       ↑       ↑       ↑       ↑       ↑       ↑       ↑
+             rank8  rank7  rank6  rank5  rank4  rank3  rank2  rank1</code></pre>
+
+                <h3>Error Handling</h3>
+                <p><strong>Key files:</strong></p>
+                <ul>
+                    <li><code>chess/chess-mini.js</code> - FEN parser with validation
+                        <ul>
+                            <li>Checks for null/undefined FEN</li>
+                            <li>Validates 8 rank count</li>
+                            <li>Detailed error messages for debugging</li>
+                        </ul>
+                    </li>
+                    <li><code>ui/daily-chess-page.js</code> - Render with error recovery
+                        <ul>
+                            <li>Try-catch around FEN parsing</li>
+                            <li>Displays error to user instead of crashing</li>
+                            <li>Includes puzzle ID and FEN in error output</li>
+                        </ul>
+                    </li>
+                </ul>
+
+                <h3>Testing Chess Puzzles</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Task</th>
+                            <th>Command</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Count total puzzles</td>
+                            <td><code>grep -c '"id": "puzzle_' xiangqi/scripts/puzzles/chess-bank.js</code></td>
+                        </tr>
+                        <tr>
+                            <td>Find malformed FENs</td>
+                            <td><code>grep '"fen"' xiangqi/scripts/puzzles/chess-bank.js | awk -F'/' '{print NF-1}' | grep -v '^7$'</code></td>
+                        </tr>
+                        <tr>
+                            <td>Verify all valid</td>
+                            <td><code>./validate_puzzles.js</code></td>
+                        </tr>
+                        <tr>
+                            <td>Test navigation</td>
+                            <td>Visit <code>xiangqi.games-core.com/#/chess-daily</code> after clearing Cloudflare cache</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>CDN Caching Notes</h3>
+                <div class="warning">
+                    <strong>⚠️ Important:</strong> Cloudflare caches JavaScript files. After updating <code>chess-bank.js</code> or <code>chess-mini.js</code>:
+                    <ol>
+                        <li>Push to GitHub</li>
+                        <li>Pull on server</li>
+                        <li><strong>Clear Cloudflare cache</strong> (dashboard or API)</li>
+                        <li>Test in incognito/private window</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+
+        <!-- 11. Quick Reference -->
+        <div class="section">
+            <div class="section-header">
+                <span>⚡ Quick Reference & Shortcuts</span>
+                <span class="toggle">▼</span>
+            </div>
+            <div class="section-content">
+                <h3>Key Modules at a Glance</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Need to...</th>
+                            <th>Check this file</th>
+                            <th>Key Function</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Add new game route</td>
+                            <td><code>main.js</code></td>
+                            <td><code>applyRoute(hash)</code></td>
+                        </tr>
+                        <tr>
+                            <td>Handle user input (move)</td>
+                            <td><code>game-controller.js</code></td>
+                            <td><code>makeMove(moveStr)</code></td>
+                        </tr>
+                        <tr>
+                            <td>Validate move on board</td>
+                            <td><code>core/moves.js</code></td>
+                            <td><code>isLegalMove(board, move)</code></td>
+                        </tr>
+                        <tr>
+                            <td>AI decision making</td>
+                            <td><code>ai/search.js</code></td>
+                            <td><code>negamax(depth, alpha, beta)</code></td>
+                        </tr>
+                        <tr>
+                            <td>Daily puzzle state</td>
+                            <td><code>puzzles/chess-bank.js</code></td>
+                            <td><code>getDailyChessPuzzle(date)</code></td>
+                        </tr>
+                        <tr>
+                            <td>ELO calculation</td>
+                            <td><code>elo/elo.js</code></td>
+                            <td><code>calculateELO(k, rating, result)</code></td>
+                        </tr>
+                        <tr>
+                            <td>API calls</td>
+                            <td><code>net/api.js</code></td>
+                            <td><code>post(path, data)</code></td>
+                        </tr>
+                        <tr>
+                            <td>Backend auth</td>
+                            <td><code>api-xiangqi/app/auth.py</code></td>
+                            <td><code>verify_jwt(token)</code></td>
+                        </tr>
+                        <tr>
+                            <td>Rate limiting</td>
+                            <td><code>api-xiangqi/app/rate_limit.py</code></td>
+                            <td><code>check_rate_limit(key, limit)</code></td>
+                        </tr>
+                        <tr>
+                            <td>Move validation (BE)</td>
+                            <td><code>api-xiangqi/app/xiangqi_engine.py</code></td>
+                            <td><code>is_legal_move(fen, move)</code></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Daily File Checklist</h3>
+                <div class="flow-box">
+                    <div class="step">Start work: <code>git status</code> → ensure main branch</div>
+                    <div class="step">Make changes → test locally</div>
+                    <div class="step">Run tests: <code>pytest tests/test_security.py -v</code> (backend only)</div>
+                    <div class="step">Commit & push: <code>git add file && git commit -m "msg" && git push</code></div>
+                    <div class="step">Deploy: <code>scp -i ~/.ssh/id_ed25519 file xiangqi-server:/path</code></div>
+                    <div class="step">Verify: Open xiangqi.games-core.com, test changed feature</div>
+                </div>
+
+                <h3>Debugging Tips</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Problem</th>
+                            <th>Debug Method</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Move not working</td>
+                            <td>Check console → check game-controller.js → check core/moves.js validation</td>
+                        </tr>
+                        <tr>
+                            <td>AI not moving</td>
+                            <td>Check ai.worker.js logs → check search.js depth → check eval.js scoring</td>
+                        </tr>
+                        <tr>
+                            <td>ELO not updating</td>
+                            <td>Check game-controller.js endGame() → check elo.js calculation</td>
+                        </tr>
+                        <tr>
+                            <td>Puzzle not loading</td>
+                            <td>Check chess-bank.js getDailyChessPuzzle() → check localStorage</td>
+                        </tr>
+                        <tr>
+                            <td>API 401 error</td>
+                            <td>Check JWT token valid → check api.js headers → check auth.py verify_jwt()</td>
+                        </tr>
+                        <tr>
+                            <td>Rate limit blocking</td>
+                            <td>Check Client IP (X-Forwarded-For) → check rate_limit.py logic</td>
+                        </tr>
+                        <tr>
+                            <td>Layout broken on mobile</td>
+                            <td>Check board.css @media queries → check 100dvh → test on actual device</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Links & Resources</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Resource</th>
+                            <th>URL/Location</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Production</strong></td>
+                            <td><code>https://xiangqi.games-core.com</code></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Git Repository</strong></td>
+                            <td><code>https://github.com/manhdauvn09-manhds/xiangqi.git</code></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Server SSH</strong></td>
+                            <td><code>root@62.238.28.106</code></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Cloudflare</strong></td>
+                            <td>Dashboard for DNS + SSL + caching settings</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Email Service</strong></td>
+                            <td>Mailtrap (password reset emails)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>
+                <strong>Cờ Tướng Vương Developer Documentation</strong><br>
+                <small>Last Updated: 2026-05-17 • Phase 7 MVP • Built with ES Modules + FastAPI</small><br>
+                <small><a href="https://github.com/manhdauvn09-manhds/xiangqi">View Repository</a> • <a href="https://xiangqi.games-core.com">Live Site</a></small>
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // Section toggle functionality
+        document.querySelectorAll('.section-header').forEach(header => {
+            header.addEventListener('click', () => {
+                const section = header.closest('.section');
+                section.classList.toggle('closed');
+            });
+        });
+
+        // Smooth scroll for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(link => {
+            link.addEventListener('click', (e) => {
+                const target = document.querySelector(link.getAttribute('href'));
+                if (target) {
+                    e.preventDefault();
+                    target.scrollIntoView({ behavior: 'smooth' });
+                }
+            });
+        });
+    </script>
+</body>
+</html>
