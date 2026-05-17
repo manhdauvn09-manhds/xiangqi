@@ -131,10 +131,15 @@ async def audit_middleware(request: Request, call_next):
 
     # Add security headers
     response.headers['X-Content-Type-Options'] = 'nosniff'
-    response.headers['X-Frame-Options'] = 'DENY'
+    response.headers['X-Frame-Options'] = 'SAMEORIGIN'   # DENY quá strict cho game embed
     response.headers['X-XSS-Protection'] = '1; mode=block'
     response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
-    response.headers['Content-Security-Policy'] = "default-src 'self'"
+    response.headers['Referrer-Policy'] = 'no-referrer'  # Tránh lộ token reset qua Referer
+    response.headers['Content-Security-Policy'] = (
+        "default-src 'self'; "
+        "connect-src 'self' wss:; "   # cho phép WebSocket
+        "frame-ancestors 'self'"       # thay X-Frame-Options (CSP level 2+)
+    )
 
     # Log the request
     audit.log_api_call(user_id, method, path, response.status_code, ip, elapsed_ms)
@@ -286,8 +291,9 @@ async def google_auth(body: GoogleAuthIn):
 
 @app.post('/api/auth/verify-email')
 async def verify_email(req: Request):
-    """Resend verification email."""
+    """Resend verification email. Rate limited per IP + per token store."""
     user = require_user(req)
+    check_rate_limit(auth_limiter, get_client_ip(req))  # Rate limit HTTP level
     email_service.request_email_verification(user['id'])
     return {'ok': True, 'message': 'verification_email_sent'}
 
@@ -405,8 +411,9 @@ async def patch_me(body: PatchMe, req: Request):
     if not updates:
         return {'ok': True}
 
-    # Chỉ cho phép các cột trong whitelist
-    assert all(k in _PATCH_ME_ALLOWED_COLS for k in updates), 'unexpected column'
+    # Chỉ cho phép các cột trong whitelist — dùng raise thay assert (assert bị disable với -O)
+    if not all(k in _PATCH_ME_ALLOWED_COLS for k in updates):
+        raise HTTPException(400, 'invalid_field')
     set_clause = ', '.join(f'{col} = ?' for col in updates)
     params = list(updates.values()) + [user['id']]
     db.execute(f"UPDATE users SET {set_clause} WHERE id = ?", params)
@@ -1080,8 +1087,21 @@ async def ws_endpoint(ws: WebSocket):
                 audit.log_security_event('ws_invalid_type', user_id, f'Invalid message type: {t}')
                 continue
 
+            # Validate gameId và các string field không vượt quá giới hạn
+            raw_game_id = m.get('gameId')
+            if raw_game_id is not None and (not isinstance(raw_game_id, str) or len(raw_game_id) > 64):
+                await _send(user_id, {'type': 'error', 'code': 'invalid_game_id'})
+                continue
+
             if t == 'queue.join':
-                key = f"{m.get('variant', 'standard')}:{m.get('time', '10+5')}"
+                variant = m.get('variant', 'standard')
+                time_ctrl = m.get('time', '10+5')
+                # Giới hạn độ dài để tránh memory bloat trong QUEUE dict
+                if not isinstance(variant, str) or len(variant) > 32:
+                    continue
+                if not isinstance(time_ctrl, str) or len(time_ctrl) > 16:
+                    continue
+                key = f"{variant}:{time_ctrl}"
                 conn.queue_mode = key
                 q = QUEUE.setdefault(key, [])
                 if user_id not in q:
@@ -1113,6 +1133,14 @@ async def ws_endpoint(ws: WebSocket):
 
                 # ── SERVER-SIDE MOVE VALIDATION ──
                 move_data = m.get('move', {})
+                # Validate cấu trúc move_data trước khi dùng (tránh KeyError crash)
+                if (not isinstance(move_data, dict)
+                        or not isinstance(move_data.get('from'), dict)
+                        or not isinstance(move_data.get('to'), dict)
+                        or 'file' not in move_data['from'] or 'rank' not in move_data['from']
+                        or 'file' not in move_data['to']   or 'rank' not in move_data['to']):
+                    await _send(user_id, {'type': 'error', 'code': 'invalid_move_format'})
+                    continue
                 board = g['board']
                 ok, err = engine.validate_move(board, move_data)
                 if not ok:

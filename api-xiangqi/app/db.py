@@ -6,12 +6,15 @@ Lý do dùng SQLite thay Postgres ở Phase 2 v1:
 - Hỗ trợ JSON1 → đủ flexibility cho game records.
 - Chuyển sang Postgres khi scale (cùng SQL dialect, sửa connector).
 """
+import logging
 import os
 import sqlite3
 import threading
 import time
 from pathlib import Path
 from typing import Any, Iterable
+
+logger = logging.getLogger(__name__)
 
 DB_PATH = Path(os.getenv('XQ_DB_PATH', './data/xiangqi.db'))
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -34,7 +37,7 @@ def get_conn() -> sqlite3.Connection:
         if _conn is not None:
             return _conn
 
-        print(f'[db] initializing connection to {DB_PATH}')
+        logger.info('[db] initializing connection to %s', DB_PATH)
         _conn = sqlite3.connect(str(DB_PATH), check_same_thread=False, isolation_level=None, timeout=30.0)
         _conn.row_factory = sqlite3.Row
         _conn.execute('PRAGMA journal_mode=WAL')
@@ -42,7 +45,7 @@ def get_conn() -> sqlite3.Connection:
         _conn.execute('PRAGMA synchronous=NORMAL')
         _conn.execute('PRAGMA busy_timeout=30000')  # 30s timeout for locks
         migrate(_conn)
-        print('[db] connection ready')
+        logger.info('[db] connection ready')
     return _conn
 
 
@@ -72,7 +75,7 @@ def query(sql: str, params: Iterable[Any] = (), limit: int | None = None) -> lis
         # Log slow queries
         elapsed_ms = time.time() * 1000 - start_ms
         if elapsed_ms > _slow_query_threshold_ms:
-            print(f'[db] slow query ({elapsed_ms:.1f}ms): {sql[:60]}...')
+            logger.warning('[db] slow query (%.1fms): %s...', elapsed_ms, sql[:60])
 
         return result
     finally:
@@ -100,7 +103,7 @@ def execute(sql: str, params: Iterable[Any] = ()) -> int:
             # Log slow writes
             elapsed_ms = time.time() * 1000 - start_ms
             if elapsed_ms > _slow_query_threshold_ms:
-                print(f'[db] slow write ({elapsed_ms:.1f}ms): {sql[:60]}...')
+                logger.warning('[db] slow write (%.1fms): %s...', elapsed_ms, sql[:60])
 
             return result
         finally:
@@ -120,7 +123,7 @@ def close_conn() -> None:
         try:
             _conn.close()
         except Exception as e:
-            print(f'[db] error closing connection: {e}')
+            logger.error('[db] error closing connection: %s', e)
         finally:
             _conn = None
 
@@ -317,7 +320,7 @@ def migrate(conn: sqlite3.Connection) -> None:
         if current >= target:
             return
 
-        print(f'[db] migrating {current} → {target}')
+        logger.info('[db] migrating %s → %s', current, target)
 
         for v in range(current, target):
             try:
@@ -326,13 +329,13 @@ def migrate(conn: sqlite3.Connection) -> None:
                 conn.executescript(sql)
                 conn.execute('INSERT INTO schema_version(version) VALUES (?)', (v + 1,))
                 conn.commit()
-                print(f'[db] migration {v+1} applied successfully')
+                logger.info('[db] migration %d applied successfully', v+1)
             except Exception as e:
                 conn.rollback()
-                print(f'[db] ERROR in migration {v+1}: {e}')
+                logger.error('[db] ERROR in migration %d: %s', v+1, e)
                 raise
     except Exception as e:
-        print(f'[db] Migration failed: {e}')
+        logger.error('[db] Migration failed: %s', e)
         raise
 
 

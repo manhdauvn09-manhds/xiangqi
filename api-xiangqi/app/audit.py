@@ -1,16 +1,26 @@
 """Audit logging — track all API actions for security."""
 import json
 import logging
+import logging.handlers
+import os
 import time
 from datetime import datetime
 from typing import Any
 
-# Setup audit logger with file rotation
+# Setup audit logger với rotating file handler — tránh disk đầy
 audit_logger = logging.getLogger('audit')
 audit_logger.setLevel(logging.INFO)
 
-# Create handler with timestamp
-handler = logging.FileHandler('data/audit.log')
+# Đảm bảo thư mục data tồn tại
+os.makedirs('data', exist_ok=True)
+
+# RotatingFileHandler: max 10MB mỗi file, giữ 10 file backup
+handler = logging.handlers.RotatingFileHandler(
+    'data/audit.log',
+    maxBytes=10 * 1024 * 1024,   # 10 MB
+    backupCount=10,
+    encoding='utf-8',
+)
 formatter = logging.Formatter(
     '%(asctime)s | %(levelname)s | %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'

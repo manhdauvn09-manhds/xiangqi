@@ -135,12 +135,39 @@ class _LoginFailureTracker:
 login_failure_tracker = _LoginFailureTracker()
 
 
+# Cloudflare IP ranges (IPv4) — cập nhật từ https://www.cloudflare.com/ips/
+# Chỉ trust X-Forwarded-For nếu request đến từ Cloudflare
+import ipaddress as _ipaddress
+
+_CF_RANGES_V4 = [
+    '173.245.48.0/20', '103.21.244.0/22', '103.22.200.0/22', '103.31.4.0/22',
+    '141.101.64.0/18', '108.162.192.0/18', '190.93.240.0/20', '188.114.96.0/20',
+    '197.234.240.0/22', '198.41.128.0/17', '162.158.0.0/15', '104.16.0.0/13',
+    '104.24.0.0/14', '172.64.0.0/13', '131.0.72.0/22',
+]
+_CF_NETS = [_ipaddress.ip_network(r) for r in _CF_RANGES_V4]
+
+
+def _is_cloudflare_ip(ip: str) -> bool:
+    """Kiểm tra IP có thuộc Cloudflare không."""
+    try:
+        addr = _ipaddress.ip_address(ip)
+        return any(addr in net for net in _CF_NETS)
+    except ValueError:
+        return False
+
+
 def get_client_ip(req: Request) -> str:
-    """Extract client IP, respecting X-Forwarded-For in production."""
+    """Extract client IP.
+    Chỉ trust X-Forwarded-For khi request từ Cloudflare IP range.
+    Tránh bypass rate limit bằng cách giả mạo header.
+    """
+    direct_ip = req.client.host if req.client else '0.0.0.0'
     forwarded = req.headers.get('x-forwarded-for')
-    if forwarded:
+    if forwarded and _is_cloudflare_ip(direct_ip):
+        # Request đến qua Cloudflare — lấy IP thực của client
         return forwarded.split(',')[0].strip()
-    return req.client.host if req.client else '0.0.0.0'
+    return direct_ip
 
 
 def check_rate_limit(limiter: RateLimiter, key: str):
