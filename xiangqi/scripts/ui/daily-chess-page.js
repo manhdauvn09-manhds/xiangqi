@@ -15,6 +15,21 @@ const HL = {
   last:    'rgba(155,199,0,0.4)',
 };
 
+// Tier system (7 tiers across 100 levels)
+const TIERS = [
+  { name: 'Tân thủ', range: [1, 15], color: '#6c757d', emoji: '🎓' },
+  { name: 'Học viên', range: [16, 30], color: '#0d6efd', emoji: '📚' },
+  { name: 'Chiến binh', range: [31, 50], color: '#198754', emoji: '⚔️' },
+  { name: 'Chuyên gia', range: [51, 70], color: '#ffc107', emoji: '🎯' },
+  { name: 'Cao thủ', range: [71, 85], color: '#fd7e14', emoji: '🔥' },
+  { name: 'Kiện tướng', range: [86, 95], color: '#dc3545', emoji: '👑' },
+  { name: 'Đại kiện tướng', range: [96, 100], color: '#6f42c1', emoji: '⭐' },
+];
+
+function getTierByLevel(level) {
+  return TIERS.find(t => level >= t.range[0] && level <= t.range[1]) || TIERS[0];
+}
+
 export function renderDailyChessPage(root) {
   const puzzle = getDailyChessPuzzle(new Date());
   if (!puzzle) {
@@ -43,6 +58,8 @@ export function renderDailyChessPage(root) {
   `;
 
   // ── Header ─────────────────────────────────────────────────
+  const level = getLevel();
+  const tier = getTierByLevel(level);
   const header = $(`
     display:flex;justify-content:space-between;align-items:center;
     padding:10px 16px;background:rgba(255,255,255,0.05);
@@ -56,9 +73,39 @@ export function renderDailyChessPage(root) {
         <div style="font-size:11px;color:#aaa">${x(puzzle.opening)} · ${x(puzzle.theme)}</div>
       </div>
     </div>
-    <div style="text-align:right;font-size:12px;color:#aaa">
-      <div>🔥 <b style="color:#fff">${getStreak()}</b> day streak</div>
-      <div>Level <b style="color:#fff">${getLevel()}/100</b></div>
+    <div style="text-align:right;font-size:12px;color:#aaa;display:flex;gap:8px;align-items:center">
+      <div>
+        <div>🔥 <b style="color:#fff">${getStreak()}</b> day streak</div>
+        <div style="color:#fff;font-weight:700">${tier.emoji} Lv ${level} · ${tier.name}</div>
+      </div>
+      <button id="btnTutorial" style="padding:4px 8px;background:rgba(255,255,255,0.1);color:#fff;border:1px solid rgba(255,255,255,0.2);border-radius:4px;cursor:pointer;font-size:14px;line-height:1">?</button>
+    </div>
+  `;
+
+  // ── Level Progress Bar ────────────────────────────────────
+  const progressBar = $(`
+    padding:12px 16px;background:rgba(255,255,255,0.02);flex-shrink:0;
+  `);
+  const progressWithinTier = level - tier.range[0] + 1;
+  const tierSize = tier.range[1] - tier.range[0] + 1;
+  const tierProgress = Math.round((progressWithinTier / tierSize) * 100);
+  progressBar.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;font-size:12px">
+      <div>
+        <span style="color:#aaa">Level ${level}/100</span>
+        <span style="color:#666;margin:0 6px">·</span>
+        <span style="color:${tier.color};font-weight:700">${tier.emoji} ${tier.name}</span>
+      </div>
+      <span style="color:#999">${progressWithinTier}/${tierSize}</span>
+    </div>
+    <div style="
+      width:100%;height:8px;background:rgba(255,255,255,0.1);
+      border-radius:4px;overflow:hidden;
+    ">
+      <div style="
+        width:${tierProgress}%;height:100%;background:${tier.color};
+        transition:width 0.3s ease;
+      "></div>
     </div>
   `;
 
@@ -103,7 +150,97 @@ export function renderDailyChessPage(root) {
   const btnFS   = btn('⛶',        'rgba(255,255,255,0.08)','#fff');
   actBar.append(btnHint, btnSkip, btnFlip, btnFS);
 
-  root.append(header, banner, infoBar, boardWrap, analysisEl, actBar);
+  root.append(header, progressBar, banner, infoBar, boardWrap, analysisEl, actBar);
+
+  // ── Tutorial Modal ───────────────────────────────────────
+  function showTutorial() {
+    const ov = $(`
+      position:fixed;inset:0;background:rgba(0,0,0,0.85);
+      display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px;
+    `);
+    const tutorialKey = 'chess-daily-tutorial-seen';
+
+    ov.innerHTML = `
+      <div style="background:#1e1e2e;border:1px solid rgba(255,255,255,0.15);
+                  border-radius:12px;padding:28px;max-width:500px;width:100%;
+                  max-height:85vh;overflow-y:auto;font-size:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+          <h2 style="margin:0;font-size:20px;color:#f4c430">🎓 Chess Daily Guide</h2>
+          <button id="closeTut" style="background:none;border:none;color:#999;cursor:pointer;font-size:20px">✕</button>
+        </div>
+
+        <div style="color:#ddd;line-height:1.7">
+          <h3 style="color:#fff;margin:16px 0 8px;font-size:15px">🎯 How to Play</h3>
+          <ul style="padding-left:20px;margin:8px 0">
+            <li>Your task is to find the <strong>best move</strong> in a chess position</li>
+            <li>Click a piece to select it, then click where to move it</li>
+            <li>Follow the solution step by step (both white and black moves)</li>
+            <li>Solve the puzzle to unlock the next level</li>
+          </ul>
+
+          <h3 style="color:#fff;margin:16px 0 8px;font-size:15px">📊 100 Levels & Tiers</h3>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0;font-size:12px">
+            ${TIERS.map(t => `
+              <div style="background:rgba(255,255,255,0.05);padding:10px;border-radius:6px;border-left:3px solid ${t.color}">
+                <div style="font-weight:700;color:${t.color}">${t.emoji} ${t.name}</div>
+                <div style="color:#999;font-size:11px">Levels ${t.range[0]}–${t.range[1]}</div>
+              </div>
+            `).join('')}
+          </div>
+          <p style="color:#999;font-size:12px;margin:10px 0">
+            Advance one level each day you solve the puzzle. Climb through all 7 tiers to become a 🌟 <strong>Đại kiện tướng</strong>!
+          </p>
+
+          <h3 style="color:#fff;margin:16px 0 8px;font-size:15px">🛠️ Controls</h3>
+          <div style="display:grid;gap:8px;margin:10px 0;font-size:12px">
+            <div style="display:flex;gap:10px">
+              <span style="background:rgba(244,196,48,0.2);padding:2px 8px;border-radius:4px;color:#f4c430;font-weight:700;min-width:80px">💡 Hint</span>
+              <span style="color:#aaa">Shows the best next move (one-time use per puzzle)</span>
+            </div>
+            <div style="display:flex;gap:10px">
+              <span style="background:rgba(255,255,255,0.1);padding:2px 8px;border-radius:4px;color:#fff;font-weight:700;min-width:80px">⏭️ Skip</span>
+              <span style="color:#aaa">Skip this puzzle and save it for later</span>
+            </div>
+            <div style="display:flex;gap:10px">
+              <span style="background:rgba(255,255,255,0.1);padding:2px 8px;border-radius:4px;color:#fff;font-weight:700;min-width:80px">🔁 Flip</span>
+              <span style="color:#aaa">Flip board to view from black's perspective</span>
+            </div>
+            <div style="display:flex;gap:10px">
+              <span style="background:rgba(255,255,255,0.1);padding:2px 8px;border-radius:4px;color:#fff;font-weight:700;min-width:80px">⛶</span>
+              <span style="color:#aaa">Enter fullscreen mode for distraction-free play</span>
+            </div>
+          </div>
+
+          <h3 style="color:#fff;margin:16px 0 8px;font-size:15px">🔥 Daily Streak</h3>
+          <p style="color:#aaa;font-size:12px;margin:8px 0">
+            Solve the daily puzzle every day to build your streak! The more days in a row you solve it, the higher your streak counter. Keep it going! 🚀
+          </p>
+        </div>
+
+        <div style="display:flex;gap:10px;margin-top:20px">
+          <button id="closeTut2" style="flex:1;padding:10px;background:rgba(255,255,255,0.1);color:#fff;
+                 border:1px solid rgba(255,255,255,0.2);border-radius:6px;cursor:pointer;font-weight:600">Got it!</button>
+        </div>
+      </div>`;
+
+    document.body.appendChild(ov);
+
+    const closeFn = () => {
+      ov.remove();
+      localStorage.setItem(tutorialKey, 'true');
+    };
+    ov.querySelector('#closeTut').onclick = closeFn;
+    ov.querySelector('#closeTut2').onclick = closeFn;
+    ov.addEventListener('click', (e) => {
+      if (e.target === ov) closeFn();
+    });
+  }
+
+  // Show tutorial on first visit
+  const tutorialKey = 'chess-daily-tutorial-seen';
+  if (!localStorage.getItem(tutorialKey)) {
+    setTimeout(() => showTutorial(), 300);
+  }
 
   // ── Build board (called on init + flip + fullscreen) ──────────
   function rebuildBoard() {
@@ -236,6 +373,8 @@ export function renderDailyChessPage(root) {
   });
 
   // ── Handlers ──────────────────────────────────────────────
+  document.getElementById('btnTutorial')?.addEventListener('click', showTutorial);
+
   btnHint.onclick = () => {
     if (solved) return;
     hintUsed = true;
