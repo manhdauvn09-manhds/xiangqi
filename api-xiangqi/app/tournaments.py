@@ -156,13 +156,31 @@ class TournamentManager:
         return True
 
     def report_result(self, tid: str, match_id: str, result: str,
-                      game_id: str | None = None) -> bool:
+                      game_id: str | None = None, reporter_user_id: int | None = None) -> bool:
+        """Report match result. Validate reporter is participant.
+
+        Args:
+            tid: Tournament ID
+            match_id: Match ID
+            result: Result string ('1-0', '0-1', '1/2-1/2')
+            game_id: Optional game ID to link
+            reporter_user_id: User reporting the result (for validation)
+
+        Returns:
+            True if accepted, False otherwise
+        """
         t = self.tournaments.get(tid)
         if not t or t.status != TournamentStatus.ACTIVE:
             return False
 
         match = next((m for m in t.matches if m.id == match_id), None)
         if not match or match.result is not None:
+            return False
+
+        # Verify reporter is actually in this match
+        if reporter_user_id and reporter_user_id not in (match.red_uid, match.black_uid):
+            logging.warning('[tournament] unauthorized report_result: tid=%s mid=%s reporter=%s',
+                          tid, match_id, reporter_user_id)
             return False
 
         match.result = result

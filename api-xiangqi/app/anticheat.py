@@ -19,8 +19,9 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-_PROFILE_MAX_AGE_SECONDS = 6 * 3600  # xóa profile sau 6 giờ (game kết thúc)
-_PROFILE_MAX_COUNT = 500             # giới hạn số game đang theo dõi
+_PROFILE_MAX_AGE_SECONDS = 6 * 3600  # 6 hours
+_PROFILE_HARD_MAX = 1000  # Max profiles in memory (LRU evicts oldest)
+_CLEANUP_INTERVAL_SECONDS = 300  # Cleanup every 5 minutes
 
 
 @dataclass
@@ -42,7 +43,7 @@ class PlayerGameProfile:
 
 
 class AntiCheatEngine:
-    """Heuristic anti-cheat engine for Xiangqi."""
+    """Heuristic anti-cheat engine with bounded memory via LRU eviction."""
 
     # Thresholds
     MIN_AVG_MOVE_TIME_MS = 500       # <500ms avg = suspicious
@@ -55,15 +56,25 @@ class AntiCheatEngine:
     def __init__(self):
         self._profiles: dict[str, dict[int, PlayerGameProfile]] = {}  # game_id → {uid → profile}
         self._created_at: dict[str, float] = {}  # game_id → creation timestamp
+        self._last_cleanup: float = time.monotonic()
 
     def start_game(self, game_id: str, red_uid: int, black_uid: int):
         """Initialize tracking for a new game."""
-        self._cleanup()  # Dọn profile cũ trước khi thêm mới
+        # Try cleanup if interval elapsed
+        now = time.monotonic()
+        if now - self._last_cleanup > _CLEANUP_INTERVAL_SECONDS:
+            self._cleanup()
+            self._last_cleanup = now
+
+        # If approaching hard limit, force cleanup
+        if len(self._profiles) >= _PROFILE_HARD_MAX * 0.9:  # 90% full
+            self._cleanup()
+
         self._profiles[game_id] = {
             red_uid: PlayerGameProfile(user_id=red_uid),
             black_uid: PlayerGameProfile(user_id=black_uid),
         }
-        self._created_at[game_id] = time.monotonic()
+        self._created_at[game_id] = now
 
     def record_move(self, game_id: str, user_id: int, move_time_ms: float,
                     is_capture: bool = False, is_check: bool = False):
@@ -142,35 +153,47 @@ class AntiCheatEngine:
         return min(1.0, score), reasons
 
     def end_game(self, game_id: str):
-        """Clean up sau khi game kết thúc và đã analyze."""
+        """Clean up after game ends."""
         self._profiles.pop(game_id, None)
         self._created_at.pop(game_id, None)
+        logger.debug('[anticheat] game ended: %s', game_id)
 
     def _cleanup(self):
-        """Xóa profile cũ (>6 giờ) và giới hạn số lượng tối đa."""
+        """Remove expired profiles and enforce hard memory limit via LRU."""
         now = time.monotonic()
-        # Xóa profile hết hạn theo thời gian
-        expired = [
-            gid for gid, ts in self._created_at.items()
-            if now - ts > _PROFILE_MAX_AGE_SECONDS
-        ]
+
+        # Step 1: Remove TTL-expired profiles
+        expired = [gid for gid, ts in self._created_at.items()
+                   if now - ts > _PROFILE_MAX_AGE_SECONDS]
         for gid in expired:
             self._profiles.pop(gid, None)
             self._created_at.pop(gid, None)
-        if expired:
-            logger.debug('[anticheat] cleanup: removed %d expired game profiles', len(expired))
 
-        # Hard cap: nếu vẫn vượt giới hạn, xóa theo FIFO
-        if len(self._profiles) > _PROFILE_MAX_COUNT:
-            overflow = list(self._profiles.keys())[:len(self._profiles) - _PROFILE_MAX_COUNT]
-            for gid in overflow:
+        if expired:
+            logger.debug('[anticheat] cleanup: removed %d expired profiles', len(expired))
+
+        # Step 2: If still over hard limit, evict oldest (LRU)
+        if len(self._profiles) > _PROFILE_HARD_MAX:
+            # Sort by creation time, remove oldest
+            sorted_gids = sorted(self._created_at.keys(),
+                                key=lambda gid: self._created_at[gid])
+            to_evict = sorted_gids[:len(self._profiles) - _PROFILE_HARD_MAX]
+            for gid in to_evict:
                 self._profiles.pop(gid, None)
                 self._created_at.pop(gid, None)
-            logger.warning('[anticheat] memory cap hit: removed %d overflow profiles', len(overflow))
+            logger.warning('[anticheat] memory pressure: evicted %d oldest profiles', len(to_evict))
 
     def cleanup_stale(self, max_age_seconds: int = _PROFILE_MAX_AGE_SECONDS):
-        """Public API — gọi _cleanup (backward compatible)."""
+        """Public API — backward compatible."""
         self._cleanup()
+
+    def get_stats(self) -> dict[str, int]:
+        """Return current memory stats."""
+        return {
+            'active_profiles': len(self._profiles),
+            'max_profiles': _PROFILE_HARD_MAX,
+            'cleanup_interval_seconds': _CLEANUP_INTERVAL_SECONDS,
+        }
 
 
 # ── Singleton ──

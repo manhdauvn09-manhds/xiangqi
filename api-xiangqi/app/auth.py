@@ -6,6 +6,7 @@ import os
 import secrets
 import sys
 import time
+from pathlib import Path
 from typing import Any
 
 import jwt
@@ -14,18 +15,47 @@ from . import db
 
 logger = logging.getLogger(__name__)
 
-_jwt_secret_env = os.getenv('XQ_JWT_SECRET')
-_is_production = os.getenv('XQ_ENV', '').lower() in ('production', 'prod')
+# JWT Secret initialization (with file-based persistence for dev consistency)
+_JWT_SECRET_FILE = Path(os.getenv('XQ_JWT_SECRET_FILE', './.env.local.jwt-secret'))
 
-if _is_production and not _jwt_secret_env:
-    logger.critical('XQ_JWT_SECRET phải được set trong môi trường production. Dừng server.')
+def _get_or_create_jwt_secret() -> str:
+    """Get JWT secret from env var, file, or create new file (dev only).
+
+    Priority:
+    1. XQ_JWT_SECRET environment variable (production)
+    2. Secret file .env.local.jwt-secret (dev persistence)
+    3. Generate new secret and save to file (dev only)
+    4. Exit if production and no secret configured
+    """
+    # Priority 1: Environment variable
+    if env_secret := os.getenv('XQ_JWT_SECRET'):
+        return env_secret
+
+    _is_production = os.getenv('XQ_ENV', '').lower() in ('production', 'prod')
+
+    # Priority 2: Secret file (for dev consistency across restarts)
+    if _JWT_SECRET_FILE.exists():
+        secret = _JWT_SECRET_FILE.read_text().strip()
+        logger.info('[auth] Loaded JWT secret from file: %s', _JWT_SECRET_FILE)
+        return secret
+
+    # Priority 3: Generate new secret and save (dev only)
+    if not _is_production:
+        secret = secrets.token_hex(32)
+        _JWT_SECRET_FILE.parent.mkdir(parents=True, exist_ok=True)
+        _JWT_SECRET_FILE.write_text(secret)
+        _JWT_SECRET_FILE.chmod(0o600)  # Read-only to owner
+        logger.info('[auth] Generated new JWT secret to %s (enable multi-process dev)', _JWT_SECRET_FILE)
+        return secret
+
+    # No secret found in production
+    logger.critical('[auth] XQ_JWT_SECRET must be set in production')
     sys.exit(1)
 
-if not _jwt_secret_env:
-    logger.warning('XQ_JWT_SECRET không được set — dùng secret ngẫu nhiên (chỉ hợp lệ cho dev/single-process)')
-
-JWT_SECRET: str = _jwt_secret_env or secrets.token_hex(32)
-JWT_TTL_DAYS = int(os.getenv('XQ_JWT_TTL_DAYS', '30'))
+JWT_SECRET: str = _get_or_create_jwt_secret()
+JWT_TTL_DAYS = int(os.getenv('XQ_JWT_TTL_DAYS', '30'))  # Legacy: used for backward compatibility
+JWT_TTL_SECONDS = int(os.getenv('XQ_JWT_TTL_SECONDS', '3600'))  # 1 hour for refresh token flow
+REFRESH_TOKEN_TTL_DAYS = int(os.getenv('XQ_REFRESH_TTL_DAYS', '7'))  # 7 days for refresh tokens
 JWT_ALG = 'HS256'
 
 # Scrypt params (n=16384, r=8, p=1, dklen=64) — chuẩn dev, đủ mạnh
@@ -74,6 +104,144 @@ def decode_jwt(token: str) -> dict[str, Any] | None:
         return jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALG])
     except jwt.PyJWTError:
         return None
+
+
+def create_tokens(user_id: int, device_id: str | None = None, user_agent: str | None = None) -> dict[str, Any]:
+    """Create access JWT + refresh token. Returns dict with access/refresh tokens.
+
+    Args:
+        user_id: User ID to encode in tokens
+        device_id: Optional device fingerprint for multi-device tracking
+        user_agent: Optional browser/client info for audit
+
+    Returns:
+        {
+            'access_token': str,     # Short-lived JWT (1 hour)
+            'refresh_token': str,    # Long-lived refresh token (7 days)
+            'token_type': 'Bearer',
+            'expires_in': int,       # Access token TTL in seconds
+        }
+    """
+    now = int(time.time())
+
+    # Access token (short-lived, 1 hour)
+    access_payload = {
+        'sub': str(user_id),
+        'iat': now,
+        'exp': now + JWT_TTL_SECONDS,
+        'type': 'access',
+    }
+    access_token = jwt.encode(access_payload, JWT_SECRET, algorithm=JWT_ALG)
+
+    # Refresh token (long-lived, 7 days)
+    refresh_raw = secrets.token_urlsafe(32)
+    refresh_hash = hashlib.sha256(refresh_raw.encode()).hexdigest()
+
+    # Store in DB
+    try:
+        db.execute(
+            'INSERT INTO refresh_tokens (user_id, token_hash, device_id, user_agent, issued_at, expires_at) '
+            'VALUES (?, ?, ?, ?, ?, ?)',
+            (user_id, refresh_hash, device_id, user_agent,
+             now, now + REFRESH_TOKEN_TTL_DAYS * 86400)
+        )
+    except Exception as e:
+        logger.error('[auth] Failed to persist refresh token: %s', e)
+        # Continue anyway — token is still valid in memory
+
+    return {
+        'access_token': access_token,
+        'refresh_token': refresh_raw,
+        'token_type': 'Bearer',
+        'expires_in': JWT_TTL_SECONDS,
+    }
+
+
+def refresh_access_token(refresh_raw: str, device_id: str | None = None) -> dict[str, Any] | None:
+    """Exchange refresh token for new access token.
+
+    Args:
+        refresh_raw: Raw refresh token from client
+        device_id: Optional device fingerprint for multi-device tracking
+
+    Returns:
+        Same dict as create_tokens, or None if invalid/expired/revoked
+    """
+    refresh_hash = hashlib.sha256(refresh_raw.encode()).hexdigest()
+
+    try:
+        row = db.fetch_one(
+            'SELECT user_id FROM refresh_tokens '
+            'WHERE token_hash = ? AND expires_at > ? AND revoked_at IS NULL',
+            (refresh_hash, int(time.time()))
+        )
+    except Exception as e:
+        logger.error('[auth] Error looking up refresh token: %s', e)
+        return None
+
+    if not row:
+        return None  # Invalid, expired, or revoked
+
+    user_id = row['user_id']
+
+    # Update last_used_at
+    try:
+        db.execute(
+            'UPDATE refresh_tokens SET last_used_at = ? WHERE token_hash = ?',
+            (int(time.time()), refresh_hash)
+        )
+    except Exception as e:
+        logger.warning('[auth] Failed to update refresh token last_used: %s', e)
+
+    # Return new access token (do NOT rotate refresh token for now)
+    return create_tokens(user_id, device_id)
+
+
+def revoke_refresh_token(refresh_raw: str) -> bool:
+    """Revoke a specific refresh token (for logout).
+
+    Args:
+        refresh_raw: Raw refresh token to revoke
+
+    Returns:
+        True if revoked, False if not found
+    """
+    refresh_hash = hashlib.sha256(refresh_raw.encode()).hexdigest()
+    try:
+        db.execute(
+            'UPDATE refresh_tokens SET revoked_at = ? WHERE token_hash = ?',
+            (int(time.time()), refresh_hash)
+        )
+        return True
+    except Exception as e:
+        logger.error('[auth] Failed to revoke refresh token: %s', e)
+        return False
+
+
+def revoke_user_tokens(user_id: int) -> int:
+    """Revoke all refresh tokens for a user (force logout all devices).
+
+    Args:
+        user_id: User ID whose tokens to revoke
+
+    Returns:
+        Count of tokens revoked
+    """
+    now = int(time.time())
+    try:
+        db.execute(
+            'UPDATE refresh_tokens SET revoked_at = ? WHERE user_id = ? AND revoked_at IS NULL',
+            (now, user_id)
+        )
+        # Return count
+        row = db.fetch_one(
+            'SELECT COUNT(*) as count FROM refresh_tokens WHERE user_id = ? AND revoked_at = ?',
+            (user_id, now)
+        )
+        return row['count'] if row else 0
+    except Exception as e:
+        logger.error('[auth] Failed to revoke user tokens: %s', e)
+        return 0
 
 
 def get_user_by_email(email: str) -> dict[str, Any] | None:

@@ -20,6 +20,7 @@ import logging
 import re
 import secrets
 import time
+import unicodedata
 import urllib.parse
 import uuid
 from contextlib import asynccontextmanager
@@ -28,7 +29,7 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect, status
+from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect, status, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, EmailStr
@@ -51,11 +52,25 @@ from . import audit
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     db.get_conn()
-    logger.info('[xq] backend ready - Phase 3')
-    yield
-    # Cleanup on shutdown
-    db.close_conn()
-    logger.info('[xq] backend shutdown - database closed')
+
+    # Start periodic anticheat cleanup task
+    async def cleanup_task():
+        while True:
+            try:
+                await asyncio.sleep(300)  # Every 5 minutes
+                anticheat._cleanup()
+            except Exception as e:
+                logger.error('[anticheat] cleanup task error: %s', e)
+
+    cleanup_handle = asyncio.create_task(cleanup_task())
+    logger.info('[xq] backend ready - Phase 3 + anticheat monitoring')
+
+    try:
+        yield
+    finally:
+        cleanup_handle.cancel()
+        db.close_conn()
+        logger.info('[xq] backend shutdown - database closed')
 
 
 app = FastAPI(title='Cờ Tướng Vương Backend', version='0.3.0', lifespan=lifespan)
@@ -172,6 +187,32 @@ def optional_user(req: Request) -> dict[str, Any] | None:
 
 
 # ═════════════════════════════════════════════
+# ADMIN ENDPOINTS PATTERN
+# ═════════════════════════════════════════════
+# Use Depends(admin_required) to ensure endpoint requires admin role.
+# This prevents accidentally leaving endpoints unprotected.
+#
+# Example:
+#   @app.get('/api/admin/something')
+#   async def admin_endpoint(user: dict = Depends(admin_required)):
+#       # user is guaranteed admin here
+# ═════════════════════════════════════════════
+
+
+def admin_required(req: Request) -> dict[str, Any]:
+    """Dependency: require admin user, raise 403 if not.
+
+    Usage in endpoints:
+        async def my_endpoint(user: dict = Depends(admin_required)):
+            # user is guaranteed to be admin here
+    """
+    user = require_user(req)
+    if not user.get('is_admin'):
+        raise HTTPException(403, 'admin_only')
+    return user
+
+
+# ═════════════════════════════════════════════
 # 1. AUTH
 # ═════════════════════════════════════════════
 
@@ -201,11 +242,25 @@ async def register(body: RegisterIn, req: Request):
         audit.log_auth('register', body.email, False, get_client_ip(req), 'email_taken')
         raise HTTPException(409, 'email_taken')
     user_id = auth.create_user(body.email, body.password, body.display_name.strip())
-    token = auth.create_jwt(user_id)
+
+    # Generate tokens (both legacy JWT for compatibility + new refresh token)
+    device_id = req.headers.get('x-device-id')
+    user_agent = req.headers.get('user-agent')
+    tokens = auth.create_tokens(user_id, device_id, user_agent)
+
     # Send verification email
     email_service.request_email_verification(user_id)
     audit.log_auth('register', body.email, True, get_client_ip(req), f'user_id={user_id}')
-    return {'jwt': token, 'user': _public_user(auth.get_user_by_id(user_id))}
+
+    user = auth.get_user_by_id(user_id)
+    return {
+        'jwt': tokens['access_token'],  # Legacy JWT for backward compatibility
+        'access_token': tokens['access_token'],
+        'refresh_token': tokens['refresh_token'],
+        'token_type': tokens['token_type'],
+        'expires_in': tokens['expires_in'],
+        'user': _public_user(user),
+    }
 
 
 @app.post('/api/auth/login')
@@ -227,17 +282,72 @@ async def login(body: LoginIn, req: Request):
 
     # Đăng nhập thành công — xóa failure record
     login_failure_tracker.clear(body.email)
-    token = auth.create_jwt(user['id'])
+
+    # Generate tokens (both legacy JWT for compatibility + new refresh token)
+    device_id = req.headers.get('x-device-id')
+    user_agent = req.headers.get('user-agent')
+    tokens = auth.create_tokens(user['id'], device_id, user_agent)
+
     db.execute('UPDATE users SET last_seen_at = ? WHERE id = ?', (int(time.time()), user['id']))
     audit.log_auth('login', body.email, True, get_client_ip(req), f'user_id={user["id"]}')
-    return {'jwt': token, 'user': _public_user(user)}
+
+    return {
+        'jwt': tokens['access_token'],  # Legacy JWT for backward compatibility
+        'access_token': tokens['access_token'],
+        'refresh_token': tokens['refresh_token'],
+        'token_type': tokens['token_type'],
+        'expires_in': tokens['expires_in'],
+        'user': _public_user(user),
+    }
+
+
+# ── Refresh Token ──
+
+
+class RefreshTokenIn(BaseModel):
+    refresh_token: str
+
+
+class RefreshTokenOut(BaseModel):
+    access_token: str
+    refresh_token: str | None = None  # Do not rotate for now
+    token_type: str = 'Bearer'
+    expires_in: int
+
+
+@app.post('/api/auth/refresh', response_model=RefreshTokenOut)
+async def refresh_token_endpoint(body: RefreshTokenIn, req: Request):
+    """Use refresh token to get new access token."""
+    device_id = req.headers.get('x-device-id')
+    tokens = auth.refresh_access_token(body.refresh_token, device_id)
+
+    if not tokens:
+        raise HTTPException(401, 'invalid_refresh_token')
+
+    return RefreshTokenOut(
+        access_token=tokens['access_token'],
+        refresh_token=None,  # Don't rotate refresh token
+        token_type=tokens['token_type'],
+        expires_in=tokens['expires_in'],
+    )
 
 
 @app.post('/api/auth/logout')
-async def logout(req: Request):
+async def logout(body: RefreshTokenIn, req: Request):
+    """Revoke refresh token (logout)."""
     user = require_user(req)
+    auth.revoke_refresh_token(body.refresh_token)
     db.execute('UPDATE users SET last_seen_at = ? WHERE id = ?', (int(time.time()), user['id']))
     return {'ok': True}
+
+
+@app.post('/api/auth/logout-all')
+async def logout_all(req: Request):
+    """Revoke all refresh tokens for this user (logout all devices)."""
+    user = require_user(req)
+    count = auth.revoke_user_tokens(user['id'])
+    db.execute('UPDATE users SET last_seen_at = ? WHERE id = ?', (int(time.time()), user['id']))
+    return {'ok': True, 'revoked': count}
 
 
 # ── Google OAuth ──
@@ -265,7 +375,7 @@ async def get_google_client_id():
 
 
 @app.post('/api/auth/google')
-async def google_auth(body: GoogleAuthIn):
+async def google_auth(body: GoogleAuthIn, req: Request):
     """Login or register via Google ID token."""
     google_data = await oauth.verify_google_id_token(body.id_token)
     if not google_data:
@@ -273,21 +383,41 @@ async def google_auth(body: GoogleAuthIn):
 
     profile = oauth.google_user_to_profile(google_data)
 
+    # Get device info for token tracking
+    device_id = req.headers.get('x-device-id')
+    user_agent = req.headers.get('user-agent')
+
     # Check if user exists by google_sub
     existing = db.fetch_one('SELECT * FROM users WHERE google_sub = ?', (profile['google_sub'],))
     if existing:
         user = dict(existing)
-        token = auth.create_jwt(user['id'])
+        tokens = auth.create_tokens(user['id'], device_id, user_agent)
         db.execute('UPDATE users SET last_seen_at = ? WHERE id = ?', (int(time.time()), user['id']))
-        return {'jwt': token, 'user': _public_user(user), 'isNew': False}
+        return {
+            'jwt': tokens['access_token'],  # Legacy
+            'access_token': tokens['access_token'],
+            'refresh_token': tokens['refresh_token'],
+            'token_type': tokens['token_type'],
+            'expires_in': tokens['expires_in'],
+            'user': _public_user(user),
+            'isNew': False,
+        }
 
     # Check if email is taken by password user → link accounts
     email_user = auth.get_user_by_email(profile['email'])
     if email_user:
         db.execute('UPDATE users SET google_sub = ?, avatar_url = COALESCE(avatar_url, ?) WHERE id = ?',
                    (profile['google_sub'], profile['avatar_url'], email_user['id']))
-        token = auth.create_jwt(email_user['id'])
-        return {'jwt': token, 'user': _public_user(auth.get_user_by_id(email_user['id'])), 'isNew': False}
+        tokens = auth.create_tokens(email_user['id'], device_id, user_agent)
+        return {
+            'jwt': tokens['access_token'],  # Legacy
+            'access_token': tokens['access_token'],
+            'refresh_token': tokens['refresh_token'],
+            'token_type': tokens['token_type'],
+            'expires_in': tokens['expires_in'],
+            'user': _public_user(auth.get_user_by_id(email_user['id'])),
+            'isNew': False,
+        }
 
     # Create new user
     user_id = auth.create_user(
@@ -299,8 +429,16 @@ async def google_auth(body: GoogleAuthIn):
     # Google email is already verified
     db.execute('UPDATE users SET email_verified = 1, avatar_url = ? WHERE id = ?',
                (profile['avatar_url'], user_id))
-    token = auth.create_jwt(user_id)
-    return {'jwt': token, 'user': _public_user(auth.get_user_by_id(user_id)), 'isNew': True}
+    tokens = auth.create_tokens(user_id, device_id, user_agent)
+    return {
+        'jwt': tokens['access_token'],  # Legacy
+        'access_token': tokens['access_token'],
+        'refresh_token': tokens['refresh_token'],
+        'token_type': tokens['token_type'],
+        'expires_in': tokens['expires_in'],
+        'user': _public_user(auth.get_user_by_id(user_id)),
+        'isNew': True,
+    }
 
 
 # ── Email Verification ──
@@ -883,9 +1021,14 @@ async def report_match_result(tid: str, body: ReportMatchIn, req: Request):
     user = require_user(req)
     if body.result not in ('1-0', '0-1', '1/2-1/2'):
         raise HTTPException(400, 'bad_result')
-    ok = tournament_mgr.report_result(tid, body.match_id, body.result, body.game_id)
+
+    # Pass user_id to verify participant in match before accepting result
+    ok = tournament_mgr.report_result(tid, body.match_id, body.result, body.game_id, user['id'])
     if not ok:
-        raise HTTPException(400, 'cannot_report')
+        # Log potential abuse
+        audit.log_security_event('tournament_unauthorized_report', user['id'],
+                                f'Tournament {tid}: match {body.match_id}')
+        raise HTTPException(403, 'not_in_match')
     t = tournament_mgr.tournaments.get(tid)
     return tournament_mgr.serialize_detail(t)
 
@@ -934,11 +1077,8 @@ async def get_chat_history(game_id: str, req: Request):
 
 
 @app.get('/api/anticheat/reports')
-async def get_anticheat_reports(req: Request, limit: int = 50):
+async def get_anticheat_reports(user: dict = Depends(admin_required), limit: int = 50):
     """Get recent anti-cheat flagged reports (admin only)."""
-    user = require_user(req)
-    if not user.get('is_admin'):
-        raise HTTPException(403, 'admin_only')
     rows = db.query(
         'SELECT ar.*, u.display_name FROM anticheat_reports ar '
         'JOIN users u ON u.id = ar.user_id '
@@ -958,6 +1098,35 @@ async def get_anticheat_reports(req: Request, limit: int = 50):
         }
         for r in rows
     ]
+
+
+@app.get('/api/admin/chat/flagged')
+async def get_flagged_messages(user: dict = Depends(admin_required), limit: int = 100):
+    """Get recently flagged chat messages (admin only)."""
+    rows = db.query(
+        'SELECT cm.*, u.display_name, g.id as game_id FROM chat_messages cm '
+        'JOIN users u ON u.id = cm.sender_id '
+        'LEFT JOIN games g ON g.id = cm.game_id '
+        'WHERE cm.flagged = 1 '
+        'ORDER BY cm.sent_at DESC LIMIT ?',
+        (min(limit, 500),)
+    )
+    return [
+        {
+            'id': r['id'],
+            'gameId': r['game_id'],
+            'sender': {'id': r['sender_id'], 'name': r['display_name']},
+            'text': r['text'],
+            'sentAt': r['sent_at'] * 1000,
+        }
+        for r in rows
+    ]
+
+
+@app.get('/api/admin/anticheat/stats')
+async def get_anticheat_stats(user: dict = Depends(admin_required)):
+    """Get anticheat engine memory stats (admin only)."""
+    return anticheat.get_stats()
 
 
 # ═════════════════════════════════════════════
@@ -1028,23 +1197,108 @@ async def _try_match(mode_key: str):
                     'variant': variant})
 
 
-PROFANITY = set([
-    'fuck', 'shit', 'bitch', 'asshole',
-    'đm', 'dm', 'cl', 'clm', 'đcm',
-])
+# Enhanced profanity list with word boundaries
+PROFANITY = {
+    # English
+    'fuck', 'fucking', 'fucked', 'fucker',
+    'shit', 'shitty',
+    'bitch', 'bitchy',
+    'asshole', 'asshat',
+    'bastard',
+    'dumbass', 'dipshit',
+    'motherfucker', 'motherfucking',
+    'cunt',
+    'damn', 'damned',
+    'piss', 'pissed',
+    'cock', 'cocksucker',
+    'whore', 'slut',
+    'retard', 'retarded',
+    'faggot',
+    'nigger',
+
+    # Vietnamese
+    'đm', 'đmm',  # Shortened "đổ mẹ" (derogatory)
+    'clm', 'cl',  # "cái lồn mẹ" or shortened (vulgar)
+    'đcm',        # "đi chết mẹ" (derogatory)
+    'ngu',        # Stupid (mild)
+    'đần',        # Stupid (mild)
+    'óc',         # Retarded, dumb
+    'khốn',       # Wretch
+    'tả tơi',     # Wretch
+    'con chó',    # Son of a bitch (literally)
+}
+
+
+def _normalize_unicode(text: str) -> str:
+    """Normalize unicode to catch bypasses with diacritics, zero-width chars, etc.
+
+    - NFD decomposition: "é" → "e" + combining accent
+    - Remove combining marks (accents, diacritics)
+    - Remove zero-width characters
+    - Remove right-to-left marks
+    """
+    # NFD decomposition
+    text = unicodedata.normalize('NFD', text)
+    # Remove combining marks (accents, diacritics)
+    text = ''.join(c for c in text if unicodedata.category(c) != 'Mn')
+    # Remove zero-width characters (zero-width joiner, zero-width space, etc.)
+    text = text.replace('​', '').replace('‌', '').replace('‍', '')
+    # Remove right-to-left marks
+    text = text.replace('‮', '').replace('‭', '')
+    return text
 
 
 def _profanity_filter(text: str) -> str:
-    out = text
-    low = text.lower()
-    for w in PROFANITY:
-        if w in low:
-            out = re.sub(re.escape(w), '*' * len(w), out, flags=re.IGNORECASE)
-    return out
+    """Filter profanity with word boundaries + unicode normalization.
+
+    Multiple detection layers:
+    1. Word boundary matching on normalized text (catches most bypasses)
+    2. Spaced/zero-width evasion detection (flags for moderation)
+    """
+    if not text:
+        return text
+
+    original = text
+    normalized_lower = _normalize_unicode(text.lower())
+    filtered = text
+    modified = False
+
+    # Layer 1: Word boundary matching on normalized text
+    for word in PROFANITY:
+        # Use word boundaries: \b matches between word chars and non-word chars
+        pattern = r'\b' + re.escape(word) + r'\b'
+        if re.search(pattern, normalized_lower, re.IGNORECASE):
+            replacement = '*' * len(word)
+            # Replace in original text to preserve case/accents
+            filtered = re.sub(pattern, replacement, filtered, flags=re.IGNORECASE)
+            modified = True
+
+    # Layer 2: Catch spacing/zero-width evasion: "f u c k" or "f‌u‌c‌k"
+    # Remove spaces and zero-width chars, check again
+    spaced_normalized = re.sub(r'[\s​‌‍]+', '', normalized_lower)
+    for word in PROFANITY:
+        if word in spaced_normalized:
+            # Mark as modified (don't filter spaced version, just flag)
+            logger.debug('[chat] Detected spaced/zero-width profanity attempt: %s', text[:50])
+            modified = True
+            break
+
+    return filtered if modified else text
 
 
 @app.websocket('/ws')
 async def ws_endpoint(ws: WebSocket):
+    """WebSocket endpoint with message size limits and rate limiting.
+
+    Size limits:
+    - Uvicorn enforces ws_max_size (default 16KB, configurable via XQ_WS_MAX_SIZE env var)
+    - Server-side check for defense in depth (also 16KB)
+    - Oversized messages logged and rejected with 'message_too_large' error
+
+    Rate limiting:
+    - Connection rate: max 2 conn/s, burst 5 (per IP)
+    - Message rate: max 20 msg/s, burst 50 (per user)
+    """
     # Rate limit WebSocket connections per IP before accepting (max 2 conn/s, burst 5)
     # This prevents connection flooding/DoS attacks
     ip = get_client_ip(ws.scope if hasattr(ws, 'scope') else ws)
@@ -1057,8 +1311,15 @@ async def ws_endpoint(ws: WebSocket):
     await ws.accept()
     conn: WSConn | None = None
     try:
-        # Auth handshake
-        first = await asyncio.wait_for(ws.receive_text(), timeout=10.0)
+        # Auth handshake — with size limit enforced at transport level
+        try:
+            first = await asyncio.wait_for(ws.receive_text(), timeout=10.0)
+        except Exception as e:
+            # Uvicorn raises WebSocketDisconnect if message exceeds ws_max_size
+            audit.log_security_event('ws_oversized', None, f'Message exceeded max size during handshake: {e}')
+            await ws.close(code=4002, reason='Message too large')
+            return
+
         msg = json.loads(first)
         if msg.get('type') != 'auth':
             await ws.close(code=4001)
@@ -1081,11 +1342,17 @@ async def ws_endpoint(ws: WebSocket):
         await ws.send_text(json.dumps({'type': 'ready', 'user': _public_user(user)}))
 
         while True:
-            raw = await ws.receive_text()
+            try:
+                raw = await ws.receive_text()
+            except Exception as e:
+                # Catch oversized or malformed messages from transport layer
+                if conn:
+                    audit.log_security_event('ws_error', conn.user_id, f'WebSocket error: {e}')
+                break
 
-            # Giới hạn kích thước message — tránh memory exhaustion
-            if len(raw) > 10_240:  # 10KB
-                audit.log_security_event('ws_oversized', user_id, f'Message too large: {len(raw)} bytes')
+            # Additional check for defense in depth (match Uvicorn limit of 16KB)
+            if len(raw) > 16_384:
+                audit.log_security_event('ws_oversized', user_id, f'Message: {len(raw)} bytes')
                 await _send(user_id, {'type': 'error', 'code': 'message_too_large'})
                 continue
 
@@ -1250,13 +1517,30 @@ async def ws_endpoint(ws: WebSocket):
                 if not g: continue
                 text = (m.get('text') or '')[:500].strip()
                 if not text: continue
+
                 clean = _profanity_filter(text)
+                flagged = 1 if clean != text else 0
+
+                # Also check for spaced evasion (flag even if not filtered)
+                if not flagged:
+                    spaced_normalized = re.sub(r'[\s​‌‍]+', '',
+                                              _normalize_unicode(text.lower()))
+                    for word in PROFANITY:
+                        if word in spaced_normalized:
+                            flagged = 1
+                            break
+
                 opp = g['black'] if user_id == g['red'] else g['red']
                 db.execute(
                     'INSERT INTO chat_messages (game_id, sender_id, text, sent_at, flagged) '
                     'VALUES (?, ?, ?, ?, ?)',
-                    (gid, user_id, clean, int(time.time()), 1 if clean != text else 0)
+                    (gid, user_id, clean, int(time.time()), flagged)
                 )
+
+                # Log flagged messages for moderation
+                if flagged:
+                    audit.log_security_event('chat_profanity', user_id, f'Game {gid}')
+
                 payload = {'type': 'chat.message', 'gameId': gid,
                            'sender': {'id': user_id, 'name': conn.user['display_name']},
                            'text': clean, 'sentAt': int(time.time() * 1000)}

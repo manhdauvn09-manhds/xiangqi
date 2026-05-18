@@ -45,6 +45,7 @@ data/
 .env
 .env.local
 .env.*.local
+.env.local.jwt-secret
 
 # Node
 node_modules/

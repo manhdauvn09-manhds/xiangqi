@@ -304,6 +304,51 @@ MIGRATIONS = [
     """
     ALTER TABLE users ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0;
     """,
+    # v4 — email token persistence (Fix #1)
+    """
+    CREATE TABLE IF NOT EXISTS email_tokens (
+        id              INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id         INTEGER NOT NULL,
+        purpose         TEXT NOT NULL,           -- 'verify' | 'reset'
+        token_hash      TEXT NOT NULL UNIQUE,    -- SHA256 of token
+        created_at      INTEGER NOT NULL,
+        expires_at      INTEGER NOT NULL,
+        used_at         INTEGER,                 -- NULL until consumed
+        used            INTEGER NOT NULL DEFAULT 0,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_email_tokens_user_purpose ON email_tokens(user_id, purpose);
+    CREATE INDEX IF NOT EXISTS idx_email_tokens_expires ON email_tokens(expires_at);
+    CREATE INDEX IF NOT EXISTS idx_email_tokens_hash ON email_tokens(token_hash);
+    """,
+    # v5 — refresh tokens + audit logs (Fixes #6, #7)
+    """
+    CREATE TABLE IF NOT EXISTS refresh_tokens (
+        id              INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id         INTEGER NOT NULL,
+        token_hash      TEXT NOT NULL UNIQUE,    -- SHA256(refresh token)
+        device_id       TEXT,                    -- Optional: device fingerprint
+        user_agent      TEXT,                    -- Browser/client info for audit
+        issued_at       INTEGER NOT NULL,
+        expires_at      INTEGER NOT NULL,
+        revoked_at      INTEGER,                 -- NULL unless explicitly revoked
+        last_used_at    INTEGER,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user ON refresh_tokens(user_id);
+    CREATE INDEX IF NOT EXISTS idx_refresh_tokens_expires ON refresh_tokens(expires_at);
+    CREATE INDEX IF NOT EXISTS idx_refresh_tokens_hash ON refresh_tokens(token_hash);
+
+    CREATE TABLE IF NOT EXISTS audit_logs (
+        id              INTEGER PRIMARY KEY AUTOINCREMENT,
+        event_type      TEXT NOT NULL,    -- 'tournament_unauthorized_report', etc.
+        user_id         INTEGER,
+        details         TEXT,
+        created_at      INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_audit_logs_created ON audit_logs(created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_audit_logs_user ON audit_logs(user_id);
+    """,
 ]
 
 

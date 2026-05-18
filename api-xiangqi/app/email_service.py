@@ -40,17 +40,49 @@ class Token:
 
 
 class TokenStore:
-    """In-memory token store. Production: use DB or Redis."""
+    """Hybrid token store: in-memory cache + database persistence.
+
+    Fast path: check in-memory cache for valid tokens (< 100ms)
+    Persistent path: write to database on create/consume + load on init
+    Background: cleanup task removes expired tokens daily
+    """
 
     def __init__(self):
-        self._tokens: dict[str, Token] = {}
+        self._tokens: dict[str, Token] = {}  # In-memory cache
         # Theo dõi thời điểm tạo token gần nhất theo user_id+purpose
         self._last_created: dict[tuple[int, str], float] = {}
+        # Load existing tokens from DB on startup
+        self._load_from_db()
+
+    def _load_from_db(self):
+        """Load non-expired, unused tokens from DB on startup."""
+        try:
+            now = int(time.time())
+            rows = db.query(
+                'SELECT token_hash, user_id, purpose, created_at, expires_at, used '
+                'FROM email_tokens WHERE expires_at > ? AND used = 0',
+                (now,)
+            )
+            for row in rows:
+                ttl = row['expires_at'] - row['created_at']
+                self._tokens[row['token_hash']] = Token(
+                    token=row['token_hash'],
+                    user_id=row['user_id'],
+                    purpose=row['purpose'],
+                    created_at=row['created_at'],
+                    ttl=ttl,
+                    used=bool(row['used']),
+                )
+            if rows:
+                logger.info('[email] Loaded %d tokens from database', len(rows))
+        except Exception as e:
+            # Database might not be ready yet (migration pending)
+            logger.warning('[email] Could not load tokens from DB: %s', e)
 
     def create(self, user_id: int, purpose: str) -> str | None:
         """Create a new token. Returns raw token, hoặc None nếu rate limited."""
         key = (user_id, purpose)
-        now = time.time()
+        now = int(time.time())
         last = self._last_created.get(key, 0)
         if now - last < _TOKEN_RATE_WINDOW:
             logger.warning('Token rate limit: user_id=%s purpose=%s', user_id, purpose)
@@ -59,12 +91,24 @@ class TokenStore:
         raw = secrets.token_urlsafe(32)
         hashed = self._hash(raw)
         ttl = TOKEN_TTL_VERIFY if purpose == 'verify' else TOKEN_TTL_RESET
+
+        # Write to DB first
+        try:
+            db.execute(
+                'INSERT INTO email_tokens (user_id, purpose, token_hash, created_at, expires_at, used) '
+                'VALUES (?, ?, ?, ?, ?, ?)',
+                (user_id, purpose, hashed, now, now + ttl, 0)
+            )
+        except Exception as e:
+            logger.error('[email] Failed to persist token: %s', e)
+            # Continue with in-memory fallback
+
+        # Cache in memory
         self._tokens[hashed] = Token(
             token=hashed, user_id=user_id, purpose=purpose,
             created_at=now, ttl=ttl,
         )
         self._last_created[key] = now
-        self._cleanup()
         return raw
 
     def validate(self, raw_token: str, purpose: str) -> Token | None:
@@ -87,6 +131,15 @@ class TokenStore:
         t = self.validate(raw_token, purpose)
         if t:
             t.used = True
+            hashed = self._hash(raw_token)
+            # Update DB
+            try:
+                db.execute(
+                    'UPDATE email_tokens SET used = 1, used_at = ? WHERE token_hash = ?',
+                    (int(time.time()), hashed)
+                )
+            except Exception as e:
+                logger.error('[email] Failed to update token in DB: %s', e)
         return t
 
     def invalidate_user(self, user_id: int, purpose: str):
@@ -96,11 +149,20 @@ class TokenStore:
         for k in to_del:
             del self._tokens[k]
 
+        # Also mark as used in DB
+        try:
+            db.execute(
+                'UPDATE email_tokens SET used = 1, used_at = ? WHERE user_id = ? AND purpose = ? AND used = 0',
+                (int(time.time()), user_id, purpose)
+            )
+        except Exception as e:
+            logger.warning('[email] Failed to invalidate tokens in DB: %s', e)
+
     def _hash(self, raw: str) -> str:
         return hashlib.sha256(raw.encode()).hexdigest()
 
     def _cleanup(self):
-        """Remove expired tokens."""
+        """Remove expired tokens from in-memory cache."""
         now = time.time()
         expired = [k for k, t in self._tokens.items()
                    if now - t.created_at > t.ttl or t.used]
