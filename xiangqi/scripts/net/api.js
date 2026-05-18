@@ -107,6 +107,11 @@ export async function googleSignIn({ idToken }) {
   return r;
 }
 
+export async function getGoogleClientId() {
+  const r = await request('/api/auth/google-client-id');
+  return r.client_id;
+}
+
 export async function logout() {
   try { await request('/api/auth/logout', { method: 'POST' }); } catch {}
   _setToken(null, null);

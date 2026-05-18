@@ -1,11 +1,11 @@
-# Cờ Tướng Vương — Build & Run Script (PowerShell)
+# Xiangqi Build and Run Script
 # Usage:
 #   .\build.ps1 -Build      # Build Docker image
 #   .\build.ps1 -Run        # Run container
 #   .\build.ps1 -Stop       # Stop container
 #   .\build.ps1 -Logs       # Show logs
-#   .\build.ps1 -Clean      # Remove image + container
-#   .\build.ps1 -BuildRun   # Build + Run (default)
+#   .\build.ps1 -Clean      # Remove image and container
+#   .\build.ps1 -BuildRun   # Build and Run (default)
 
 param(
     [switch]$Build,
@@ -24,7 +24,8 @@ $ComposeFile = Join-Path $RootDir "docker-compose.yml"
 
 function Write-Status {
     param([string]$Message, [string]$Color = "Cyan")
-    Write-Host "[$([DateTime]::Now.ToString('HH:mm:ss'))] $Message" -ForegroundColor $Color
+    $time = [DateTime]::Now.ToString('HH:mm:ss')
+    Write-Host "[$time] $Message" -ForegroundColor $Color
 }
 
 function Write-Success {
@@ -32,34 +33,33 @@ function Write-Success {
     Write-Status $Message "Green"
 }
 
-function Write-Error-Custom {
+function Write-ErrorMsg {
     param([string]$Message)
     Write-Status $Message "Red"
 }
 
-# ============= Build =============
+# Build Docker image
 function Build-Image {
     Write-Status "Building Docker image: $Tag" "Yellow"
 
     if (-not (Test-Path $ComposeFile)) {
-        Write-Error-Custom "docker-compose.yml not found at $ComposeFile"
+        Write-ErrorMsg "docker-compose.yml not found at $ComposeFile"
         exit 1
     }
 
     docker-compose -f $ComposeFile build
     if ($LASTEXITCODE -ne 0) {
-        Write-Error-Custom "Build failed!"
+        Write-ErrorMsg "Build failed!"
         exit 1
     }
 
     Write-Success "Image built: $Tag"
 }
 
-# ============= Run =============
+# Run container
 function Run-Container {
     Write-Status "Starting container: $ContainerName" "Yellow"
 
-    # Check if already running
     $running = docker ps --filter "name=$ContainerName" --format "{{.Names}}"
     if ($running) {
         Write-Status "Container already running. Stopping first..." "Cyan"
@@ -68,15 +68,13 @@ function Run-Container {
 
     docker-compose -f $ComposeFile up -d
     if ($LASTEXITCODE -ne 0) {
-        Write-Error-Custom "Failed to start container!"
+        Write-ErrorMsg "Failed to start container!"
         exit 1
     }
 
-    # Wait for services to be ready
     Write-Status "Waiting for services..." "Cyan"
     Start-Sleep -Seconds 3
 
-    # Check API health
     Write-Status "Checking API health..." "Cyan"
     $maxAttempts = 20
     $attempt = 0
@@ -84,7 +82,7 @@ function Run-Container {
         try {
             $response = Invoke-WebRequest -Uri "http://localhost:8787/api/leaderboard" -TimeoutSec 5 -ErrorAction Stop
             if ($response.StatusCode -eq 200) {
-                Write-Success "✓ API is ready!"
+                Write-Success "API is ready!"
                 break
             }
         }
@@ -98,48 +96,46 @@ function Run-Container {
     }
 
     if ($attempt -eq $maxAttempts) {
-        Write-Error-Custom "API health check failed after $maxAttempts attempts"
+        Write-ErrorMsg "API health check failed after $maxAttempts attempts"
         Write-Status "Check logs with: .\build.ps1 -Logs" "Yellow"
         exit 1
     }
 
-    # Show status
     Write-Host ""
-    Write-Success "✓ Services started successfully!"
+    Write-Success "Services started successfully!"
     Write-Host ""
-    Write-Host "╔════════════════════════════════════════╗" -ForegroundColor Green
-    Write-Host "║  Cờ Tướng Vương — Docker Running      ║" -ForegroundColor Green
-    Write-Host "║  🎮 Frontend:  http://localhost:5500   ║" -ForegroundColor Green
-    Write-Host "║  🔧 API:       http://localhost:8787   ║" -ForegroundColor Green
-    Write-Host "║  ⚡ WebSocket: ws://localhost:8787/ws  ║" -ForegroundColor Green
-    Write-Host "║                                        ║" -ForegroundColor Green
-    Write-Host "║  Stop:   .\build.ps1 -Stop             ║" -ForegroundColor Green
-    Write-Host "║  Logs:   .\build.ps1 -Logs             ║" -ForegroundColor Green
-    Write-Host "╚════════════════════════════════════════╝" -ForegroundColor Green
+    Write-Host "==== XIANGQI DOCKER RUNNING ====" -ForegroundColor Green
+    Write-Host "Frontend:  http://localhost:5500" -ForegroundColor Green
+    Write-Host "API:       http://localhost:8787" -ForegroundColor Green
+    Write-Host "WebSocket: ws://localhost:8787/ws" -ForegroundColor Green
+    Write-Host ""
+    Write-Host "Stop:   .\build.ps1 -Stop" -ForegroundColor Cyan
+    Write-Host "Logs:   .\build.ps1 -Logs" -ForegroundColor Cyan
+    Write-Host "===================================" -ForegroundColor Green
     Write-Host ""
 }
 
-# ============= Stop =============
+# Stop container
 function Stop-Container {
     Write-Status "Stopping container: $ContainerName" "Yellow"
 
     docker-compose -f $ComposeFile down
     if ($LASTEXITCODE -ne 0) {
-        Write-Error-Custom "Failed to stop container!"
+        Write-ErrorMsg "Failed to stop container!"
         exit 1
     }
 
     Write-Success "Container stopped"
 }
 
-# ============= Logs =============
+# Show logs
 function Show-Logs {
     Write-Status "Showing logs (Ctrl+C to exit)..." "Yellow"
     Write-Host ""
     docker-compose -f $ComposeFile logs -f
 }
 
-# ============= Clean =============
+# Clean everything
 function Clean-All {
     Write-Status "Cleaning up image and containers..." "Yellow"
 
@@ -150,7 +146,7 @@ function Clean-All {
     Write-Status "To rebuild: .\build.ps1 -Build" "Cyan"
 }
 
-# ============= Main =============
+# Main
 try {
     # Default to BuildRun if no params
     if (-not $Build -and -not $Run -and -not $Stop -and -not $Logs -and -not $Clean -and -not $BuildRun) {
@@ -178,6 +174,6 @@ try {
     }
 }
 catch {
-    Write-Error-Custom "Error: $_"
+    Write-ErrorMsg "Error: $_"
     exit 1
 }

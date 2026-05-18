@@ -78,6 +78,10 @@ auth_limiter = RateLimiter(rate=3.0, burst=8)
 # WebSocket messages: 20 msg/s, burst 50
 ws_limiter = RateLimiter(rate=20.0, burst=50)
 
+# WebSocket connections (handshake): max 2 connections/s per IP, burst 5
+# This prevents connection flooding attacks
+ws_connect_limiter = RateLimiter(rate=2.0, burst=5)
+
 # Game moves: 5 moves/s (enough for fast play)
 move_limiter = RateLimiter(rate=5.0, burst=10)
 

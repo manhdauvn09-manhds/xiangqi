@@ -35,7 +35,7 @@ from pydantic import BaseModel, Field, EmailStr
 
 from . import auth, db, elo
 from .rate_limit import (
-    api_limiter, auth_limiter, move_limiter,
+    api_limiter, auth_limiter, move_limiter, ws_limiter, ws_connect_limiter,
     check_rate_limit, check_ws_rate, get_client_ip,
     login_failure_tracker, check_email_reset_rate,
 )
@@ -245,6 +245,23 @@ async def logout(req: Request):
 
 class GoogleAuthIn(BaseModel):
     id_token: str
+
+
+@app.get('/api/auth/google-client-id')
+async def get_google_client_id():
+    """Return Google OAuth client ID for frontend configuration.
+
+    This endpoint allows the frontend to dynamically fetch the client ID
+    instead of hardcoding it, improving security and supporting multiple
+    deployment environments.
+    """
+    from app.oauth import GOOGLE_CLIENT_ID
+
+    if not GOOGLE_CLIENT_ID:
+        logger.warning('GOOGLE_CLIENT_ID not configured')
+        raise HTTPException(500, 'Google OAuth not configured')
+
+    return {'client_id': GOOGLE_CLIENT_ID}
 
 
 @app.post('/api/auth/google')
@@ -1028,6 +1045,15 @@ def _profanity_filter(text: str) -> str:
 
 @app.websocket('/ws')
 async def ws_endpoint(ws: WebSocket):
+    # Rate limit WebSocket connections per IP before accepting (max 2 conn/s, burst 5)
+    # This prevents connection flooding/DoS attacks
+    ip = get_client_ip(ws.scope if hasattr(ws, 'scope') else ws)
+    try:
+        check_rate_limit(ws_connect_limiter, f'ws_connect:{ip}')
+    except HTTPException as e:
+        await ws.close(code=4029, reason='Too many connection attempts')
+        return
+
     await ws.accept()
     conn: WSConn | None = None
     try:

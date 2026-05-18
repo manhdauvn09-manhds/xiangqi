@@ -24,8 +24,14 @@ logger = logging.getLogger(__name__)
 GOOGLE_CERTS_URL = 'https://www.googleapis.com/oauth2/v3/certs'
 GOOGLE_ISS = ('accounts.google.com', 'https://accounts.google.com')
 
-# Set via environment variable in production
+# Set via environment variable in production (REQUIRED)
 GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID', '')
+
+# Validate in production
+_is_production = os.getenv('ENV', 'dev').lower() == 'production'
+if _is_production and not GOOGLE_CLIENT_ID:
+    logger.critical('GOOGLE_CLIENT_ID environment variable is REQUIRED in production')
+    raise RuntimeError('GOOGLE_CLIENT_ID not configured for production environment')
 
 # PyJWKClient with built-in caching (keys refresh every ~24h)
 _jwk_client = PyJWKClient(GOOGLE_CERTS_URL, cache_keys=True, lifespan=3600)
@@ -45,6 +51,8 @@ async def verify_google_id_token(id_token: str) -> dict[str, Any] | None:
         signing_key = _jwk_client.get_signing_key_from_jwt(id_token)
 
         # Decode AND verify signature + claims
+        # Always verify audience for security (use empty string if not configured)
+        verify_audience = bool(GOOGLE_CLIENT_ID)
         payload = pyjwt.decode(
             id_token,
             signing_key.key,
@@ -54,10 +62,15 @@ async def verify_google_id_token(id_token: str) -> dict[str, Any] | None:
             options={
                 'verify_signature': True,
                 'verify_exp': True,
-                'verify_aud': bool(GOOGLE_CLIENT_ID),
+                'verify_aud': verify_audience,  # Only verify if client ID is configured
                 'verify_iss': True,
             },
         )
+
+        # In production, ensure audience verification succeeded
+        if _is_production and verify_audience and payload.get('aud') != GOOGLE_CLIENT_ID:
+            logger.warning('Google token audience mismatch: %s != %s', payload.get('aud'), GOOGLE_CLIENT_ID)
+            return None
     except (pyjwt.PyJWTError, Exception) as e:
         logger.warning('Google ID token verification failed: %s', e)
         return None
