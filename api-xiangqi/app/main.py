@@ -1129,6 +1129,50 @@ async def get_anticheat_stats(user: dict = Depends(admin_required)):
     return anticheat.get_stats()
 
 
+@app.get('/api/admin/audit-logs')
+async def get_audit_logs(
+    user: dict = Depends(admin_required),
+    limit: int = 100,
+    event_type: str | None = None,
+    user_id: int | None = None,
+):
+    """Get audit logs (admin only).
+
+    Args:
+        limit: Max logs to return (default 100, max 500)
+        event_type: Filter by event type (e.g., 'tournament_unauthorized_report')
+        user_id: Filter by user ID
+    """
+    limit = min(limit, 500)
+
+    query = 'SELECT id, event_type, user_id, details, created_at FROM audit_logs WHERE 1=1'
+    params = []
+
+    if event_type:
+        query += ' AND event_type = ?'
+        params.append(event_type)
+
+    if user_id:
+        query += ' AND user_id = ?'
+        params.append(user_id)
+
+    query += ' ORDER BY created_at DESC LIMIT ?'
+    params.append(limit)
+
+    rows = db.fetch_all(query, params)
+
+    return [
+        {
+            'id': r['id'],
+            'eventType': r['event_type'],
+            'userId': r['user_id'],
+            'details': r['details'],
+            'createdAt': r['created_at'] * 1000,
+        }
+        for r in rows
+    ]
+
+
 # ═════════════════════════════════════════════
 # 9. WEBSOCKET — matchmaking + game sync + chat
 #    Phase 3: server-side move validation + anti-cheat

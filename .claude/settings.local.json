@@ -178,7 +178,10 @@
       "Bash(bash /tmp/diagnose.sh)",
       "Bash(bash /tmp/check-imports.sh)",
       "Bash(powershell -Command \".\\\\deploy.ps1 -Deploy -SkipLocalTest\")",
-      "Bash(powershell -NoProfile -ExecutionPolicy Bypass -Command \".\\\\deploy.ps1 -Deploy -SkipLocalTest\")"
+      "Bash(powershell -NoProfile -ExecutionPolicy Bypass -Command \".\\\\deploy.ps1 -Deploy -SkipLocalTest\")",
+      "Bash(powershell -NoProfile -ExecutionPolicy Bypass -Command \".\\\\deploy.ps1 -Status 2>&1\")",
+      "Bash(bash /tmp/test_security_fixes.sh)",
+      "Bash(python3 /tmp/load_test.py)"
     ]
   }
 }
