@@ -58,11 +58,11 @@ function Test-DockerInstalled {
 }
 
 function Test-SshInstalled {
-    try {
-        ssh -V 2>&1 | Out-Null
+    $sshTest = & cmd /c "where ssh" 2>$null
+    if ($sshTest) {
         Write-Success "[OK] SSH installed"
     }
-    catch {
+    else {
         Write-ErrorMsg "SSH not found! Enable via 'Add-WindowsCapability -Online -Name OpenSSH.Client~~~~0.0.1.0'"
     }
 }

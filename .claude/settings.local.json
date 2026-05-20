@@ -176,7 +176,9 @@
       "Bash(curl -s -H \"Host: xiangqi.games-core.com\" https://62.238.28.106/index.html --insecure)",
       "Bash(curl -s -H \"Host: xiangqi.games-core.com\" https://62.238.28.106/scripts/puzzles/bank.js --insecure)",
       "Bash(bash /tmp/diagnose.sh)",
-      "Bash(bash /tmp/check-imports.sh)"
+      "Bash(bash /tmp/check-imports.sh)",
+      "Bash(powershell -Command \".\\\\deploy.ps1 -Deploy -SkipLocalTest\")",
+      "Bash(powershell -NoProfile -ExecutionPolicy Bypass -Command \".\\\\deploy.ps1 -Deploy -SkipLocalTest\")"
     ]
   }
 }
