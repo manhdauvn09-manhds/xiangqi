@@ -173,7 +173,7 @@ function Deploy-ToServer {
     while ($attempt -lt $maxAttempts) {
         try {
             $response = Invoke-WebRequest -Uri "https://xiangqi.games-core.com/api/leaderboard" `
-                -TimeoutSec 5 -ErrorAction Stop
+                -TimeoutSec 15 -ErrorAction Stop
             if ($response.StatusCode -eq 200) {
                 Write-Success "[OK] API health check passed!"
                 break

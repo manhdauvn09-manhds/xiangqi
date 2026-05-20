@@ -181,7 +181,8 @@
       "Bash(powershell -NoProfile -ExecutionPolicy Bypass -Command \".\\\\deploy.ps1 -Deploy -SkipLocalTest\")",
       "Bash(powershell -NoProfile -ExecutionPolicy Bypass -Command \".\\\\deploy.ps1 -Status 2>&1\")",
       "Bash(bash /tmp/test_security_fixes.sh)",
-      "Bash(python3 /tmp/load_test.py)"
+      "Bash(python3 /tmp/load_test.py)",
+      "Bash(ssh root@62.238.28.106 \"cd /opt/apps/xiangqi && docker-compose -f docker-compose-prod.yml logs --tail 50 xiangqi-api\")"
     ]
   }
 }
