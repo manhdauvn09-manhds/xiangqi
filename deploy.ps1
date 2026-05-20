@@ -170,22 +170,28 @@ function Deploy-ToServer {
 
     $maxAttempts = 10
     $attempt = 0
+    $healthCheckPassed = $false
     while ($attempt -lt $maxAttempts) {
+        $attempt++
         try {
             $response = Invoke-WebRequest -Uri "https://xiangqi.games-core.com/api/leaderboard" `
                 -TimeoutSec 15 -ErrorAction Stop
             if ($response.StatusCode -eq 200) {
                 Write-Success "[OK] API health check passed!"
+                $healthCheckPassed = $true
                 break
             }
         }
         catch {
-            $attempt++
             if ($attempt -lt $maxAttempts) {
                 Write-Status "  Health check attempt $attempt/$maxAttempts..." "Cyan"
                 Start-Sleep -Seconds 2
             }
         }
+    }
+
+    if (-not $healthCheckPassed) {
+        Write-ErrorMsg "Health check failed after $maxAttempts attempts. Check server logs."
     }
 
     if ($attempt -eq $maxAttempts) {
@@ -222,7 +228,7 @@ function Check-ServerStatus {
     # Health check
     Write-Status "Testing API endpoint..." "Cyan"
     try {
-        $response = Invoke-WebRequest -Uri "https://xiangqi.games-core.com/api/leaderboard" -TimeoutSec 5
+        $response = Invoke-WebRequest -Uri "https://xiangqi.games-core.com/api/leaderboard" -TimeoutSec 15
         Write-Success "[OK] API is healthy"
     }
     catch {
