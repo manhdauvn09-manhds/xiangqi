@@ -184,8 +184,10 @@ function Deploy-ToServer {
         }
         catch {
             if ($attempt -lt $maxAttempts) {
-                Write-Status "  Health check attempt $attempt/$maxAttempts..." "Cyan"
+                Write-Status "  Health check attempt $attempt/$maxAttempts - Error: $($_.Exception.Message)" "Yellow"
                 Start-Sleep -Seconds 2
+            } else {
+                Write-Status "  Final attempt failed: $($_.Exception.Message)" "Red"
             }
         }
     }
