@@ -173,21 +173,20 @@ function Deploy-ToServer {
     $healthCheckPassed = $false
     while ($attempt -lt $maxAttempts) {
         $attempt++
-        try {
-            $response = Invoke-WebRequest -Uri "https://xiangqi.games-core.com/api/leaderboard" `
-                -TimeoutSec 15 -ErrorAction Stop
-            if ($response.StatusCode -eq 200) {
-                Write-Success "[OK] API health check passed!"
-                $healthCheckPassed = $true
-                break
-            }
-        }
-        catch {
+        # Use curl.exe instead of Invoke-WebRequest (better Cloudflare support)
+        $output = & curl.exe -s -w "%{http_code}" "https://xiangqi.games-core.com/api/leaderboard" 2>$null
+        $statusCode = $output[-3..-1] -join ""  # Last 3 chars are status code
+
+        if ($statusCode -eq "200") {
+            Write-Success "[OK] API health check passed!"
+            $healthCheckPassed = $true
+            break
+        } else {
             if ($attempt -lt $maxAttempts) {
-                Write-Status "  Health check attempt $attempt/$maxAttempts - Error: $($_.Exception.Message)" "Yellow"
+                Write-Status "  Health check attempt $attempt/$maxAttempts (HTTP $statusCode)..." "Yellow"
                 Start-Sleep -Seconds 2
             } else {
-                Write-Status "  Final attempt failed: $($_.Exception.Message)" "Red"
+                Write-Status "  Final attempt: HTTP $statusCode" "Red"
             }
         }
     }
