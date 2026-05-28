@@ -193,7 +193,10 @@
       "Bash(pwsh -Command \".\\\\deploy.ps1 -Deploy -SkipLocalTest\")",
       "Bash(/c/WINDOWS/System32/WindowsPowerShell/v1.0/powershell -Command \".\\\\deploy.ps1 -Deploy -SkipLocalTest 2>&1\")",
       "Bash(tee deploy.log)",
-      "Bash(/c/WINDOWS/System32/WindowsPowerShell/v1.0/powershell -Command \".\\\\deploy.ps1 -Status 2>&1\")"
+      "Bash(/c/WINDOWS/System32/WindowsPowerShell/v1.0/powershell -Command \".\\\\deploy.ps1 -Status 2>&1\")",
+      "Bash(curl -s https://xiangqi.games-core.com/api/health)",
+      "Bash(curl -s \"https://xiangqi.games-core.com/api/leaderboard?limit=1\")",
+      "Bash(/c/WINDOWS/System32/WindowsPowerShell/v1.0/powershell -Command \"ssh root@62.238.28.106 'cat /etc/nginx/sites-available/xiangqi.games-core.com | grep -A 20 location' 2>&1\")"
     ]
   }
 }
