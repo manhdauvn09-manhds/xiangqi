@@ -684,6 +684,12 @@ async def get_elo(user_id: int, variant: str = 'standard'):
     return p
 
 
+@app.get('/health')
+async def health_check():
+    """Simple health check endpoint for monitoring."""
+    return {'status': 'ok', 'service': 'xiangqi-api'}
+
+
 @app.get('/api/leaderboard')
 async def leaderboard(variant: str = 'standard', scope: str = 'global', limit: int = 100):
     sql = '''
