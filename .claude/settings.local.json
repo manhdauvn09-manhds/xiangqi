@@ -192,7 +192,8 @@
       "Bash(.\\\\deploy.ps1 -Deploy -SkipLocalTest)",
       "Bash(pwsh -Command \".\\\\deploy.ps1 -Deploy -SkipLocalTest\")",
       "Bash(/c/WINDOWS/System32/WindowsPowerShell/v1.0/powershell -Command \".\\\\deploy.ps1 -Deploy -SkipLocalTest 2>&1\")",
-      "Bash(tee deploy.log)"
+      "Bash(tee deploy.log)",
+      "Bash(/c/WINDOWS/System32/WindowsPowerShell/v1.0/powershell -Command \".\\\\deploy.ps1 -Status 2>&1\")"
     ]
   }
 }
