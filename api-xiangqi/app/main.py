@@ -684,7 +684,7 @@ async def get_elo(user_id: int, variant: str = 'standard'):
     return p
 
 
-@app.get('/health')
+@app.get('/api/health')
 async def health_check():
     """Simple health check endpoint for monitoring."""
     return {'status': 'ok', 'service': 'xiangqi-api'}
