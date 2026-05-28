@@ -183,7 +183,16 @@
       "Bash(bash /tmp/test_security_fixes.sh)",
       "Bash(python3 /tmp/load_test.py)",
       "Bash(ssh root@62.238.28.106 \"cd /opt/apps/xiangqi && docker-compose -f docker-compose-prod.yml logs --tail 50 xiangqi-api\")",
-      "Bash(powershell -NoProfile -ExecutionPolicy Bypass -Command \".\\\\deploy.ps1 -Deploy -SkipLocalTest 2>&1\")"
+      "Bash(powershell -NoProfile -ExecutionPolicy Bypass -Command \".\\\\deploy.ps1 -Deploy -SkipLocalTest 2>&1\")",
+      "Skill(opt-token-and-memory-control)",
+      "Skill(opt-token-and-memory-control:*)",
+      "Bash(timeout 3 curl -i -N -H \"Connection: Upgrade\" -H \"Upgrade: websocket\" https://xiangqi.games-core.com/ws)",
+      "Bash(cd /e)",
+      "Bash(find . -name \"xiangqi_engine.py\")",
+      "Bash(.\\\\deploy.ps1 -Deploy -SkipLocalTest)",
+      "Bash(pwsh -Command \".\\\\deploy.ps1 -Deploy -SkipLocalTest\")",
+      "Bash(/c/WINDOWS/System32/WindowsPowerShell/v1.0/powershell -Command \".\\\\deploy.ps1 -Deploy -SkipLocalTest 2>&1\")",
+      "Bash(tee deploy.log)"
     ]
   }
 }
