@@ -54,16 +54,19 @@ export class GameController {
         if (config.moves && Array.isArray(config.moves)) {
           for (const moveRecord of config.moves) {
             // moveRecord has: { side, san, iccs, reveal? }
-            const iccs = moveRecord.iccs;
-            if (iccs && iccs.length === 4) {
-              const from = { file: iccs.charCodeAt(0) - 'a'.charCodeAt(0), rank: parseInt(iccs[1]) };
-              const to = { file: iccs.charCodeAt(2) - 'a'.charCodeAt(0), rank: parseInt(iccs[3]) };
-              const moves = generateLegalMoves(this.board, this.board.side);
-              const move = moves.find(m => m.from.file === from.file && m.from.rank === from.rank &&
-                                           m.to.file === to.file && m.to.rank === to.rank);
-              if (move) {
-                if (this.variant === 'blind') applyBlindMove(this.board, move);
-                else applyMove(this.board, move);
+            // ICCS có thể là 4-5 ký tự (rank 10 chiếm 2 ký tự) — dùng iccsToMove để parse đúng
+            const parsed = moveRecord.iccs ? iccsToMove(moveRecord.iccs) : null;
+            if (!parsed) continue;
+            const moves = generateLegalMoves(this.board, this.board.side);
+            const move = moves.find(m =>
+              m.from.file === parsed.from.file && m.from.rank === parsed.from.rank &&
+              m.to.file   === parsed.to.file   && m.to.rank   === parsed.to.rank);
+            if (move) {
+              if (this.variant === 'blind') applyBlindMove(this.board, move);
+              else applyMove(this.board, move);
+              // Cập nhật fenHistory cho phát hiện lặp lại 3 lần khi resume
+              if (!moveRecord.reveal && this.variant === 'standard') {
+                this.fenHistory.push(toFEN(this.board));
               }
             }
           }
@@ -550,6 +553,7 @@ export class GameController {
       else undoMove(this.board);
       this.movesLog.pop();
       this.iccsHistory.pop();
+      if (this.fenHistory.length) this.fenHistory.pop();  // đồng bộ tracking lặp lại
       toUndo--;
     }
     this.renderer.setBoard(this.board);
@@ -773,5 +777,8 @@ export class GameController {
   }
 }
 
-function lastMoveFromLog() { return null; }
+function lastMoveFromLog(iccsHistory) {
+  if (!iccsHistory || !iccsHistory.length) return null;
+  return iccsToMove(iccsHistory[iccsHistory.length - 1]);
+}
 function esc(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }

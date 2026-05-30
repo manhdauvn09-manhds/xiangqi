@@ -1,15 +1,20 @@
 // Cờ Tướng Vương — Daily Challenge page
+// Cách chơi MỚI: người chơi được đi TỰ DO (mọi nước hợp lệ, KHÔNG bị undo).
+// Máy phòng thủ tối ưu. Thắng (chiếu hết hoặc vây hãm) trong/đúng số nước → giải xong.
+// Chỉ báo "chưa đạt" khi: thua, hoà, hoặc đi quá nhiều nước mà không thắng — vẫn cho chơi tiếp.
 import { t } from '../i18n/i18n.js';
 import { getDailyPuzzle, dateKey } from '../puzzles/bank.js';
 import { fromFEN, applyMove, undoMove, pieceAt } from '../core/board.js';
-import { isCheck, isCheckmate, isFacingGenerals, generateLegalMoves } from '../core/rules.js';
+import { isCheck, isFacingGenerals, generateLegalMoves, detectGameResult } from '../core/rules.js';
 import { movesForPiece } from '../core/moves.js';
 import { OPP } from '../core/constants.js';
+import { searchBestMove } from '../ai/search.js';
 import { createBoardRenderer } from './board-renderer.js';
 import { toast, confirm } from './toast.js';
 import { SoundFX } from '../sound/sound.js';
 
 const STORAGE = 'xq_daily_streak';
+const MAX_PLAYER_MOVES = 30;   // chặn vòng lặp vô hạn — quá số này coi như chưa giải được
 
 function getStreak() {
   try { return JSON.parse(localStorage.getItem(STORAGE) || '{}'); }
@@ -20,13 +25,16 @@ function setStreak(o) { localStorage.setItem(STORAGE, JSON.stringify(o)); }
 export function renderDailyPage(root) {
   const puzzle = getDailyPuzzle();
   const board = fromFEN(puzzle.fen);
+  const solverSide = puzzle.solverSide || 'r';
   const streak = getStreak();
   const todaySolved = streak[puzzle.dateKey] === 'solved';
 
   let selected = null;
   let legalForSelected = [];
   let solved = todaySolved;
-  let attempts = 0;
+  let finished = todaySolved;   // true khi đã thắng (khoá bàn cờ)
+  let busy = false;             // máy đang suy nghĩ
+  let playerMoves = 0;
   let startTs = Date.now();
 
   root.innerHTML = `
@@ -61,7 +69,7 @@ export function renderDailyPage(root) {
         </div>
         <div class="hint-box hidden" id="hintBox"></div>
         <div class="muted small" style="text-align:center; margin-top:8px;">
-          ${esc(t('daily.attempts'))}: <span id="attemptCount">0</span>
+          ${esc(t('daily.attempts'))}: <span id="attemptCount">0</span> / ${puzzle.mateIn}
         </div>
         <div id="solutionBox" style="display:none;margin-top:12px;background:rgba(255,255,255,0.05);border-radius:8px;padding:12px;border-left:3px solid #f4c430;"></div>
       </div>
@@ -71,24 +79,23 @@ export function renderDailyPage(root) {
   const renderer = createBoardRenderer(
     root.querySelector('#dailyBoard'),
     (f, r) => onSquareClick(f, r),
-    {}
+    { flipped: solverSide === 'b' }
   );
   renderer.setBoard(board);
 
+  function setStatus(html) {
+    const el = root.querySelector('#dailyStatus');
+    if (el) el.innerHTML = html;
+  }
+
   function onSquareClick(file, rank) {
-    if (solved) return;
+    if (finished || busy) return;
+    if (board.side !== solverSide) return;   // chỉ cho đi khi tới lượt mình
     const piece = pieceAt(board, file, rank);
     if (selected) {
-      // click cùng phe → đổi quân
-      if (piece && piece.side === board.side) {
-        select(file, rank);
-        return;
-      }
+      if (piece && piece.side === board.side) { select(file, rank); return; }
       const move = legalForSelected.find(m => m.to.file === file && m.to.rank === rank);
-      if (move) {
-        applyAndCheck(move);
-        return;
-      }
+      if (move) { playerMove(move); return; }
       select(null);
       return;
     }
@@ -97,8 +104,7 @@ export function renderDailyPage(root) {
 
   function select(f, r) {
     if (f == null) {
-      selected = null;
-      legalForSelected = [];
+      selected = null; legalForSelected = [];
       renderer.setSelected(null, []);
       return;
     }
@@ -114,52 +120,94 @@ export function renderDailyPage(root) {
     renderer.setSelected(selected, legalForSelected.map(m => m.to));
   }
 
-  function applyAndCheck(move) {
+  function playerMove(move) {
     applyMove(board, move);
     SoundFX.move();
-    selected = null;
-    legalForSelected = [];
+    selected = null; legalForSelected = [];
     renderer.setBoard(board);
     renderer.setSelected(null, []);
     renderer.setLastMove(move);
-    attempts++;
+    playerMoves++;
     const ac = root.querySelector('#attemptCount');
-    if (ac) ac.textContent = attempts;
+    if (ac) ac.textContent = playerMoves;
 
-    // Check kết quả
-    const oppSide = board.side; // bên đối phương đến lượt
-    if (isCheckmate(board, oppSide)) {
-      onSolved();
-      return;
+    const res = detectGameResult(board);
+    if (res.ended) return finishGame(res);
+
+    // tới lượt máy phòng thủ
+    setStatus('🤖 ' + esc(t('status.thinking') || 'Máy đang suy nghĩ…'));
+    busy = true;
+    setTimeout(opponentMove, 350);
+  }
+
+  function opponentMove() {
+    if (finished) { busy = false; return; }
+    // máy đi nước phòng thủ tốt nhất (kéo dài/né chiếu hết)
+    let mv = null;
+    try {
+      const r = searchBestMove(board, { maxDepth: 6, timeMs: 600, useTT: true });
+      mv = r.move;
+    } catch (_) { mv = null; }
+    if (!mv) {
+      const legal = generateLegalMoves(board, board.side);
+      mv = legal[0] || null;
     }
-    // Đối phương vẫn còn nước → ta đi sai
-    setTimeout(() => {
-      undoMove(board);
+    if (mv) {
+      applyMove(board, mv);
+      SoundFX.move();
       renderer.setBoard(board);
-      renderer.setLastMove(null);
-      SoundFX.illegal();
-      toast(t('daily.try_again'), { type: 'warn' });
-    }, 600);
+      renderer.setLastMove(mv);
+      if (isCheck(board, board.side)) SoundFX.check?.();
+    }
+    busy = false;
+
+    const res = detectGameResult(board);
+    if (res.ended) return finishGame(res);
+
+    if (playerMoves >= MAX_PLAYER_MOVES) return onNotSolved('too_many');
+
+    if (playerMoves >= puzzle.mateIn) {
+      setStatus(`⚠️ ${esc(t('status.your_turn'))} — đã quá ${puzzle.mateIn} nước, cố thắng hoặc ↺ thử lại`);
+    } else {
+      setStatus(esc(t('status.your_turn')));
+    }
+  }
+
+  function finishGame(res) {
+    finished = true; busy = false;
+    if (res.winner === solverSide) return onSolved();
+    // thua hoặc hoà
+    return onNotSolved(res.reason === '60_move' ? 'draw' : 'lost');
   }
 
   function onSolved() {
-    solved = true;
+    solved = true; finished = true;
     SoundFX.win();
     const elapsed = Math.round((Date.now() - startTs) / 1000);
     const st = getStreak();
     st[puzzle.dateKey] = 'solved';
     setStreak(st);
-    root.querySelector('#dailyStatus').innerHTML = `✅ <strong>${esc(t('daily.solved'))}</strong> · ${attempts} ${esc(t('daily.tries'))} · ${elapsed}s`;
-    // Tự động hiện giải thích sau khi giải
+    const perfect = playerMoves <= puzzle.mateIn;
+    setStatus(`✅ <strong>${esc(t('daily.solved'))}</strong> · ${playerMoves} ${esc(t('daily.tries'))} · ${elapsed}s${perfect ? ' · ⭐ tối ưu' : ''}`);
     showSolution(true);
     setTimeout(async () => {
       await confirm({
         title: '🎉 ' + t('daily.solved'),
-        body: `<p>${esc(t('daily.solved.body', { n: attempts, s: elapsed }))}</p>`,
+        body: `<p>${esc(t('daily.solved.body', { n: playerMoves, s: elapsed }))}</p>`,
         okText: t('btn.close'),
         cancelText: t('btn.back_home'),
       });
     }, 800);
+  }
+
+  function onNotSolved(kind) {
+    finished = true; busy = false;
+    SoundFX.illegal();
+    const msg = kind === 'lost' ? 'Bạn đã thua thế cờ này 😅'
+              : kind === 'draw' ? 'Ván hoà — chưa thắng được'
+              : 'Chưa thắng trong giới hạn nước đi';
+    setStatus(`❌ <strong>${esc(msg)}</strong> — ↺ bấm Thử lại để chơi lại`);
+    toast(msg + ' — bấm ↺ Thử lại', { type: 'warn' });
   }
 
   function showSolution(afterSolve = false) {
@@ -169,7 +217,7 @@ export function renderDailyPage(root) {
 
     const analysis = puzzle.analysis || [];
     let html = `<div style="font-weight:700;font-size:13px;color:#f4c430;margin-bottom:10px">
-      ${afterSolve ? '🎉 Cách giải' : '📖 Cách giải (spoiler)'}
+      ${afterSolve ? '🎉 Cách giải mẫu' : '📖 Cách giải (spoiler)'}
     </div>`;
 
     if (analysis.length) {
@@ -184,7 +232,6 @@ export function renderDailyPage(root) {
         </div>`;
       });
     } else {
-      // fallback: show solution moves
       (puzzle.solution || []).forEach((mv, i) => {
         html += `<div style="margin-bottom:6px;font-size:13px">
           <span style="color:#f4c430;font-weight:700">Nước ${i+1}:</span> <code>${esc(mv)}</code>
@@ -198,14 +245,13 @@ export function renderDailyPage(root) {
 
   // Hint
   root.querySelector('#btnHint')?.addEventListener('click', () => {
-    if (solved) return;
+    if (finished) return;
     const box = root.querySelector('#hintBox');
     box.classList.remove('hidden');
     box.innerHTML = `💡 ${esc(puzzle.hint.vi)}`;
   });
 
   root.querySelector('#btnReset')?.addEventListener('click', () => {
-    if (solved) return;
     location.reload();
   });
 
@@ -215,7 +261,6 @@ export function renderDailyPage(root) {
 }
 
 function countStreak(streak) {
-  // Đếm chuỗi ngày liên tiếp tới hôm nay đã giải
   let count = 0;
   const today = new Date();
   for (let i = 0; i < 365; i++) {
