@@ -337,20 +337,6 @@ function startLocalGame() {
   else location.hash = '#/play';
 }
 
-// ─────────────── Mobile Game Layout Setup ───────────────
-function setupMobileGameLayout() {
-  const moves = document.querySelector('.xq-moves');
-  if (!moves || window.innerWidth >= 768) return;
-
-  // Add moves list toggle
-  moves.querySelector('.head').addEventListener('click', () => {
-    moves.classList.toggle('show');
-  });
-
-  // Optional: Add a dedicated moves toggle button if needed
-  // (The header click toggle above is sufficient)
-}
-
 // ─────────────── Game view ───────────────
 function renderPlay(root) {
   // Check if resuming a saved game
@@ -361,7 +347,6 @@ function renderPlay(root) {
   if (isResuming) {
     const session = getGameSession();
     if (!session) { routeTo('#/home'); return; }
-    // Reconstruct config from session
     cfg = {
       mode: session.mode,
       variant: session.variant,
@@ -376,7 +361,6 @@ function renderPlay(root) {
   } else {
     try { cfg = JSON.parse(sessionStorage.getItem('xq_pending_game') || 'null'); } catch {}
     if (!cfg) { routeTo('#/home'); return; }
-    // Normalize config: map 'difficulty' to 'botLevel' for consistency with GameController
     if (cfg.difficulty && !cfg.botLevel) cfg.botLevel = cfg.difficulty;
   }
 
@@ -385,9 +369,13 @@ function renderPlay(root) {
   const isBlind = cfg.variant === 'blind';
   const isOnline = cfg.mode === 'online';
 
-  // Show confirm dialog before starting game
   const opponentName = isOnline ? (cfg.opponent?.displayName || '?') : `Bot Lv ${cfg.botLevel || '3'}`;
   const opponentInfo = isOnline ? `${cfg.time || '10+5'} · ${cfg.variant}` : (cfg.botLevel ? `~${[600,800,1000,1200,1400,1600,1800,2000,2200,2400][cfg.botLevel-1]} ELO` : '');
+
+  const oppAvHtml = isOnline
+    ? esc((cfg.opponent?.displayName || '?').slice(0,2).toUpperCase())
+    : '🤖';
+
   root.innerHTML = `
     <div class="xq-game">
       <div class="xq-confirm-overlay" id="confirmOverlay">
@@ -421,100 +409,124 @@ function renderPlay(root) {
       </div>
 
       <div class="xq-game-content" style="display:none" id="gameContent">
-        <!-- TOP BAR: opponent left · status center · user right -->
-        <div class="xq-side">
-          <div class="xq-player ${cfg.userSide==='b'?'red':''}">
-            <div class="av">${isOnline ? esc((cfg.opponent?.displayName || '?').slice(0,2).toUpperCase()) : '🤖'}</div>
-            <div>
-              <div class="name" id="opNameRed">${isOnline ? esc(cfg.opponent?.displayName || '?') : `🤖 Bot Lv ${cfg.botLevel || '—'}`}</div>
-              <div class="meta">${isOnline ? esc(t('online.title')) + ' · ' + esc(cfg.time || '10+5') : (cfg.mode==='bot' ? '~' + (cfg.botLevel ? [600,800,1000,1200,1400,1600,1800,2000,2200,2400][cfg.botLevel-1] : 1000) + ' ELO' : '')}</div>
-            </div>
+        <!-- OPPONENT STRIP -->
+        <div class="xq-player-strip" id="xqOppStrip" data-active="false">
+          <div class="strip-av">${oppAvHtml}</div>
+          <div class="strip-body">
+            <div class="strip-name" id="xqOppName">${esc(opponentName)}</div>
+            <div class="strip-sub">${esc(opponentInfo)}</div>
           </div>
-          <div class="xq-status" id="xqStatus">…</div>
-          ${isBlind ? `<div class="alert warn xq-blind-badge">🎴 Blind</div>` : ''}
-          <div class="xq-player ${cfg.userSide==='r'?'red':''}">
-            <div class="av">${esc((profile.name||'You').slice(0,2).toUpperCase())}</div>
-            <div>
-              <div class="name" id="opNameBlack">${esc(profile.name || t('side.you'))}</div>
-              <div class="meta">ELO ${profile.elo}</div>
-            </div>
-          </div>
+          <div class="strip-timer" id="xqOppTimer">—</div>
         </div>
-        <!-- BOARD + ACTIONS BELOW BOARD -->
+
+        <!-- BOARD -->
         <div class="xq-board-stage">
+          ${isBlind ? `<div class="alert warn xq-blind-badge">🎴 Blind</div>` : ''}
           <div class="xq-board-wrap" id="xqBoardHost"></div>
-          <div class="xq-actions">
-            <button class="btn btn-sm" id="btnHint" title="${esc(t('btn.hint'))}" data-emoji="💡">💡 ${esc(t('btn.hint'))}</button>
-            <button class="btn btn-sm" id="btnTakeback" title="${esc(t('btn.takeback'))}" data-emoji="↺">↺ ${esc(t('btn.takeback.short'))}</button>
+        </div>
+
+        <!-- USER STRIP -->
+        <div class="xq-player-strip xq-player-user" id="xqUserStrip" data-active="false">
+          <div class="strip-av">${esc((profile.name||'You').slice(0,2).toUpperCase())}</div>
+          <div class="strip-body">
+            <div class="strip-name" id="xqUserName">${esc(profile.name || t('side.you'))}</div>
+            <div class="strip-sub">ELO ${profile.elo}</div>
+          </div>
+          <div class="strip-timer" id="xqUserTimer">—</div>
+        </div>
+
+        <!-- ACTION BAR -->
+        <div class="xq-action-bar">
+          <div class="xq-more-tray" id="xqMoreTray">
+            <button class="btn btn-sm" id="btnHint" data-emoji="💡" title="${esc(t('btn.hint'))}">💡 ${esc(t('btn.hint'))}</button>
+            <button class="btn btn-sm" id="btnTakeback" data-emoji="↺" title="${esc(t('btn.takeback'))}">↺ ${esc(t('btn.takeback.short'))}</button>
             <button class="btn btn-sm" id="btnFlip" data-emoji="🔁">🔁 ${esc(t('btn.flip'))}</button>
             <button class="btn btn-sm" id="btnNew" data-emoji="🆕">🆕 ${esc(t('btn.new_game'))}</button>
-            <button class="btn btn-sm btn-danger" id="btnResign" data-emoji="🚩">🚩 ${esc(t('btn.resign'))}</button>
             <button class="btn btn-sm btn-ghost" id="btnBackHome" data-emoji="🏠">🏠 ${esc(t('btn.back_home'))}</button>
             <button class="btn btn-sm btn-ghost" id="btnFullscreen" data-emoji="⛶" title="Fullscreen">⛶</button>
           </div>
+          <div class="xq-action-row">
+            <button class="btn btn-sm btn-danger" id="btnResign">🚩 ${esc(t('btn.resign'))}</button>
+            <span class="xq-status-badge" id="xqStatus"></span>
+            <button class="btn btn-sm btn-ghost" id="btnMore" title="More options">⋯</button>
+          </div>
         </div>
-        <div class="xq-moves" id="xqMovesPanel">
-          <div class="head">${esc(t('log.title'))}</div>
-          <div id="xqMovesBody"><div class="empty">${esc(t('log.empty'))}</div></div>
-        </div>
+      </div>
+
+      <!-- MOVES PANEL (sibling: right column on desktop, slide-up on mobile) -->
+      <div class="xq-moves" id="xqMovesPanel">
+        <div class="head">${esc(t('log.title'))}</div>
+        <div id="xqMovesBody"><div class="empty">${esc(t('log.empty'))}</div></div>
       </div>
     </div>
   `;
 
   // Confirm dialog handlers
-  const cancelBtn = document.getElementById('confirmCancel');
-  const startBtn = document.getElementById('confirmStart');
+  document.getElementById('confirmCancel')?.addEventListener('click', () => routeTo('#/home'));
 
-  cancelBtn?.addEventListener('click', () => {
-    routeTo('#/home');
-  });
-
-  startBtn?.addEventListener('click', () => {
+  document.getElementById('confirmStart')?.addEventListener('click', () => {
     document.getElementById('confirmOverlay').style.display = 'none';
-    document.getElementById('gameContent').style.display = 'contents';
+    document.getElementById('gameContent').style.display = 'flex';
 
-    // Setup mobile game layout with floating buttons
-    if (window.innerWidth < 768) {
-      setupMobileGameLayout();
-    }
+    // Element mappings: redInfoEl/blackInfoEl point to the name element for that side
+    const userNameEl = document.getElementById('xqUserName');
+    const oppNameEl  = document.getElementById('xqOppName');
+    const userTimerEl = document.getElementById('xqUserTimer');
+    const oppTimerEl  = document.getElementById('xqOppTimer');
+    const userStripEl = document.getElementById('xqUserStrip');
+    const oppStripEl  = document.getElementById('xqOppStrip');
 
-    // Start game
     currentGame = new GameController(
       {
-        boardHost: document.getElementById('xqBoardHost'),
-        statusEl: document.getElementById('xqStatus'),
-        movesEl: document.getElementById('xqMovesBody'),
-        redInfoEl:   cfg.userSide==='r' ? document.getElementById('opNameBlack') : document.getElementById('opNameRed'),
-        blackInfoEl: cfg.userSide==='b' ? document.getElementById('opNameBlack') : document.getElementById('opNameRed'),
-        btnResign: document.getElementById('btnResign'),
-        btnFlip: document.getElementById('btnFlip'),
-        btnNew: document.getElementById('btnNew'),
-        btnHint: document.getElementById('btnHint'),
+        boardHost:   document.getElementById('xqBoardHost'),
+        statusEl:    document.getElementById('xqStatus'),
+        movesEl:     document.getElementById('xqMovesBody'),
+        redInfoEl:   cfg.userSide === 'r' ? userNameEl : oppNameEl,
+        blackInfoEl: cfg.userSide === 'b' ? userNameEl : oppNameEl,
+        redTimerEl:  cfg.userSide === 'r' ? userTimerEl : oppTimerEl,
+        blackTimerEl: cfg.userSide === 'b' ? userTimerEl : oppTimerEl,
+        redStripEl:  cfg.userSide === 'r' ? userStripEl : oppStripEl,
+        blackStripEl: cfg.userSide === 'b' ? userStripEl : oppStripEl,
+        btnResign:   document.getElementById('btnResign'),
+        btnFlip:     document.getElementById('btnFlip'),
+        btnNew:      document.getElementById('btnNew'),
+        btnHint:     document.getElementById('btnHint'),
         btnTakeback: document.getElementById('btnTakeback'),
         btnBackHome: document.getElementById('btnBackHome'),
       },
       cfg
     );
 
-    // Fullscreen button handler
+    // More tray toggle
+    const btnMore  = document.getElementById('btnMore');
+    const moreTray = document.getElementById('xqMoreTray');
+    if (btnMore && moreTray) {
+      btnMore.addEventListener('click', (e) => {
+        e.stopPropagation();
+        moreTray.classList.toggle('open');
+      });
+      // Close tray on any outside click
+      document.addEventListener('click', () => moreTray.classList.remove('open'), { capture: true });
+    }
+
+    // Moves panel toggle (mobile slide-up)
+    const movesPanel = document.getElementById('xqMovesPanel');
+    movesPanel?.querySelector('.head')?.addEventListener('click', () => {
+      movesPanel.classList.toggle('show');
+    });
+
+    // Fullscreen button
     const btnFS = document.getElementById('btnFullscreen');
     if (btnFS) {
       btnFS.addEventListener('click', () => {
         if (!document.fullscreenElement) {
           document.documentElement.requestFullscreen?.();
-          btnFS.setAttribute('data-emoji', '✕');
-          btnFS.title = 'Exit Fullscreen';
         } else {
           document.exitFullscreen?.();
-          btnFS.setAttribute('data-emoji', '⛶');
-          btnFS.title = 'Fullscreen';
         }
       });
       document.addEventListener('fullscreenchange', () => {
-        if (!document.fullscreenElement) {
-          btnFS.setAttribute('data-emoji', '⛶');
-          btnFS.title = 'Fullscreen';
-        }
+        btnFS.textContent = document.fullscreenElement ? '✕' : '⛶';
       });
     }
   });

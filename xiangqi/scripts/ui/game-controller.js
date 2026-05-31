@@ -53,8 +53,6 @@ export class GameController {
         // Replay all moves to restore board state
         if (config.moves && Array.isArray(config.moves)) {
           for (const moveRecord of config.moves) {
-            // moveRecord has: { side, san, iccs, reveal? }
-            // ICCS có thể là 4-5 ký tự (rank 10 chiếm 2 ký tự) — dùng iccsToMove để parse đúng
             const parsed = moveRecord.iccs ? iccsToMove(moveRecord.iccs) : null;
             if (!parsed) continue;
             const moves = generateLegalMoves(this.board, this.board.side);
@@ -64,7 +62,6 @@ export class GameController {
             if (move) {
               if (this.variant === 'blind') applyBlindMove(this.board, move);
               else applyMove(this.board, move);
-              // Cập nhật fenHistory cho phát hiện lặp lại 3 lần khi resume
               if (!moveRecord.reveal && this.variant === 'standard') {
                 this.fenHistory.push(toFEN(this.board));
               }
@@ -75,7 +72,6 @@ export class GameController {
         this.iccsHistory = config.iccsHistory ? config.iccsHistory.slice() : [];
       } catch (e) {
         console.error('Failed to restore game from session:', e);
-        // Fall back to initial board
         if (this.variant === 'blind') {
           this.blindSeed = config.blindSeed || genSeed();
           this.board = createBlindBoard(this.blindSeed);
@@ -105,11 +101,12 @@ export class GameController {
       // Start game clock for red
       const startPlayer = config.userSide === 'r' && config.mode === 'bot' && this.botSide === 'r' ? 'black' : 'red';
       this.timeControl.startTurn(startPlayer);
-      // Create time display component
-      this.timeDisplay = createTimeDisplay(this.timeControl);
-      if (this.timeDisplay && els.statusEl) {
-        // Insert time display before status element for prominence
-        els.statusEl.parentElement?.insertBefore(this.timeDisplay, els.statusEl);
+      // Only create the legacy time-display widget when no individual strip timers are wired up
+      if (!els.redTimerEl && !els.blackTimerEl) {
+        this.timeDisplay = createTimeDisplay(this.timeControl);
+        if (this.timeDisplay && els.statusEl) {
+          els.statusEl.parentElement?.insertBefore(this.timeDisplay, els.statusEl);
+        }
       }
     }
 
@@ -145,7 +142,6 @@ export class GameController {
       // ── Chat Panel (Phase 3)
       this.chatPanel = createChatPanel(this.config.gameId, getUser()?.displayName || '?');
       els.boardHost?.parentElement?.appendChild(this.chatPanel);
-      // Chat messages handled by chat-panel.js directly via wsClient.on
     }
 
     // Bot/Fake opponent Đỏ đi trước nếu user cầm Đen
@@ -171,7 +167,6 @@ export class GameController {
     if (msg.gameId !== this.config.gameId) return;
     const m = msg.move;
     if (!m || !m.from || !m.to) return;
-    // Apply nước của đối thủ
     this.commitMove(m, /*remote=*/true);
   }
 
@@ -195,7 +190,6 @@ export class GameController {
   }
 
   destroy() {
-    // Save game before destroying
     if (!this.gameEnded) {
       this.saveGameSession();
     }
@@ -235,7 +229,6 @@ export class GameController {
   }
 
   saveGameSession() {
-    // Save current game state for resuming later (bot & local modes only)
     if (this.gameEnded) {
       clearGameSession();
       return;
@@ -264,7 +257,6 @@ export class GameController {
     const piece = pieceAt(this.board, file, rank);
 
     if (this.selected) {
-      // re-select cùng phe (chỉ cho cờ ngửa và cho quân đã lật ở cờ úp)
       if (piece && !piece.hidden && piece.side === this.board.side) {
         this.selectSquare(file, rank);
         return;
@@ -278,9 +270,7 @@ export class GameController {
       return;
     }
 
-    // Chưa chọn
     if (this.variant === 'blind' && piece && piece.hidden) {
-      // Lật quân úp
       this.commitMove({ from: { file, rank }, to: { file, rank }, reveal: true });
       return;
     }
@@ -304,12 +294,11 @@ export class GameController {
       const movedSide = OPP[this.board.side];
       let ok = !isCheck(this.board, movedSide) && !isFacingGenerals(this.board);
 
-      // Chặn nước đi tạo thế lặp lần 3
       if (ok) {
         const fen = toFEN(this.board);
         let count = 0;
         for (const f of this.fenHistory) { if (f === fen) count++; }
-        if (count >= 2) ok = false; // sẽ là lần thứ 3 → không hợp lệ
+        if (count >= 2) ok = false;
       }
 
       undoMove(this.board);
@@ -324,7 +313,6 @@ export class GameController {
     let san;
 
     if (move.reveal) {
-      // Lật quân úp (cờ úp)
       applyBlindMove(this.board, move);
       SoundFX.flip();
       san = '🎴 ' + (piece ? piece.type : '?');
@@ -354,13 +342,11 @@ export class GameController {
     this.updateInfo();
     this.updateMovesLog();
 
-    // Repetition detection: track FEN after each move
     if (!move.reveal) {
       const fen = toFEN(this.board);
       this.fenHistory.push(fen);
     }
 
-    // Time control: end turn for the player who just moved
     if (this.timeControl) {
       const justMovedPlayer = this.movesLog[this.movesLog.length - 1].side === 'r' ? 'red' : 'black';
       const moveTime = Date.now() - this.moveStartTime;
@@ -372,7 +358,6 @@ export class GameController {
       }
     }
 
-    // Status
     const sideToMove = this.board.side;
     const inCheck = isCheck(this.board, sideToMove);
     if (inCheck) {
@@ -383,14 +368,12 @@ export class GameController {
       this.renderer.setInCheck(null);
     }
 
-    // Time control: start turn for the next player
     if (this.timeControl) {
       const nextPlayer = sideToMove === 'r' ? 'red' : 'black';
       this.timeControl.startTurn(nextPlayer);
       this.moveStartTime = Date.now();
     }
 
-    // Online: gửi nước qua WS (chỉ khi đây là nước local, không phải remote echo)
     if (this.config.mode === 'online' && !remote) {
       wsClient.send('game.move', {
         gameId: this.config.gameId,
@@ -400,7 +383,6 @@ export class GameController {
 
     let result = detectGameResult(this.board);
 
-    // Check for 3-fold repetition
     if (!result.ended && this.fenHistory.length >= 5) {
       if (isThreefoldRepetition(this.fenHistory)) {
         result = { ended: true, winner: null, reason: 'threefold_repetition' };
@@ -408,7 +390,6 @@ export class GameController {
     }
 
     if (result.ended) {
-      // Online: báo server kết quả
       if (this.config.mode === 'online' && !remote) {
         wsClient.send('game.end', {
           gameId: this.config.gameId,
@@ -421,12 +402,10 @@ export class GameController {
     }
     this.updateStatus();
 
-    // Save game session for resuming later
     if (this.config.mode === 'bot' || this.config.mode === 'local') {
       this.saveGameSession();
     }
 
-    // Trigger bot move for bot games or online games with fake opponents
     const isBotTurn = (this.config.mode === 'bot' || (this.config.mode === 'online' && this.config.fakeOpponent))
                       && this.board.side === this.botSide;
     if (isBotTurn) {
@@ -439,11 +418,9 @@ export class GameController {
     this.isThinking = true;
     this.updateStatus();
 
-    // Cờ úp: bot đơn giản hơn — random reveal hoặc move legal
     if (this.variant === 'blind') {
       const moves = generateBlindLegalMoves(this.board, this.board.side);
       if (moves.length === 0) { this.endGame(detectGameResult(this.board)); this.isThinking=false; return; }
-      // Ưu tiên ăn quân, sau đó di chuyển, cuối cùng lật
       const captures = moves.filter(m => !m.reveal && pieceAt(this.board, m.to.file, m.to.rank));
       const movesNorm = moves.filter(m => !m.reveal);
       const reveals = moves.filter(m => m.reveal);
@@ -454,7 +431,6 @@ export class GameController {
       return;
     }
 
-    // Use FakePlayers if it's a bot game or online with fake opponent
     const botLevel = this.config.botLevel || this.config.difficulty;
     if ((this.config.mode === 'bot' || this.config.fakeOpponent) && botLevel) {
       const moves = generateLegalMoves(this.board, this.board.side);
@@ -476,7 +452,6 @@ export class GameController {
       return;
     }
 
-    // Fallback to AI worker
     const worker = this.ensureWorker();
     const fen = toFEN(this.board);
     const level = this.config.botLevel || 3;
@@ -526,7 +501,6 @@ export class GameController {
           this.isThinking = false;
           this.updateStatus();
           if (!msg.moves || msg.moves.length === 0) { resolve(); return; }
-          // Highlight nước hint số 1
           const top = msg.moves[0].move;
           this.lastHint = top;
           this.renderer.setSelected(top.from, [top.to]);
@@ -546,14 +520,13 @@ export class GameController {
       toast(t('toast.takeback_bot_only'), { type: 'warn' });
       return;
     }
-    // Lùi 2 nước (nước bot + nước người) để về lượt người
     let toUndo = (this.board.side === this.userSide) ? 2 : 1;
     while (toUndo > 0 && this.board.history.length > 0) {
       if (this.variant === 'blind') undoBlindMove(this.board);
       else undoMove(this.board);
       this.movesLog.pop();
       this.iccsHistory.pop();
-      if (this.fenHistory.length) this.fenHistory.pop();  // đồng bộ tracking lặp lại
+      if (this.fenHistory.length) this.fenHistory.pop();
       toUndo--;
     }
     this.renderer.setBoard(this.board);
@@ -566,9 +539,7 @@ export class GameController {
 
   endGame(result) {
     this.gameEnded = true;
-    // Clear session when game ends
     clearGameSession();
-    // Release fake player if it was a bot game
     const botLevel = this.config.botLevel || this.config.difficulty;
     if ((this.config.mode === 'bot' || this.config.fakeOpponent) && botLevel) {
       fakePlayerManager.releasePlayer(this.config.gameId);
@@ -595,10 +566,8 @@ export class GameController {
       else if (myResult === 0) profile.losses += 1;
       else profile.draws += 1;
 
-      // Calculate ELO for bot and online (with fake opponent) modes
       if (this.config.mode === 'bot' || this.config.fakeOpponent) {
         const myElo = profile.elo || 1200;
-        // Get opponent ELO based on game type
         let opponentElo = 1200;
         if (this.config.mode === 'bot' && this.config.botLevel) {
           opponentElo = ELO_BY_LV[this.config.botLevel - 1];
@@ -606,12 +575,11 @@ export class GameController {
           opponentElo = this.config.opponent.elo;
         }
 
-        // Calculate new ELO
         const eloCalc = updateElo(myElo, opponentElo, myResult, profile.gamesPlayed - 1);
         profile.elo = eloCalc.newElo;
-        this.eloChange = eloCalc.delta; // Store for result dialog display
+        this.eloChange = eloCalc.delta;
       } else {
-        this.eloChange = 0; // No ELO change for local games
+        this.eloChange = 0;
       }
 
       setProfile(profile);
@@ -629,7 +597,6 @@ export class GameController {
         blindSeed: this.blindSeed,
       };
       appendGame(record);
-      // Sync up to backend nếu authed
       if (isAuthed()) {
         apiGames.save({
           variant: this.variant,
@@ -646,7 +613,6 @@ export class GameController {
     }
 
     setTimeout(async () => {
-      // Build result message with ELO change if available
       let reasonText = `<p>${t(reasonKey)}</p>`;
       let eloText = '';
 
@@ -654,7 +620,6 @@ export class GameController {
         reasonText += `<p style="margin-top:8px" class="muted">${t('side.bot')} Lv ${this.config.botLevel} (~${ELO_BY_LV[(this.config.botLevel||3)-1]} ELO)</p>`;
       }
 
-      // Add ELO change display
       if (this.eloChange !== undefined && (this.config.mode === 'bot' || this.config.fakeOpponent)) {
         const eloSign = this.eloChange > 0 ? '+' : '';
         const eloColor = this.eloChange > 0 ? '#06d6a0' : '#e63946';
@@ -695,9 +660,8 @@ export class GameController {
         cancelText: t('btn.cancel'),
       });
       if (!ok) return;
-      // If game is ongoing, resign first (count as loss for all modes)
       this.endGame({ ended: true, winner: OPP[this.userSide], reason: 'resign' });
-      return; // endGame will handle navigation after showing result
+      return;
     }
     this.goHome();
   }
@@ -719,22 +683,32 @@ export class GameController {
     const e = this.els;
     if (!e || !e.statusEl) return;
     if (this.gameEnded) return;
+
+    const activeSide = this.board.side;
+
+    // Update player strip active states
+    if (e.redStripEl)   e.redStripEl.dataset.active   = activeSide === 'r' ? 'true' : 'false';
+    if (e.blackStripEl) e.blackStripEl.dataset.active = activeSide === 'b' ? 'true' : 'false';
+
+    // Update individual clock timers in strips
+    if (this.timeControl) {
+      const status = this.timeControl.getStatus();
+      if (e.redTimerEl)   e.redTimerEl.textContent   = status.red;
+      if (e.blackTimerEl) e.blackTimerEl.textContent = status.black;
+    }
+
+    // Status badge text (thinking / turn indicator)
     let key;
     if (this.config.mode === 'bot') {
       if (this.isThinking) key = 'status.bot_thinking';
-      else if (this.board.side === this.userSide) key = 'status.your_turn';
+      else if (activeSide === this.userSide) key = 'status.your_turn';
       else key = 'status.opp_turn';
     } else {
-      e.statusEl.textContent = `${t('status.your_turn')} — ${t(this.board.side === 'r' ? 'side.red' : 'side.black')}`;
+      e.statusEl.textContent = `${t('status.your_turn')} — ${t(activeSide === 'r' ? 'side.red' : 'side.black')}`;
       return;
     }
     let txt = t(key);
-    if (isCheck(this.board, this.board.side)) txt += ' · ' + t('status.check');
-    if (this.timeControl) {
-      const status = this.timeControl.getStatus();
-      const playerTime = this.board.side === 'r' ? status.red : status.black;
-      txt += ` · ⏱ ${playerTime}`;
-    }
+    if (isCheck(this.board, activeSide)) txt += ' · ' + t('status.check');
     e.statusEl.textContent = txt;
   }
 
