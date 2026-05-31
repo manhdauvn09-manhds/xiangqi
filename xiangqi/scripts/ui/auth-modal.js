@@ -1,9 +1,9 @@
 // Cờ Tướng Vương — Auth modal (login + register tabs + Google Sign In)
 import { t } from '../i18n/i18n.js';
-import { register as apiRegister, login as apiLogin, googleSignIn as apiGoogleSignIn, getGoogleClientId } from '../net/api.js';
+import { register as apiRegister, login as apiLogin, googleSignIn as apiGoogleSignIn } from '../net/api.js';
 import { toast } from './toast.js';
 
-let GOOGLE_CLIENT_ID = null; // Fetched from backend at runtime
+const GOOGLE_CLIENT_ID = '8628113689-u891ob67bfnricdbjlmtti91dma0uokt.apps.googleusercontent.com';
 
 // Global callback for Google Sign In (must be accessible to Google SDK)
 window.handleGoogleSignInResponse = async function(response) {
@@ -33,20 +33,9 @@ window.handleGoogleSignInResponse = async function(response) {
 };
 
 export function openAuthModal(initialTab = 'login') {
-  return new Promise(async (resolve) => {
+  return new Promise((resolve) => {
     let tab = initialTab;
     let busy = false;
-
-    // Fetch Google Client ID from backend if not already loaded
-    if (!GOOGLE_CLIENT_ID) {
-      try {
-        GOOGLE_CLIENT_ID = await getGoogleClientId();
-      } catch (err) {
-        console.error('Failed to get Google Client ID:', err);
-        toast(t('auth.err.config_failed'), { type: 'error' });
-        return resolve(false);
-      }
-    }
 
     const back = document.createElement('div');
     back.className = 'xq-modal-backdrop';
@@ -75,7 +64,6 @@ export function openAuthModal(initialTab = 'login') {
       // Google Sign In button — render with Google SDK
       const googleBtn = back.querySelector('#googleSignIn');
       if (googleBtn && window.google?.accounts?.id) {
-        // Use renderButton instead of onclick
         window.google.accounts.id.renderButton(
           googleBtn,
           {

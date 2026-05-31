@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Home — Cờ Tướng Vương</title>
+<!-- Theme boot — chống "flash of wrong theme" -->
+<script>
+(function () {
+  var saved = localStorage.getItem('xq_theme') || 'dark';
+  var effective = saved === 'auto'
+    ? (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
+    : saved;
+  document.documentElement.dataset.theme = effective;
+})();
+</script>
+<link rel="stylesheet" href="_shared.css">
+<style>
+.hero-banner {
+  position: relative;
+  border-radius: var(--radius-xl);
+  padding: 36px 40px;
+  background:
+    radial-gradient(ellipse at right, rgba(244,196,48,0.18), transparent 60%),
+    linear-gradient(135deg, #2a1620 0%, #1a1230 60%, #0a0e1a 100%);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  margin-bottom: 24px;
+}
+.hero-banner::before {
+  content: '帥'; position: absolute; right: -20px; top: -30px;
+  font-family: var(--font-han); font-size: 280px; color: rgba(230,57,70,0.06);
+  font-weight: 900; pointer-events: none;
+}
+.hero-banner h1 {
+  font-size: 36px; font-weight: 800; line-height: 1.1; margin-bottom: 12px;
+}
+.hero-banner h1 .accent {
+  background: linear-gradient(135deg, var(--accent-red), var(--accent-gold));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  font-family: var(--font-han); letter-spacing: 1px;
+}
+.hero-banner p { color: var(--text-mute); font-size: 15px; margin-bottom: 22px; max-width: 580px; line-height: 1.55; }
+.hero-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+
+.modes-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px; }
+@media (max-width: 920px) { .modes-grid { grid-template-columns: repeat(2, 1fr); } }
+
+.mode-card {
+  position: relative;
+  padding: 20px 18px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all .2s;
+  overflow: hidden;
+}
+.mode-card:hover { transform: translateY(-3px); border-color: var(--accent-jade); }
+.mode-card.featured { border-color: rgba(244,196,48,0.4); background: linear-gradient(180deg, rgba(244,196,48,0.06), var(--bg-surface)); }
+.mode-card .ico { font-size: 32px; margin-bottom: 10px; }
+.mode-card h3 { font-size: 16px; margin-bottom: 4px; }
+.mode-card p { font-size: 12px; color: var(--text-mute); line-height: 1.45; }
+.mode-card .tag {
+  position: absolute; top: 12px; right: 12px;
+  font-size: 10px; font-weight: 700; padding: 2px 8px;
+  border-radius: 999px; background: var(--accent-gold-soft); color: var(--accent-gold);
+  text-transform: uppercase; letter-spacing: .5px;
+}
+
+.row-2col { display: grid; grid-template-columns: 1.4fr 1fr; gap: 18px; }
+@media (max-width: 920px) { .row-2col { grid-template-columns: 1fr; } }
+
+.list-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 18px; border-bottom: 1px solid var(--border);
+}
+.list-item:last-child { border-bottom: none; }
+.list-item .ico-box {
+  width: 38px; height: 38px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--bg-elevated); font-size: 18px;
+}
+.list-item .body { flex: 1; }
+.list-item .body .t { font-weight: 600; font-size: 14px; }
+.list-item .body .d { font-size: 12px; color: var(--text-mute); margin-top: 2px; }
+
+.variant-toggle {
+  display: inline-flex; padding: 4px; gap: 4px;
+  background: var(--bg-elevated); border-radius: 999px;
+  border: 1px solid var(--border);
+  margin-bottom: 14px;
+}
+.variant-toggle button {
+  padding: 6px 14px; border-radius: 999px; font-size: 13px; font-weight: 600;
+  color: var(--text-mute);
+}
+.variant-toggle button.active { background: var(--accent-red-soft); color: var(--accent-red); }
+
+.stat-strip {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 10px; padding: 14px;
+  background: var(--bg-glass); border: 1px solid var(--border); border-radius: var(--radius);
+  margin-bottom: 18px;
+}
+.stat-strip .stat { text-align: center; }
+.stat-strip .label { font-size: 11px; color: var(--text-mute); text-transform: uppercase; letter-spacing: .5px; }
+.stat-strip .value { font-size: 20px; font-weight: 800; margin-top: 4px; color: var(--accent-gold); }
+</style>
+</head>
+<body>
+<div class="mockup-banner">
+  <span class="pill">Mockup 1/8</span>
+  <span>Home / Lobby — vào game thấy đầu tiên.</span>
+  <span style="margin-left:auto"><a href="index.html">← Gallery</a> · <a href="board.html">Tiếp: Board →</a></span>
+</div>
+
+<div class="shell">
+  <header class="topbar">
+    <div class="logo">象棋 <span class="light">Cờ Tướng Vương</span></div>
+    <nav>
+      <a class="active" href="home.html">Trang chủ</a>
+      <a href="leaderboard.html">Xếp hạng</a>
+      <a href="tournament.html">Giải đấu</a>
+      <a href="history.html">Lịch sử</a>
+      <a href="profile.html">Hồ sơ</a>
+    </nav>
+    <span class="spacer"></span>
+
+    <!-- Language switcher: VN ↔ EN -->
+    <div class="tb-toggle" role="group" aria-label="Language">
+      <button class="active" data-lang="vi" title="Tiếng Việt">🇻🇳 VN</button>
+      <button data-lang="en" title="English">🇬🇧 EN</button>
+    </div>
+
+    <!-- Theme toggle: dark ↔ light -->
+    <button class="tb-icon-btn" id="themeToggle" aria-label="Toggle theme" title="Đổi chế độ Sáng/Tối">
+      <span class="moon">🌙</span>
+      <span class="sun">☀️</span>
+    </button>
+
+    <div class="userchip">
+      <div class="avatar">MS</div>
+      <div>
+        <div style="font-weight:700">ManhDS</div>
+        <div style="font-size:11px;color:var(--text-mute)">1432 ELO · <span class="rank-bac">🥈 Bạc</span></div>
+      </div>
+    </div>
+  </header>
+
+  <section class="hero-banner">
+    <h1>Sẵn sàng <span class="accent">lên cấp Cao Thủ?</span></h1>
+    <p>Đối kháng online theo ELO, tập luyện với 10 cấp bot, hoặc chinh phục Siêu AI mỗi tuần.
+       Cờ ngửa truyền thống và cờ úp giải trí — đầy đủ trên cùng một bàn.</p>
+    <div class="hero-actions">
+      <button class="btn btn-primary btn-lg">⚡ CHƠI NGAY</button>
+      <button class="btn btn-lg">🎯 Đấu Ranked</button>
+      <button class="btn btn-ghost btn-lg">📚 Hướng dẫn người mới</button>
+    </div>
+  </section>
+
+  <div class="stat-strip">
+    <div class="stat"><div class="label">ELO của bạn</div><div class="value">1432</div></div>
+    <div class="stat"><div class="label">Tỷ lệ thắng</div><div class="value">58%</div></div>
+    <div class="stat"><div class="label">Streak ngày</div><div class="value">🔥 12</div></div>
+    <div class="stat"><div class="label">Người online</div><div class="value">2,847</div></div>
+  </div>
+
+  <h2 style="font-size:14px; color:var(--text-mute); text-transform:uppercase; letter-spacing:1px; margin-bottom:10px;">Chọn chế độ</h2>
+
+  <div class="variant-toggle">
+    <button class="active">♟ Cờ Ngửa</button>
+    <button>🎴 Cờ Úp</button>
+  </div>
+
+  <div class="modes-grid">
+    <div class="mode-card featured">
+      <span class="tag">Phổ biến</span>
+      <div class="ico">⚡</div>
+      <h3>Quick Play</h3>
+      <p>Ghép trận online theo ELO trong 5–30 giây. Time 10+5.</p>
+    </div>
+    <div class="mode-card">
+      <div class="ico">🎯</div>
+      <h3>Ranked</h3>
+      <p>Tự chọn time control. Ảnh hưởng ELO ±150 đối thủ.</p>
+    </div>
+    <div class="mode-card">
+      <div class="ico">🤖</div>
+      <h3>Đấu Bot</h3>
+      <p>10 cấp độ — Tập Sự đến Siêu AI ~2400 ELO.</p>
+    </div>
+    <div class="mode-card">
+      <div class="ico">🔑</div>
+      <h3>Mã phòng</h3>
+      <p>Chơi với bạn qua mã 6 ký tự. Không tính ELO.</p>
+    </div>
+  </div>
+
+  <div class="row-2col">
+    <div class="panel">
+      <div class="panel-head">
+        <h2>🥇 Sự kiện đang diễn ra</h2>
+        <a href="tournament.html" class="btn btn-sm btn-ghost">Xem tất cả →</a>
+      </div>
+      <div class="list-item">
+        <div class="ico-box" style="background:var(--accent-gold-soft); color:var(--accent-gold)">🏆</div>
+        <div class="body">
+          <div class="t">Giải Cuối tuần — Swiss 5 vòng</div>
+          <div class="d">Bắt đầu 19:00 thứ Bảy · 156 người tham gia · Top 8 nhận badge</div>
+        </div>
+        <button class="btn btn-sm">Đăng ký</button>
+      </div>
+      <div class="list-item">
+        <div class="ico-box" style="background:var(--accent-red-soft); color:var(--accent-red)">⚔️</div>
+        <div class="body">
+          <div class="t">Thách Siêu AI — Tuần này còn 3 lượt</div>
+          <div class="d">Bot Lv10 · suy nghĩ 30s/nước · Thắng = +50 ELO bonus + badge</div>
+        </div>
+        <button class="btn btn-sm btn-gold">Thử ngay</button>
+      </div>
+      <div class="list-item">
+        <div class="ico-box" style="background:var(--accent-jade-soft); color:var(--accent-jade)">🎯</div>
+        <div class="body">
+          <div class="t">Daily Challenge — Chiếu hết trong 4 nước</div>
+          <div class="d">Đến 23:59 hôm nay · Streak hiện tại: 🔥 12 ngày</div>
+        </div>
+        <button class="btn btn-sm">Giải</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <h2>📜 Ván gần đây</h2>
+        <a href="history.html" class="btn btn-sm btn-ghost">Tất cả →</a>
+      </div>
+      <div class="list-item">
+        <div class="ico-box" style="background:var(--accent-jade-soft); color:var(--accent-jade)">✓</div>
+        <div class="body">
+          <div class="t">vs <span class="text-jade">XiThu_HCM</span> · 1450 ELO</div>
+          <div class="d">Ranked · Cờ ngửa · Thắng chiếu hết · 12 phút trước</div>
+        </div>
+        <span class="badge badge-jade">+18</span>
+      </div>
+      <div class="list-item">
+        <div class="ico-box" style="background:var(--accent-red-soft); color:var(--accent-red)">✗</div>
+        <div class="body">
+          <div class="t">vs Bot Lv7 — <span class="text-mute">Cao Thủ</span></div>
+          <div class="d">Off-ranked · Thua hết giờ · 2 giờ trước</div>
+        </div>
+        <span class="badge text-mute">—</span>
+      </div>
+      <div class="list-item">
+        <div class="ico-box" style="background:var(--accent-gold-soft); color:var(--accent-gold)">=</div>
+        <div class="body">
+          <div class="t">vs <span class="text-gold">PhaoDau_HN</span> · 1488 ELO</div>
+          <div class="d">Ranked · Cờ úp · Hoà 60 nước · Hôm qua</div>
+        </div>
+        <span class="badge">±0</span>
+      </div>
+      <div class="list-item">
+        <div class="ico-box" style="background:var(--accent-jade-soft); color:var(--accent-jade)">✓</div>
+        <div class="body">
+          <div class="t">vs Bot Lv5 — Khá</div>
+          <div class="d">Off-ranked · Thắng chiếu hết · Hôm qua</div>
+        </div>
+        <span class="badge text-mute">—</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Demo wiring for theme & language toggles -->
+<script>
+(function () {
+  var root = document.documentElement;
+  var KEY_THEME = 'xq_theme';
+  var KEY_LANG  = 'xq_lang';
+
+  // Theme toggle
+  var btn = document.getElementById('themeToggle');
+  if (btn) {
+    btn.addEventListener('click', function () {
+      var next = root.dataset.theme === 'light' ? 'dark' : 'light';
+      root.dataset.theme = next;
+      localStorage.setItem(KEY_THEME, next);
+    });
+  }
+
+  // Language switch (demo: chỉ toggle highlight; bản code thật sẽ gọi i18n.setLang)
+  var savedLang = localStorage.getItem(KEY_LANG) || 'vi';
+  document.querySelectorAll('.tb-toggle [data-lang]').forEach(function (b) {
+    if (b.dataset.lang === savedLang) {
+      b.parentElement.querySelectorAll('button').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+    }
+    b.addEventListener('click', function () {
+      b.parentElement.querySelectorAll('button').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      localStorage.setItem(KEY_LANG, b.dataset.lang);
+    });
+  });
+})();
+</script>
+</body>
+</html>
