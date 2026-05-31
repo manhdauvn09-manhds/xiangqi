@@ -402,7 +402,7 @@ export class GameController {
     }
     this.updateStatus();
 
-    if (this.config.mode === 'bot' || this.config.mode === 'local') {
+    if (this.config.mode === 'bot' || this.config.mode === 'local' || (this.config.mode === 'online' && this.config.fakeOpponent)) {
       this.saveGameSession();
     }
 
@@ -648,7 +648,9 @@ export class GameController {
       cancelText: t('btn.cancel'),
     });
     if (!ok) return;
-    this.endGame({ ended: true, winner: OPP[this.userSide], reason: 'resign' });
+    const resignWinner = OPP[this.userSide];
+    if (this.config.mode === 'online') wsClient.send('game.end', { gameId: this.config.gameId, winner: resignWinner, reason: 'resign' });
+    this.endGame({ ended: true, winner: resignWinner, reason: 'resign' });
   }
 
   async handleBackHome() {
@@ -660,7 +662,9 @@ export class GameController {
         cancelText: t('btn.cancel'),
       });
       if (!ok) return;
-      this.endGame({ ended: true, winner: OPP[this.userSide], reason: 'resign' });
+      const bhWinner = OPP[this.userSide];
+      if (this.config.mode === 'online') wsClient.send('game.end', { gameId: this.config.gameId, winner: bhWinner, reason: 'resign' });
+      this.endGame({ ended: true, winner: bhWinner, reason: 'resign' });
       return;
     }
     this.goHome();
