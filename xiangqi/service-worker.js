@@ -1,5 +1,5 @@
 // Cờ Tướng Vương Service Worker for PWA offline support
-const CACHE_NAME = 'xiangqi-v1';
+const CACHE_NAME = 'xiangqi-v2';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
