@@ -38,6 +38,7 @@ export class GameController {
     this.movesLog = [];
     this.iccsHistory = [];
     this.fenHistory = [];  // Track FEN after each move for repetition detection
+    this.eloChange = 0;   // ELO delta from last game (initialized to avoid undefined)
 
     // Init board theo variant
     if (this.variant === 'blind') {
@@ -439,6 +440,10 @@ export class GameController {
         this.endGame(detectGameResult(this.board));
         return;
       }
+      // Lazy-register player for direct bot mode (online-queue.js handles online mode)
+      if (!fakePlayerManager.isFakePlayerGame(this.config.gameId)) {
+        fakePlayerManager.getPlayerForGame(botLevel, this.config.gameId);
+      }
       try {
         const move = await fakePlayerManager.makeMove(this.config.gameId, this.board, moves);
         this.isThinking = false;
@@ -446,7 +451,6 @@ export class GameController {
         else this.endGame(detectGameResult(this.board));
       } catch (err) {
         console.error('FakePlayers error:', err);
-        toast(t('toast.bot_error') + ': ' + err.message, { type: 'error' });
         this.isThinking = false;
       }
       return;
@@ -559,7 +563,9 @@ export class GameController {
 
     const reasonKey = `result.by_${result.reason}`;
 
-    if (this.config.mode === 'bot' || this.config.mode === 'local') {
+    const isTrackedMode = this.config.mode === 'bot' || this.config.mode === 'local'
+                       || (this.config.mode === 'online' && this.config.fakeOpponent);
+    if (isTrackedMode) {
       const profile = getProfile();
       profile.gamesPlayed += 1;
       if (myResult === 1) profile.wins += 1;

@@ -175,184 +175,296 @@ main#app {
 .xq-mode h3 { font-size: 16px; margin-bottom: 4px; }
 .xq-mode p  { font-size: 12px; color: var(--xq-text-mute); line-height: 1.5; }
 
-/* ═══════════════════════════════════════════════════════
-   GAME LAYOUT — lichess-style full-screen
-   Column: opp-strip | board (flex:1) | user-strip | action-bar
-   Desktop: adds moves panel on the right
-   ═══════════════════════════════════════════════════════ */
+/* In-game layout — fully responsive
+   Desktop  ≥1100px:  3 columns (info | board | moves)
+   iPad     768-1099: board takes priority, info + moves compact below
+   Mobile   <768px:   board takes 100% space, side/moves hidden until toggled */
 .xq-game {
-  position: fixed;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  background: var(--xq-bg-base);
+  display: grid;
+  gap: 0;
+  align-items: start;
+  grid-template-columns: 1fr;
+  grid-template-areas:
+    "board"
+    "side"
+    "moves";
+  height: 100vh;
+  height: 100dvh; /* dynamic: trừ browser chrome mobile */
+  max-height: 100vh;
+  max-height: 100dvh;
   overflow: hidden;
-  z-index: 20;
 }
-
+/* Prevent body scroll during game */
 body:has(.xq-game) {
   overflow: hidden;
   height: 100vh;
   height: 100dvh;
 }
-
-/* Game content is the main flex column */
+/* Game content wrapper - display: contents unwraps it for grid layout */
 .xq-game-content {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+  display: contents;
 }
 
-/* ── Player strips ── */
-.xq-player-strip {
-  flex: 0 0 54px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 0 14px;
-  background: var(--xq-bg-surface);
-  border-bottom: 1px solid var(--xq-border);
-  transition: background .2s;
-  user-select: none;
-}
-.xq-player-user {
-  border-bottom: none;
-  border-top: 1px solid var(--xq-border);
-}
-.xq-player-strip[data-active="true"] {
-  background: linear-gradient(90deg, rgba(230,57,70,.1), transparent 70%);
-}
-.strip-av {
-  width: 36px; height: 36px;
-  border-radius: 10px;
-  background: var(--xq-bg-elevated);
-  border: 1px solid var(--xq-border);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 12px; font-weight: 700; flex-shrink: 0;
-  color: var(--xq-text);
-  transition: border-color .2s, box-shadow .2s;
-}
-.xq-player-strip[data-active="true"] .strip-av {
-  border-color: var(--xq-red);
-  box-shadow: 0 0 0 2px rgba(230,57,70,.25);
-}
-.strip-body { flex: 1; min-width: 0; }
-.strip-name {
-  font-size: 13px; font-weight: 700;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  color: var(--xq-text);
-}
-.strip-sub { font-size: 11px; color: var(--xq-text-mute); }
-.strip-timer {
-  font-size: 20px; font-weight: 900;
-  font-family: ui-monospace, monospace;
-  min-width: 66px; text-align: right;
-  color: var(--xq-text-dim);
-  letter-spacing: -1px;
-  transition: color .3s;
-}
-.xq-player-strip[data-active="true"] .strip-timer { color: var(--xq-text); }
-.strip-timer.low      { color: var(--xq-gold) !important; }
-.strip-timer.critical { color: var(--xq-red)  !important; animation: pulse-critical .6s infinite; }
+.xq-side       { grid-area: side; }
+.xq-board-stage{ grid-area: board; }
+.xq-moves      { grid-area: moves; }
 
-/* ── Board stage: fills remaining space ── */
-.xq-board-stage {
-  flex: 1; min-height: 0;
-  display: flex; align-items: center; justify-content: center;
-  background: var(--xq-bg-base);
-  overflow: hidden; position: relative;
-}
-.xq-board-stage .xq-board-wrap {
-  width: 100%; height: 100%;
-  display: flex; align-items: center; justify-content: center;
-}
-.xq-blind-badge {
-  position: absolute; top: 6px; left: 50%; transform: translateX(-50%);
-  z-index: 5; pointer-events: none; font-size: 11px; padding: 2px 8px;
-}
+/* ══════════════════════════════════════════════════════
+   GAME LAYOUT: Mobile + Tablet (< 1100px)
+   TOP BAR (60px fixed): opponent · status · user
+   BOARD STAGE: fills remaining height, flex-col
+     └─ board canvas (flex:1, max square)
+     └─ actions row (6 circular buttons, centered below board)
+   MOVES: slide-up drawer
+   ══════════════════════════════════════════════════════ */
+@media (max-width: 1099px) {
+  .xq-game {
+    grid-template-areas: "board";
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr;
+    height: 100vh;
+    overflow: hidden;
+  }
 
-/* ── Action bar ── */
-.xq-action-bar {
-  flex: 0 0 auto;
-  background: var(--xq-bg-surface);
-  border-top: 1px solid var(--xq-border);
-}
-.xq-action-row {
-  display: flex; align-items: center;
-  gap: 8px; padding: 8px 12px;
-}
-.xq-status-badge {
-  flex: 1; text-align: center;
-  font-size: 12px; color: var(--xq-gold);
-  font-weight: 600; white-space: nowrap;
-  overflow: hidden; text-overflow: ellipsis;
-  min-height: 18px;
-}
+  /* TOP BAR: fixed 60px — opponent | status | user */
+  .xq-side {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 60px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    padding: 0 10px;
+    background: var(--xq-bg-base);
+    border-bottom: 1px solid var(--xq-border);
+    z-index: 50;
+    overflow: hidden;
+  }
+  .xq-side .xq-player {
+    flex: 1; min-width: 0;
+    display: flex; align-items: center; gap: 6px;
+    padding: 4px 6px;
+    background: transparent;
+    border: none; border-radius: 6px;
+  }
+  .xq-side .xq-player .av {
+    width: 30px; height: 30px;
+    font-size: 11px; border-radius: 8px; flex-shrink: 0;
+  }
+  .xq-side .xq-player .name { font-size: 12px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .xq-side .xq-player .meta { font-size: 10px; white-space: nowrap; }
+  .xq-side .xq-status {
+    flex: 0 0 auto;
+    padding: 4px 10px;
+    font-size: 11px;
+    border-radius: 6px;
+    background: var(--xq-bg-glass);
+    border: 1px solid var(--xq-border);
+    white-space: nowrap;
+    color: var(--xq-gold);
+    font-weight: 600;
+  }
+  .xq-blind-badge { font-size: 10px; padding: 2px 6px; }
+  .xq-side .alert:not(.xq-blind-badge) { display: none !important; }
 
-/* ── More tray: slides up from action bar ── */
-.xq-more-tray {
-  display: flex; flex-wrap: wrap; gap: 6px;
-  max-height: 0; overflow: hidden;
-  padding: 0 12px;
-  transition: max-height .25s ease-out, padding .25s;
-}
-.xq-more-tray.open {
-  max-height: 140px;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--xq-border);
-}
+  /* BOARD STAGE: fills 100vh minus top bar, flex-col */
+  .xq-board-stage {
+    grid-area: board;
+    width: 100%;
+    height: 100vh;
+    padding-top: 60px; /* below top bar */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    background: var(--xq-bg-base);
+    gap: 0;
+  }
 
-/* ── Moves panel: fixed slide-up overlay on mobile ── */
-.xq-moves {
-  position: fixed;
-  bottom: 0; left: 0; right: 0;
-  max-height: 50vh; z-index: 200;
-  transform: translateY(100%);
-  transition: transform .3s ease-out;
-  background: var(--xq-bg-surface);
-  border: 1px solid var(--xq-border);
-  border-radius: 16px 16px 0 0;
-  overflow: hidden; display: flex; flex-direction: column;
-}
-.xq-moves.show { transform: translateY(0); }
-.xq-moves .head {
-  padding: 12px 14px; cursor: pointer; user-select: none;
-  background: var(--xq-bg-surface);
-  font-weight: 700; text-align: center; font-size: 13px;
-  border-top: 2px solid var(--xq-primary); flex-shrink: 0;
-}
-.xq-moves .head::before { content: "▲ "; font-size: 11px; }
-.xq-moves.show .head::before { content: "▼ "; }
-.xq-moves > div:not(.head) { flex: 1; overflow-y: auto; }
+  /* Board canvas: takes available space, stays square */
+  .xq-board-stage .xq-board-wrap {
+    flex: 1;
+    width: 100%;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
 
-/* ── Desktop (≥1100px): moves panel is a right column ── */
-@media (min-width: 1100px) {
-  .xq-game { flex-direction: row; }
-  .xq-game-content { flex: 1; min-width: 0; }
+  /* ACTIONS ROW: centered below board, NOT fixed */
+  .xq-board-stage .xq-actions {
+    flex: 0 0 auto;
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 8px 12px;
+    background: var(--xq-bg-base);
+    border-top: 1px solid var(--xq-border);
+  }
+  .xq-board-stage .xq-actions .btn {
+    width: 40px; height: 40px; min-width: 40px;
+    padding: 0;
+    border-radius: 50%;
+    flex: 0 0 auto;
+    font-size: 0;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .xq-board-stage .xq-actions .btn::after {
+    content: attr(data-emoji);
+    font-size: 18px;
+    line-height: 1;
+    position: absolute;
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+  }
+
+  /* MOVES LOG: slide-up drawer */
   .xq-moves {
-    position: static; transform: none !important;
-    width: 260px; flex: 0 0 260px;
-    max-height: none; border-radius: 0;
-    border: none; border-left: 1px solid var(--xq-border);
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    max-height: 45vh;
+    z-index: 49;
+    transform: translateY(100%);
+    transition: transform .3s ease-out;
+    background: var(--xq-bg-surface);
+    border: 1px solid var(--xq-border);
+    border-radius: 16px 16px 0 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .xq-moves.show { transform: translateY(0); }
+  .xq-moves .head {
+    padding: 12px 14px;
+    cursor: pointer; user-select: none;
+    background: var(--xq-bg-surface);
+    font-weight: 700; text-align: center; font-size: 13px;
+    border-top: 2px solid var(--xq-primary);
+    flex-shrink: 0;
+  }
+  .xq-moves .head::before { content: "▲ "; font-size: 11px; }
+  .xq-moves.show .head::before { content: "▼ "; }
+  .xq-moves > div:not(.head) { flex: 1; overflow-y: auto; }
+  .xq-moves table { font-size: 12px; }
+  .xq-moves td { padding: 5px 8px; }
+
+  /* Moves toggle */
+  .xq-mobile-moves-toggle {
+    position: fixed;
+    bottom: 12px; right: 12px;
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: var(--xq-primary);
+    border: none; color: white;
+    font-size: 16px; cursor: pointer;
+    z-index: 100;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  }
+  .xq-mobile-moves-toggle:active { transform: scale(0.95); }
+}
+
+/* ══════════════════════════════════════════════════════
+   GAME LAYOUT: Desktop (≥ 1100px)
+   TOP BAR: fixed 52px (same as mobile — player info)
+   BOARD STAGE: fills center, flex-col: board + actions below
+   RIGHT PANEL: moves log (slide-in or fixed)
+   ══════════════════════════════════════════════════════ */
+@media (min-width: 1100px) {
+  .xq-game {
+    grid-template-areas: "board moves";
+    grid-template-columns: minmax(0, 1fr) 280px;
+    grid-template-rows: 1fr;
+    gap: 0;
+    height: 100vh;
+    align-items: stretch;
+    padding-top: 52px; /* top bar height */
+    box-sizing: border-box;
+  }
+  /* TOP BAR: same as mobile — fixed, compact */
+  .xq-side {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 52px;
+    display: flex; flex-direction: row; align-items: center;
+    gap: 8px; padding: 0 16px;
+    background: var(--xq-bg-base);
+    border-bottom: 1px solid var(--xq-border);
+    z-index: 50; overflow: hidden;
+  }
+  .xq-side .xq-player {
+    flex: 1; min-width: 0;
+    display: flex; align-items: center; gap: 8px;
+    background: transparent; border: none; padding: 4px 8px;
+  }
+  .xq-side .xq-player .av  { width: 30px; height: 30px; font-size: 11px; border-radius: 8px; flex-shrink: 0; }
+  .xq-side .xq-player .name { font-size: 13px; font-weight: 700; }
+  .xq-side .xq-player .meta { font-size: 11px; color: var(--xq-text-mute); }
+  .xq-side .xq-status {
+    flex: 0 0 auto; padding: 4px 12px; font-size: 12px;
+    border-radius: 6px; background: var(--xq-bg-glass);
+    border: 1px solid var(--xq-border); color: var(--xq-gold); font-weight: 600;
+  }
+  /* BOARD STAGE: flex-col → board on top, actions below */
+  .xq-board-stage {
+    grid-area: board;
+    width: 100%; height: 100%;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    background: var(--xq-bg-base);
+    padding: 12px 12px 0 12px;
+    box-sizing: border-box;
+  }
+  .xq-board-stage .xq-board-wrap {
+    flex: 1; min-height: 0;
+    display: flex; align-items: center; justify-content: center;
+    width: 100%;
+  }
+  /* ACTIONS ROW: compact circular buttons below board */
+  .xq-board-stage .xq-actions {
+    flex: 0 0 auto; width: 100%;
+    display: flex; flex-direction: row;
+    align-items: center; justify-content: center;
+    gap: 10px; padding: 8px 16px;
+    border-top: 1px solid var(--xq-border);
+  }
+  .xq-board-stage .xq-actions .btn {
+    width: 38px; height: 38px; min-width: 38px;
+    padding: 0; border-radius: 50%; flex: 0 0 auto;
+    font-size: 0; display: flex !important;
+    align-items: center; justify-content: center;
+    position: relative; overflow: hidden;
+  }
+  .xq-board-stage .xq-actions .btn::after {
+    content: attr(data-emoji); font-size: 17px;
+    line-height: 1; position: absolute;
+    left: 50%; top: 50%; transform: translate(-50%,-50%);
+  }
+  /* MOVES: right panel */
+  .xq-moves {
+    grid-area: moves;
+    background: var(--xq-bg-surface);
+    border-left: 1px solid var(--xq-border);
+    overflow: hidden;
+    display: flex; flex-direction: column;
   }
   .xq-moves .head {
-    border-top: none; border-bottom: 1px solid var(--xq-border);
-    cursor: default; text-align: left;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--xq-border);
+    font-size: 13px; font-weight: 700; flex-shrink: 0;
   }
-  .xq-moves .head::before { content: "" !important; }
-  .xq-moves.show .head::before { content: "" !important; }
-  /* Larger strip height on desktop */
-  .xq-player-strip { flex: 0 0 60px; }
-  .strip-av { width: 40px; height: 40px; font-size: 13px; }
-  .strip-name { font-size: 14px; }
-  .strip-timer { font-size: 22px; min-width: 76px; }
+  .xq-moves > div:not(.head) { flex: 1; overflow-y: auto; }
+  .xq-mobile-moves-toggle { display: none !important; }
 }
-
-/* Legacy class – hidden in new layout */
-.xq-side { display: none !important; }
-
 .xq-moves table { width: 100%; border-collapse: collapse; font-size: 13px; font-family: ui-monospace, monospace; }
 .xq-moves td { padding: 6px 12px; border-bottom: 1px solid var(--xq-border); }
 .xq-moves td.idx { color: var(--xq-text-dim); width: 30px; }
@@ -635,6 +747,7 @@ body:has(.xq-game) {
   color: var(--xq-jade);
 }
 
+/* Low time warning (< 1 minute) */
 .time-clock.low-time {
   background: rgba(255, 193, 7, 0.1);
   border-color: var(--xq-gold);
@@ -644,6 +757,7 @@ body:has(.xq-game) {
   color: var(--xq-gold);
 }
 
+/* Critical time warning (< 20 seconds) */
 .time-clock.critical-time {
   background: rgba(230, 57, 70, 0.1);
   border-color: var(--xq-red);
@@ -656,13 +770,23 @@ body:has(.xq-game) {
 }
 
 @keyframes pulse-critical {
-  0%, 100% { box-shadow: inset 0 0 0 2px rgba(230, 57, 70, 0.2); }
-  50%       { box-shadow: inset 0 0 8px 2px rgba(230, 57, 70, 0.4); }
+  0%, 100% {
+    box-shadow: inset 0 0 0 2px rgba(230, 57, 70, 0.2);
+  }
+  50% {
+    box-shadow: inset 0 0 8px 2px rgba(230, 57, 70, 0.4);
+  }
 }
 
 @keyframes pulse-resume {
-  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(230, 57, 70, 0.7); }
-  50%       { opacity: 0.9; box-shadow: 0 0 0 8px rgba(230, 57, 70, 0); }
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 0 0 rgba(230, 57, 70, 0.7);
+  }
+  50% {
+    opacity: 0.9;
+    box-shadow: 0 0 0 8px rgba(230, 57, 70, 0);
+  }
 }
 
 @media (max-width: 600px) {
