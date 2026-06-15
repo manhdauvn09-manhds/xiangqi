@@ -55,6 +55,16 @@ export function renderReplayPage(root, gameId) {
           <button class="btn btn-primary" data-act="play"  title="${esc(t('replay.play'))}">▶</button>
           <button class="btn" data-act="next"  title="${esc(t('replay.next'))}">⏩</button>
           <button class="btn" data-act="last"  title="${esc(t('replay.last'))}">⏭</button>
+          <button class="btn" data-act="flip"  title="Lật bàn cờ">🔁</button>
+        </div>
+        <div class="replay-speed">
+          <span class="muted small">Tốc độ:</span>
+          <select id="replaySpeed" class="text-input" style="padding:4px 8px;font-size:12px;width:auto">
+            <option value="1500">Chậm</option>
+            <option value="800" selected>Bình thường</option>
+            <option value="400">Nhanh</option>
+            <option value="150">Rất nhanh</option>
+          </select>
         </div>
         <div class="replay-progress">
           <input type="range" min="0" max="${moves.length}" value="0" class="range" id="seekBar">
@@ -112,17 +122,24 @@ export function renderReplayPage(root, gameId) {
     renderMoves();
   }
 
+  function getSpeed() {
+    return parseInt(root.querySelector('#replaySpeed')?.value || '800', 10);
+  }
+
   function togglePlay() {
     playing = !playing;
     const btn = root.querySelector('[data-act="play"]');
     btn.textContent = playing ? '⏸' : '▶';
     if (playing) {
-      playTimer = setInterval(() => {
+      const tick = () => {
+        if (!playing) return;
         if (cursor >= moves.length) { togglePlay(); return; }
         seekTo(cursor + 1);
-      }, 800);
+        playTimer = setTimeout(tick, getSpeed());
+      };
+      playTimer = setTimeout(tick, getSpeed());
     } else {
-      clearInterval(playTimer);
+      clearTimeout(playTimer);
     }
   }
 
@@ -134,6 +151,7 @@ export function renderReplayPage(root, gameId) {
       else if (a === 'next') seekTo(cursor + 1);
       else if (a === 'last') seekTo(moves.length);
       else if (a === 'play') togglePlay();
+      else if (a === 'flip') renderer.flip?.();
     });
   });
 

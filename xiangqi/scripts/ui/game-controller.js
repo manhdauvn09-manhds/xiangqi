@@ -749,7 +749,7 @@ export class GameController {
     const initial = parseInt(timeStr.split('+')[0], 10);
     if (initial <= 5) return TIME_FORMATS.BLITZ;
     if (initial <= 10) return TIME_FORMATS.RAPID;
-    return TIME_FORMATS.RAPID;
+    return TIME_FORMATS.CLASSICAL || TIME_FORMATS.RAPID;
   }
 
   _onTimeExpired(e) {

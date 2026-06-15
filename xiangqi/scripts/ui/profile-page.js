@@ -2,12 +2,23 @@
 import { t } from '../i18n/i18n.js';
 import { getProfile, listGames } from '../storage/local.js';
 import { getRank, ALL_RANKS } from '../elo/elo.js';
+import { isAuthed, games as apiGames } from '../net/api.js';
 
-export function renderProfilePage(root) {
+export async function renderProfilePage(root) {
   const p = getProfile();
-  const games = listGames(200);
   const rank = getRank(p.elo);
   const winRate = p.gamesPlayed > 0 ? Math.round(p.wins / p.gamesPlayed * 100) : 0;
+
+  // Fetch remote games if authed
+  let games = listGames(200);
+  if (isAuthed()) {
+    try {
+      const remote = await apiGames.list(100);
+      const seen = new Set(games.map(g => g.id));
+      for (const g of remote) { if (!seen.has(g.id)) games.push(g); }
+      games.sort((a, b) => (b.playedAt || 0) - (a.playedAt || 0));
+    } catch { /* keep local */ }
+  }
 
   // Stats by mode
   const byMode = {};
@@ -22,9 +33,10 @@ export function renderProfilePage(root) {
     else if (g.result === '1/2-1/2') { byMode[g.mode].d++; byVariant[v].d++; }
   }
 
-  // Build "ELO ladder" position
-  const ladderIdx = ALL_RANKS.findIndex(r => r.name === rank.name);
   const ladderPct = Math.min(100, Math.max(0, (p.elo - 600) / (2400 - 600) * 100));
+
+  // Build ELO history from recent games (last 15, working backwards from current ELO)
+  const eloHistory = buildEloHistory(games.slice(0, 15), p.elo);
 
   root.innerHTML = `
     <div class="profile-hero">
@@ -62,6 +74,12 @@ export function renderProfilePage(root) {
       </div>
     </div>
 
+    ${eloHistory.length >= 3 ? `
+    <section class="prof-section">
+      <h3>📈 ELO theo thời gian <span class="muted small">(${eloHistory.length} ván gần nhất)</span></h3>
+      ${renderSparkline(eloHistory, p.elo)}
+    </section>` : ''}
+
     <section class="prof-section">
       <h3>📈 ${esc(t('profile.ladder'))}</h3>
       <div class="ladder">
@@ -72,7 +90,7 @@ export function renderProfilePage(root) {
         </div>
       </div>
       <div class="muted small" style="text-align:center; margin-top:10px;">
-        ${ladderIdx + 1} / ${ALL_RANKS.length}
+        ELO ${p.elo} · cần ${nextRankElo(p.elo) > p.elo ? nextRankElo(p.elo) - p.elo + ' ELO nữa lên hạng tiếp' : 'Đỉnh cao!'}
       </div>
     </section>
 
@@ -93,13 +111,66 @@ export function renderProfilePage(root) {
   `;
 }
 
+function buildEloHistory(games, currentElo) {
+  // Work backwards: current ELO → subtract deltas to get past ELOs
+  const sorted = [...games].filter(g => g.eloChange != null).sort((a,b) => (b.playedAt||0) - (a.playedAt||0));
+  const points = [];
+  let elo = currentElo;
+  for (const g of sorted) {
+    points.unshift({ elo, delta: g.eloChange });
+    elo -= (g.eloChange || 0);
+  }
+  points.push({ elo: currentElo, delta: 0, current: true });
+  return points;
+}
+
+function renderSparkline(points, currentElo) {
+  const W = 300, H = 60, PAD = 8;
+  const elos = points.map(p => p.elo);
+  const min = Math.min(...elos) - 10;
+  const max = Math.max(...elos) + 10;
+  const range = max - min || 1;
+  const toX = i => PAD + (i / (points.length - 1)) * (W - PAD * 2);
+  const toY = v => H - PAD - ((v - min) / range) * (H - PAD * 2);
+
+  const pts = points.map((p, i) => `${toX(i)},${toY(p.elo)}`).join(' ');
+  const fillPts = `${toX(0)},${H} ${pts} ${toX(points.length-1)},${H}`;
+
+  // trend color
+  const trend = points[points.length-1].elo - points[0].elo;
+  const stroke = trend >= 0 ? '#48c78e' : '#ff7675';
+  const fill = trend >= 0 ? 'rgba(72,199,142,0.12)' : 'rgba(255,118,117,0.12)';
+
+  return `
+    <div class="elo-chart">
+      <svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="none" style="display:block">
+        <polygon points="${fillPts}" fill="${fill}"/>
+        <polyline points="${pts}" fill="none" stroke="${stroke}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+        ${points.map((p, i) => `
+          <circle cx="${toX(i)}" cy="${toY(p.elo)}" r="${p.current ? 4 : 2.5}"
+            fill="${p.current ? stroke : 'var(--xq-bg-surface)'}" stroke="${stroke}" stroke-width="1.5"/>
+        `).join('')}
+      </svg>
+      <div class="elo-chart-labels">
+        <span class="muted small">${elos[0]}</span>
+        <span class="${trend >= 0 ? 'text-win' : 'text-loss'} small"><strong>${trend >= 0 ? '+' : ''}${trend}</strong></span>
+        <span class="muted small">${currentElo}</span>
+      </div>
+    </div>
+  `;
+}
+
+function nextRankElo(elo) {
+  for (const r of ALL_RANKS) { if (r.min > elo) return r.min; }
+  return elo;
+}
+
 function renderBars(byMode) {
   const keys = Object.keys(byMode);
-  if (keys.length === 0) return `<p class="muted">${esc(window.t ? window.t('profile.no_data') : 'Chưa có dữ liệu')}</p>`;
+  if (!keys.length) return `<p class="muted">${esc('Chưa có dữ liệu')}</p>`;
   return keys.map(k => {
-    const m = byMode[k];
-    const total = m.games || 1;
-    const wp = m.w / total * 100, lp = m.l / total * 100, dp = m.d / total * 100;
+    const m = byMode[k]; const total = m.games || 1;
+    const wp = m.w/total*100, lp = m.l/total*100, dp = m.d/total*100;
     return `<div class="prof-row">
       <div class="prof-row-l">${esc(k)}</div>
       <div class="bar"><div class="b-w" style="width:${wp}%"></div><div class="b-l" style="width:${lp}%"></div><div class="b-d" style="width:${dp}%"></div></div>
@@ -111,30 +182,31 @@ function renderBars(byMode) {
 function renderVariantBars(byVariant) {
   const out = [];
   for (const v of ['standard','blind']) {
-    const m = byVariant[v];
-    const total = (m.w + m.l + m.d) || 0;
-    if (total === 0) continue;
-    const wp = m.w / total * 100, lp = m.l / total * 100, dp = m.d / total * 100;
+    const m = byVariant[v]; const total = m.w+m.l+m.d;
+    if (!total) continue;
+    const wp = m.w/total*100, lp = m.l/total*100, dp = m.d/total*100;
     out.push(`<div class="prof-row">
       <div class="prof-row-l">${v === 'blind' ? '🎴 Cờ Úp' : '♟ Cờ Ngửa'}</div>
       <div class="bar"><div class="b-w" style="width:${wp}%"></div><div class="b-l" style="width:${lp}%"></div><div class="b-d" style="width:${dp}%"></div></div>
       <div class="prof-row-r muted small">${m.w}W ${m.l}L ${m.d}D</div>
     </div>`);
   }
-  return out.join('') || `<p class="muted">${esc('Chưa có dữ liệu')}</p>`;
+  return out.join('') || `<p class="muted">Chưa có dữ liệu</p>`;
 }
 
 function renderRecent(games) {
-  if (games.length === 0) return `<p class="muted">${esc('Chưa có ván nào')}</p>`;
+  if (!games.length) return `<p class="muted">Chưa có ván nào</p>`;
   return `<div class="recent-grid">${games.map(g => {
     const us = g.userSide || 'r';
     let r = 'D', cls = 'r-draw';
-    if ((g.result === '1-0' && us === 'r') || (g.result === '0-1' && us === 'b')) { r = 'W'; cls = 'r-win'; }
-    else if ((g.result === '0-1' && us === 'r') || (g.result === '1-0' && us === 'b')) { r = 'L'; cls = 'r-loss'; }
-    const opp = g.mode === 'bot' ? `Bot Lv${g.botLevel}` : g.mode;
+    if ((g.result==='1-0'&&us==='r')||(g.result==='0-1'&&us==='b')) { r='W'; cls='r-win'; }
+    else if ((g.result==='0-1'&&us==='r')||(g.result==='1-0'&&us==='b')) { r='L'; cls='r-loss'; }
+    const opp = g.mode==='bot' ? `Bot Lv${g.botLevel}` : g.mode==='local' ? 'Local' : g.mode || '?';
+    const delta = g.eloChange != null ? `<div class="elo-delta ${g.eloChange>=0?'pos':'neg'}">${g.eloChange>=0?'+':''}${g.eloChange}</div>` : '';
     return `<a class="recent-tile" href="#/replay/${g.id}">
       <div class="result-pill ${cls}">${r}</div>
       <div class="t">${esc(opp)}</div>
+      ${delta}
       <div class="muted small">${esc(new Date(g.playedAt).toLocaleDateString())}</div>
     </a>`;
   }).join('')}</div>`;
