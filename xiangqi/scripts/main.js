@@ -219,7 +219,7 @@ function routeTo(hash) {
 }
 
 // ─────────────── Home ───────────────
-function renderHome(root) {
+async function renderHome(root) {
   const profile = getProfile();
   const rank = getRank(profile.elo);
   const savedGame = getGameSession();
@@ -227,6 +227,10 @@ function renderHome(root) {
     <section class="xq-hero">
       <h1>${esc(t('app.title'))} <span class="grad">象棋</span></h1>
       <p>${esc(t('app.tagline'))}</p>
+      <div id="liveStats" style="display:flex;gap:16px;justify-content:center;margin:10px 0;flex-wrap:wrap">
+        <span class="live-stat" id="statOnline" style="font-size:12px;color:rgba(255,255,255,0.45)">…</span>
+        <span class="live-stat" id="statGames"  style="font-size:12px;color:rgba(255,255,255,0.45)">…</span>
+      </div>
       <div class="xq-hero-actions">
         ${savedGame ? `<button class="btn btn-danger btn-lg" id="ctaResumeGame" style="animation: pulse-resume 1.5s infinite">⚡ Tiếp tục trò chơi</button>` : ''}
         <a class="btn btn-primary btn-lg" href="#/online">🌐 ${esc(t('online.title'))}</a>
@@ -313,6 +317,18 @@ function renderHome(root) {
   });
   document.getElementById('ctaPlayBot')?.addEventListener('click', () => startBotGame('standard'));
   document.getElementById('ctaPlayBotBlind')?.addEventListener('click', () => startBotGame('blind'));
+
+  // Live stats từ healthz (best-effort, silent fail)
+  fetch(`${(window.API_BASE||'')||''}/healthz`.replace('//', '/'))
+    .then(r => r.ok ? r.json() : null)
+    .catch(() => null)
+    .then(data => {
+      if (!data) return;
+      const online = document.getElementById('statOnline');
+      const games  = document.getElementById('statGames');
+      if (online) online.textContent = `🟢 ${data.connected_users ?? 0} người đang online`;
+      if (games)  games.textContent  = `⚔️ ${data.active_games ?? 0} ván đang diễn ra`;
+    });
   document.getElementById('ctaPlayLocal')?.addEventListener('click', startLocalGame);
 }
 

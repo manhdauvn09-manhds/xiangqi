@@ -100,6 +100,32 @@ export const PUZZLE_BANK = [
       { step: 3, move: 'Pháo e3-f3', vi: 'Pháo bịt lối — Tướng hết nước (vây hãm)!', en: 'Cannon plugs the escape — stalemate win!' },
     ],
   },
+  {
+    id: 'p007',
+    title: { vi: 'Xe khoá góc — thắng 1 nước', en: 'Rook corner lock — win in 1' },
+    fen: '3ka4/9/R8/9/9/9/9/9/9/4K4 w - - 0 1',
+    solverSide: 'r',
+    mateIn: 1,
+    winType: 'checkmate',
+    solution: ['a8d8'],
+    hint: { vi: 'Xe sang cột d — Tướng hết đường thoát.', en: 'Rook to d-file — king is trapped.' },
+    analysis: [
+      { step: 1, move: 'Xe a8-d8', vi: 'Xe chiếu Tướng trên cột d. Tướng không thể sang e10 (Sĩ chắn), không thể xuống d9 (Xe kiểm soát cột d), không thể sang c10 (ngoài cung). Chiếu hết!', en: 'Rook checks on d-file. King cannot go to e10 (advisor), d9 (rook controls file), or c10 (outside palace). Checkmate!' },
+    ],
+  },
+  {
+    id: 'p008',
+    title: { vi: 'Mã làm giá Pháo — thắng 1 nước', en: 'Horse screens Cannon — win in 1' },
+    fen: '5k3/9/9/9/6N2/9/9/5C3/9/4K4 w - - 0 1',
+    solverSide: 'r',
+    mateIn: 1,
+    winType: 'checkmate',
+    solution: ['g4f6'],
+    hint: { vi: 'Mã nhảy f6 làm giá cho Pháo bắn qua chiếu Tướng trên cột f.', en: 'Horse jumps to f6 to screen the Cannon — fires through to check King on f-file.' },
+    analysis: [
+      { step: 1, move: 'Mã g4-f6', vi: 'Mã nhảy f6 làm giá. Pháo tại f3 bắn qua Mã → chiếu Tướng ở f10. Tướng không thể dạt e10 (bay tướng với Vua Đỏ ở e1), không thể sang g10 (ngoài cung), không thể xuống f9 (Pháo vẫn bắn qua Mã). Chiếu hết!', en: 'Horse to f6 screens. Cannon fires through Horse to f10 — check. King cannot go to e10 (flying general), g10 (outside palace), or f9 (still in cannon range). Checkmate!' },
+    ],
+  },
 ];
 
 /** Lấy puzzle hôm nay theo seed = ngày YYYYMMDD. */

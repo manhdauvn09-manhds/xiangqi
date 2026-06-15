@@ -17,6 +17,7 @@ import { TimeControl, TIME_FORMATS } from '../game/time-control.js';
 import { fakePlayerManager } from '../game/fake-players.js';
 import { createTimeDisplay } from './time-display.js';
 import { updateElo } from '../elo/elo.js';
+import { checkNewAchievements } from './achievements.js';
 
 const ELO_BY_LV = [600, 800, 1000, 1200, 1400, 1600, 1800, 2000, 2200, 2400];
 
@@ -601,6 +602,7 @@ export class GameController {
         moves: this.movesLog.slice(),
         finalFEN: toFEN(this.board),
         blindSeed: this.blindSeed,
+        eloDelta: this.eloChange || 0,
       };
       appendGame(record);
       if (isAuthed()) {
@@ -616,6 +618,14 @@ export class GameController {
           blind_seed: this.blindSeed ? String(this.blindSeed) : null,
         }).catch(err => console.warn('save game failed', err));
       }
+
+      // Kiểm tra huy hiệu mới sau game
+      try {
+        const newAch = checkNewAchievements();
+        if (newAch.length) {
+          newAch.forEach(a => toast(`🏅 Huy hiệu mới: ${a.icon} ${a.title}`, { type: 'success' }));
+        }
+      } catch (_) {}
     }
 
     setTimeout(async () => {

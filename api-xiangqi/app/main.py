@@ -243,6 +243,13 @@ async def register(body: RegisterIn, req: Request):
         raise HTTPException(409, 'email_taken')
     user_id = auth.create_user(body.email, body.password, body.display_name.strip())
 
+    # Tạo ELO profile mặc định để user xuất hiện trên BXH ngay sau khi đăng ký
+    for _v in ('standard', 'blind'):
+        db.execute(
+            'INSERT OR IGNORE INTO elo_profiles (user_id, variant, elo, peak_elo, games_played, wins, losses, draws) VALUES (?, ?, 1200, 1200, 0, 0, 0, 0)',
+            (user_id, _v)
+        )
+
     # Generate tokens (both legacy JWT for compatibility + new refresh token)
     device_id = req.headers.get('x-device-id')
     user_agent = req.headers.get('user-agent')
@@ -429,6 +436,11 @@ async def google_auth(body: GoogleAuthIn, req: Request):
     # Google email is already verified
     db.execute('UPDATE users SET email_verified = 1, avatar_url = ? WHERE id = ?',
                (profile['avatar_url'], user_id))
+    for _v in ('standard', 'blind'):
+        db.execute(
+            'INSERT OR IGNORE INTO elo_profiles (user_id, variant, elo, peak_elo, games_played, wins, losses, draws) VALUES (?, ?, 1200, 1200, 0, 0, 0, 0)',
+            (user_id, _v)
+        )
     tokens = auth.create_tokens(user_id, device_id, user_agent)
     return {
         'jwt': tokens['access_token'],  # Legacy
@@ -696,7 +708,7 @@ async def leaderboard(variant: str = 'standard', scope: str = 'global', limit: i
       SELECT u.id, u.display_name, u.avatar_url, e.elo, e.games_played, e.wins, e.losses, e.draws
       FROM elo_profiles e
       JOIN users u ON u.id = e.user_id
-      WHERE e.variant = ? AND e.games_played >= 5
+      WHERE e.variant = ? AND e.games_played >= 0
       ORDER BY e.elo DESC
       LIMIT ?
     '''

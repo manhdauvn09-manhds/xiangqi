@@ -1,144 +1,189 @@
-// Cờ Tướng Vương — Leaderboard (live từ backend + fallback local)
+// Cờ Tướng Vương — Leaderboard (live từ backend, tier filter, search, highlight user)
 import { t } from '../i18n/i18n.js';
 import { getProfile } from '../storage/local.js';
 import { ALL_RANKS, getRank } from '../elo/elo.js';
-import { ratings } from '../net/api.js';
+import { ratings, getUser } from '../net/api.js';
 
 export async function renderLeaderboardPage(root) {
   const me = getProfile();
   const myRank = getRank(me.elo);
+  const currentUser = getUser();
 
   root.innerHTML = `
     <h1 class="page-h1">🏆 ${esc(t('nav.leaderboard'))}</h1>
-    <div class="lb-controls">
-      <div class="lb-tier-tabs" id="lbTiers">
-        <button class="lb-tab active" data-tier="all">Tất cả</button>
-        ${[...ALL_RANKS].reverse().map(r =>
-          `<button class="lb-tab" data-tier="${r.name}" title="${t('rank.' + r.name)}" style="color:${r.color}">${r.icon}</button>`
-        ).join('')}
-      </div>
-      <input type="search" class="lb-search text-input" id="lbSearch" placeholder="🔍 Tìm người chơi…" style="max-width:200px">
+    <div class="lb-loading" id="lbLoading" style="text-align:center;padding:40px">
+      <div class="muted">Đang tải bảng xếp hạng…</div>
     </div>
-    <div id="lbContent"><div class="muted" style="padding:20px">Đang tải…</div></div>
+    <div id="lbContent" style="display:none">
+      <div class="lb-topbar" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+        <span class="lb-badge" id="lbBadge"></span>
+        <div class="tier-tabs" id="tierTabs" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+        <input class="lb-search" id="lbSearch" type="text" placeholder="🔍 Tìm tên…" autocomplete="off"
+          style="margin-left:auto;padding:6px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);
+                 background:rgba(255,255,255,0.07);color:inherit;font-size:13px;min-width:150px">
+      </div>
+      <div id="lbSelf" style="margin-bottom:12px"></div>
+      <div class="lb-table-wrap">
+        <table class="lb-table" style="width:100%;border-collapse:collapse">
+          <thead>
+            <tr style="font-size:12px;color:rgba(255,255,255,0.5);border-bottom:1px solid rgba(255,255,255,0.1)">
+              <th style="padding:8px 4px;text-align:left;width:40px">#</th>
+              <th style="padding:8px 4px;text-align:left">${esc(t('lb.player'))}</th>
+              <th style="padding:8px 4px;text-align:right">ELO</th>
+              <th style="padding:8px 4px;text-align:left">${esc(t('lb.rank'))}</th>
+              <th style="padding:8px 4px;text-align:center;color:#48c78e">W</th>
+              <th style="padding:8px 4px;text-align:center;color:#aaa">D</th>
+              <th style="padding:8px 4px;text-align:center;color:#ff7675">L</th>
+              <th style="padding:8px 4px;text-align:right">Win%</th>
+            </tr>
+          </thead>
+          <tbody id="lbBody"></tbody>
+        </table>
+      </div>
+      <div id="lbEmpty" style="display:none;text-align:center;padding:32px;color:rgba(255,255,255,0.4)">
+        Không có người chơi nào khớp bộ lọc.
+      </div>
+    </div>
   `;
 
-  let leaders = [], isLive = false;
+  let leaders = [];
+  let isLive = false;
+
   try {
     const live = await ratings.leaderboard('standard', 100);
     if (Array.isArray(live) && live.length > 0) {
       leaders = live.map((r, i) => ({
         rank: i + 1,
+        id: r.id,
         name: r.display_name || r.displayName || '?',
         elo: r.elo,
-        wins: r.wins || 0,
-        losses: r.losses || 0,
-        draws: r.draws || 0,
-        gamesPlayed: r.games_played || r.gamesPlayed || 0,
-        isMe: !!(me.name && (r.display_name === me.name || r.displayName === me.name)),
+        wins: r.wins ?? 0,
+        losses: r.losses ?? 0,
+        draws: r.draws ?? 0,
+        gamesPlayed: r.games_played ?? 0,
       }));
       isLive = true;
     }
-  } catch { /* keep empty */ }
+  } catch (_) {}
 
-  let activeTier = 'all', search = '';
+  root.querySelector('#lbLoading').style.display = 'none';
+  root.querySelector('#lbContent').style.display = 'block';
 
-  function filtered() {
-    return leaders.filter(l => {
-      if (search && !l.name.toLowerCase().includes(search.toLowerCase())) return false;
-      if (activeTier !== 'all' && getRank(l.elo).name !== activeTier) return false;
-      return true;
+  const badgeEl = root.querySelector('#lbBadge');
+  badgeEl.textContent = isLive ? '🌐 LIVE' : '📴 Offline';
+  badgeEl.style.cssText = `padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;
+    background:${isLive ? 'rgba(72,199,142,0.2)' : 'rgba(255,255,255,0.08)'};
+    color:${isLive ? '#48c78e' : 'rgba(255,255,255,0.4)'}`;
+
+  // Tier filter tabs
+  const TIERS = [
+    { key: 'all', label: 'Tất cả', minElo: 0 },
+    { key: 'cao_thu', label: '🛡️ Cao Thủ+', minElo: 2000 },
+    { key: 'vang', label: '🥇 Vàng+', minElo: 1600 },
+    { key: 'bac', label: '🥈 Bạc+', minElo: 1400 },
+    { key: 'dong', label: '🟫 Đồng+', minElo: 1200 },
+  ];
+  let activeTier = 'all';
+  const tabsEl = root.querySelector('#tierTabs');
+
+  function buildTabs() {
+    tabsEl.innerHTML = TIERS.map(tier =>
+      `<button class="tier-tab" data-tier="${tier.key}" style="
+        padding:5px 12px;border-radius:16px;border:1px solid rgba(255,255,255,0.15);
+        background:${activeTier===tier.key?'#667eea':'rgba(255,255,255,0.06)'};
+        color:${activeTier===tier.key?'#fff':'inherit'};cursor:pointer;font-size:12px;font-weight:600">
+        ${esc(tier.label)}</button>`
+    ).join('');
+    tabsEl.querySelectorAll('.tier-tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        activeTier = btn.dataset.tier;
+        buildTabs();
+        paint();
+      });
     });
   }
+  buildTabs();
 
-  function renderContent() {
-    const el = root.querySelector('#lbContent');
-    if (!el) return;
-    const list = filtered();
-    const myEntry = leaders.find(l => l.isMe);
-    const myRankNum = myEntry ? myEntry.rank : null;
+  // Vị trí user hiện tại
+  const selfEl = root.querySelector('#lbSelf');
+  const myName = currentUser?.displayName || me.name;
+  const myEntry = isLive && myName ? leaders.find(l => l.name === myName) : null;
 
-    el.innerHTML = `
-      <div class="lb-banner${isLive ? '' : ' warn'}">
-        ${isLive
-          ? `<span class="lb-badge live">🌐 LIVE · ${leaders.length} người chơi</span>
-             ${myRankNum ? `<span class="muted small">Hạng của bạn: <strong>#${myRankNum}</strong></span>` : ''}`
-          : `<span class="lb-badge">📴 Offline — đăng nhập để xem BXH thật</span>`
-        }
+  if (myEntry) {
+    const wr = myEntry.gamesPlayed > 0 ? Math.round(myEntry.wins / myEntry.gamesPlayed * 100) : 0;
+    const rk = getRank(myEntry.elo);
+    selfEl.innerHTML = `<div style="display:flex;align-items:center;gap:12px;background:rgba(102,126,234,0.12);
+      border:1px solid rgba(102,126,234,0.3);border-radius:10px;padding:12px 16px;margin-bottom:8px">
+      <div style="width:38px;height:38px;border-radius:50%;background:${rk.color};display:flex;align-items:center;
+        justify-content:center;font-weight:700;font-size:14px;flex-shrink:0">${esc(myEntry.name.slice(0,2).toUpperCase())}</div>
+      <div>
+        <div style="font-weight:700">${esc(myEntry.name)} <span style="color:rgba(255,255,255,0.4);font-size:12px">#${myEntry.rank} toàn cầu</span></div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.6)">${rk.icon} ${esc(t('rank.'+rk.name))} · ELO <strong>${myEntry.elo}</strong> · ${myEntry.wins}W ${myEntry.draws}D ${myEntry.losses}L · ${wr}% thắng</div>
       </div>
-
-      <div class="lb-self">
-        <div class="lb-self-rank" style="color:${myRank.color}">${myRank.icon}</div>
-        <div class="lb-self-info">
-          <div class="lb-self-name">👤 ${esc(me.name || 'Bạn')}</div>
-          <div class="muted small">${esc(t('rank.' + myRank.name))} · ELO ${me.elo} · ${me.wins || 0}W / ${me.losses || 0}L / ${me.draws || 0}D</div>
-        </div>
-        ${myRankNum ? `<div class="lb-self-pos">#${myRankNum}</div>` : ''}
+    </div>`;
+  } else if (me.gamesPlayed > 0) {
+    selfEl.innerHTML = `<div style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.04);
+      border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:12px 16px;margin-bottom:8px">
+      <div style="width:38px;height:38px;border-radius:50%;background:${myRank.color};display:flex;align-items:center;
+        justify-content:center;font-weight:700;font-size:14px;flex-shrink:0">${esc((me.name||'?').slice(0,2).toUpperCase())}</div>
+      <div>
+        <div style="font-weight:700">${esc(me.name||'Bạn')} <span style="font-size:11px;color:rgba(255,255,255,0.4)">(chỉ local)</span></div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.6)">${myRank.icon} ELO <strong>${me.elo}</strong> · ${me.wins}W ${me.draws}D ${me.losses}L</div>
       </div>
-
-      ${list.length === 0 ? `<div class="empty-state"><p>Không tìm thấy người chơi</p></div>` : `
-        <div class="lb-table-wrap">
-          <table class="lb-table">
-            <thead><tr>
-              <th>#</th>
-              <th>Người chơi</th>
-              <th>ELO</th>
-              <th>Hạng</th>
-              <th class="hide-sm">Ván</th>
-              <th class="hide-sm">W / L / D</th>
-              <th class="hide-sm">Win%</th>
-            </tr></thead>
-            <tbody>
-              ${list.map(l => {
-                const r = getRank(l.elo);
-                const podium = l.rank === 1 ? '👑' : l.rank === 2 ? '🥈' : l.rank === 3 ? '🥉' : '';
-                const cls = (l.rank <= 3 ? `top-${l.rank}` : '') + (l.isMe ? ' lb-me' : '');
-                const wp = l.gamesPlayed > 0 ? Math.round(l.wins / l.gamesPlayed * 100) : 0;
-                const wpCls = wp >= 60 ? 'winpct good' : wp >= 40 ? 'winpct ok' : 'winpct low';
-                return `<tr class="${cls.trim()}">
-                  <td>${podium || `<span class="muted">${l.rank}</span>`}</td>
-                  <td>${l.isMe ? '<span class="lb-you">你</span> ' : ''}${esc(l.name)}</td>
-                  <td><strong>${l.elo}</strong></td>
-                  <td><span style="color:${r.color}">${r.icon} ${esc(t('rank.' + r.name))}</span></td>
-                  <td class="hide-sm muted small">${l.gamesPlayed}</td>
-                  <td class="hide-sm muted small">${l.wins}/${l.losses}/${l.draws}</td>
-                  <td class="hide-sm"><span class="${wpCls}">${wp}%</span></td>
-                </tr>`;
-              }).join('')}
-            </tbody>
-          </table>
-        </div>
-      `}
-
-      <section class="lb-section" style="margin-top:24px">
-        <h3>🪜 ${esc(t('lb.rank_ladder'))}</h3>
-        <div class="rank-ladder">
-          ${ALL_RANKS.map(r => `
-            <div class="rank-row ${r.name === myRank.name ? 'here' : ''}">
-              <span class="ico" style="color:${r.color}">${r.icon}</span>
-              <span class="t">${esc(t('rank.' + r.name))}</span>
-              <span class="muted small">${r.min}+</span>
-            </div>
-          `).join('')}
-        </div>
-      </section>
-    `;
+    </div>`;
   }
 
-  renderContent();
+  if (!isLive) {
+    root.querySelector('#lbSelf').insertAdjacentHTML('afterend',
+      `<p class="muted small" style="margin-bottom:12px;text-align:center">
+        Chưa kết nối server. <a href="#/online" style="color:#667eea">Đăng nhập</a> để vào BXH toàn cầu.
+      </p>`);
+  }
 
-  root.querySelector('#lbTiers').addEventListener('click', e => {
-    const btn = e.target.closest('[data-tier]');
-    if (!btn) return;
-    activeTier = btn.dataset.tier;
-    root.querySelectorAll('.lb-tab').forEach(b => b.classList.toggle('active', b === btn));
-    renderContent();
-  });
+  function paint() {
+    const search = (root.querySelector('#lbSearch')?.value || '').toLowerCase().trim();
+    const tier = TIERS.find(t => t.key === activeTier);
+    let list = leaders;
+    if (tier && tier.minElo > 0) list = list.filter(l => l.elo >= tier.minElo);
+    if (search) list = list.filter(l => l.name.toLowerCase().includes(search));
 
-  let debounce;
-  root.querySelector('#lbSearch').addEventListener('input', e => {
-    clearTimeout(debounce);
-    debounce = setTimeout(() => { search = e.target.value; renderContent(); }, 200);
-  });
+    const body = root.querySelector('#lbBody');
+    const empty = root.querySelector('#lbEmpty');
+    if (list.length === 0) { body.innerHTML = ''; empty.style.display = ''; return; }
+    empty.style.display = 'none';
+
+    body.innerHTML = list.map(l => {
+      const r = getRank(l.elo);
+      const topBg = l.rank===1 ? 'rgba(244,196,48,0.12)' : l.rank===2 ? 'rgba(192,192,192,0.1)' : l.rank===3 ? 'rgba(205,127,50,0.1)' : '';
+      const podium = l.rank===1 ? '👑' : l.rank===2 ? '🥈' : l.rank===3 ? '🥉' : '';
+      const isMe   = myName && l.name === myName;
+      const wr     = l.gamesPlayed > 0 ? Math.round(l.wins / l.gamesPlayed * 100) : 0;
+      const wrColor= wr >= 60 ? '#48c78e' : wr >= 40 ? '#f4c430' : '#ff7675';
+      const rowStyle = isMe
+        ? 'background:rgba(102,126,234,0.18);border-left:3px solid #667eea'
+        : topBg ? `background:${topBg}` : '';
+      return `<tr style="${rowStyle};border-bottom:1px solid rgba(255,255,255,0.05)">
+        <td style="padding:9px 4px;font-weight:700">${l.rank} ${podium}</td>
+        <td style="padding:9px 4px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:28px;height:28px;border-radius:50%;background:${r.color};display:flex;align-items:center;
+              justify-content:center;font-weight:700;font-size:11px;flex-shrink:0">${esc(l.name.slice(0,2).toUpperCase())}</div>
+            <span style="font-size:13px">${esc(l.name)}${isMe?` <span style="background:#667eea;color:#fff;font-size:10px;padding:1px 5px;border-radius:8px;margin-left:4px">Bạn</span>`:''}</span>
+          </div>
+        </td>
+        <td style="padding:9px 4px;text-align:right;font-weight:700">${l.elo}${l.gamesPlayed===0?` <span style="font-size:10px;color:rgba(255,255,255,0.35)">New</span>`:''}
+        </td>
+        <td style="padding:9px 4px"><span style="color:${r.color}">${r.icon} <span class="lb-rank-name" style="font-size:12px">${esc(t('rank.'+r.name))}</span></span></td>
+        <td style="padding:9px 4px;text-align:center;color:#48c78e">${l.wins}</td>
+        <td style="padding:9px 4px;text-align:center;color:rgba(255,255,255,0.5)">${l.draws}</td>
+        <td style="padding:9px 4px;text-align:center;color:#ff7675">${l.losses}</td>
+        <td style="padding:9px 4px;text-align:right"><span style="color:${wrColor};font-weight:600">${wr}%</span></td>
+      </tr>`;
+    }).join('');
+  }
+
+  root.querySelector('#lbSearch').addEventListener('input', paint);
+  paint();
 }
 
 function esc(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
