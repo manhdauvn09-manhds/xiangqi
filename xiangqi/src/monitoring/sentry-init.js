@@ -24,12 +24,9 @@ export function initSentry() {
     profilesSampleRate: 0.1, // 10% for profiling
     integrations: [
       new Sentry.Replay({
-        maskAllText: true, // Privacy: don't record user input
-        blockAllMedia: true, // Privacy: don't record media
+        maskAllText: true,
+        blockAllMedia: true,
         maskAllInputs: true,
-      }),
-      new Sentry.CaptureConsole({
-        levels: ['error', 'warn'],
       }),
     ],
     // Session Replay configuration
