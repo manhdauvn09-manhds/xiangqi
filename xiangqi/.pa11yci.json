@@ -1,0 +1,15 @@
+{
+  "runners": ["axe"],
+  "timeout": 10000,
+  "wait": 1000,
+  "chromeLaunchConfig": {
+    "args": ["--no-sandbox", "--disable-setuid-sandbox"]
+  },
+  "urls": [
+    "http://localhost:5173/",
+    "http://localhost:5173/#/ai",
+    "http://localhost:5173/#/multiplayer",
+    "http://localhost:5173/#/settings",
+    "http://localhost:5173/#/leaderboard"
+  ]
+}
