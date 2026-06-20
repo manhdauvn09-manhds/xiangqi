@@ -1,15 +1,5 @@
-/* Xiangqi Frontend — Phase 1 CSS Bundle Entry Point
-   This imports all existing CSS files + Phase 1 additions */
-
-/* CRITICAL CSS (inline by Vite) */
-@import '../../styles/theme.css';
-
-/* NON-CRITICAL CSS (deferred loading) */
-@import '../../styles/board.css';
-@import '../../styles/ui.css';
-@import '../../styles/pages.css';
-
-/* PHASE 1 CSS ADDITIONS */
+/* Xiangqi Frontend — Phase 1 CSS Entry Point (minimal working version)
+   Phase 1 CSS additions only; legacy styles loaded separately */
 
 /* Accessibility: Screen reader only */
 .sr-only {
@@ -37,101 +27,15 @@ body.keyboard-nav *:focus {
   }
 }
 
-/* Image lazy loading placeholder */
-img[loading="lazy"] {
-  background-color: var(--color-bg-secondary, #f0f0f0);
-  aspect-ratio: auto;
-}
-
-/* Web Vitals optimization: prevent layout shift */
-img,
-video,
-iframe {
-  width: auto;
-  height: auto;
-  max-width: 100%;
-}
-
-/* Performance: reduce paint area */
-.board-square {
-  will-change: transform;
-  transform: translateZ(0);
-}
-
-/* Core Web Vitals: LCP optimization */
-/* Preload critical images */
-link[rel="preload"][as="image"] {
-  importance: high;
-}
-
-/* Service Worker: offline fallback styling */
-.offline-banner {
-  background-color: var(--color-warning, #ff9800);
-  color: white;
-  padding: 12px;
-  text-align: center;
-  font-weight: bold;
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 1000;
-}
-
-/* Loading state indicator */
-.page-loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100vh;
-  font-size: 18px;
-  color: var(--color-text-secondary, #999);
-}
-
-.page-loading::after {
-  content: '';
-  width: 20px;
-  height: 20px;
-  margin-left: 10px;
-  border: 2px solid var(--color-primary, #06d6a0);
-  border-top-color: transparent;
-  border-radius: 50%;
-  animation: spin 0.6s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-/* Phase 1: Feature flags for Web Vitals optimization */
+/* Phase 1 Core Styles */
 :root {
-  /* Disable animations for CLS prevention */
   --transition-duration: 0.2s;
   --animation-duration: 0.4s;
+}
 
-  /* Prefers reduced motion */
-  @media (prefers-reduced-motion: reduce) {
+@media (prefers-reduced-motion: reduce) {
+  :root {
     --transition-duration: 0ms;
     --animation-duration: 0ms;
   }
-}
-
-/* LEGACY COMPATIBILITY — ensure old styles work with new bundle */
-/* This prevents layout shift during migration phase */
-
-/* Ensure service worker script tag doesn't block rendering */
-script[src*="service-worker"],
-script[type="module"] {
-  display: none !important;
-}
-
-/* Image optimization: AVIF/WebP fallback support */
-@supports (background-image: url("data:image/avif;base64,AAAAIGZ0eXBhdmlmAAAAAG1pZAA...")) {
-  /* AVIF supported */
-}
-
-@supports (background-image: url("data:image/webp;base64,UklGRiYAAABXRUJQVlA4IBIAAAAwAQCdASoBAAEAQAcJaACdLoAAAAAAAP8A/uAAA")) {
-  /* WebP supported */
 }
