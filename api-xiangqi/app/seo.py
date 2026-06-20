@@ -7,6 +7,8 @@ from pydantic import BaseModel
 from PIL import Image, ImageDraw, ImageFont
 import io
 import base64
+import time
+from . import db
 
 # Meta tag response model
 class MetaTagsResponse(BaseModel):
@@ -140,30 +142,100 @@ def build_game_schema(game_id: str, white_player: str, black_player: str) -> dic
     }
 
 
-async def get_player_meta(player_id: str, db=None) -> Optional[MetaTagsResponse]:
+async def get_player_meta(player_id: str, db_override=None) -> Optional[MetaTagsResponse]:
     """
     Get SEO meta tags for a player profile.
-    This would typically query the database for user info.
+    Queries users and elo_profiles tables for player info.
     """
-    # TODO: Implement database query
-    # For now, return None (will trigger fallback to homepage meta)
-    return None
+    try:
+        player_id_int = int(player_id)
+    except ValueError:
+        return None
+
+    try:
+        user_row = db.fetch_one("SELECT id, display_name, avatar_url FROM users WHERE id = ?", (player_id_int,))
+        if not user_row:
+            return None
+
+        elo_row = db.fetch_one(
+            "SELECT elo, wins, losses, draws FROM elo_profiles WHERE user_id = ? AND variant = 'standard' LIMIT 1",
+            (player_id_int,)
+        )
+
+        username = user_row['display_name']
+        elo = elo_row['elo'] if elo_row else 1200
+        wins = elo_row['wins'] if elo_row else 0
+        losses = elo_row['losses'] if elo_row else 0
+        draws = elo_row['draws'] if elo_row else 0
+
+        card_image = generate_player_card_image(player_id, username, elo, wins, losses, draws)
+
+        return MetaTagsResponse(
+            title=f"{username} - Xiangqi Player | Cờ Tướng Vương",
+            description=f"ELO {elo} • {wins}W {losses}L {draws}D • Play Xiangqi with {username}",
+            image=card_image,
+            canonical_url=f"https://xiangqi.games-core.com/#/player/{player_id}",
+            keywords=f"xiangqi, chinese chess, {username}, elo {elo}",
+            type="profile",
+            schema=build_player_schema(player_id, username, elo),
+        )
+    except Exception as e:
+        print(f"[seo] Error fetching player meta for {player_id}: {e}")
+        return None
 
 
-async def get_game_meta(game_id: str, db=None) -> Optional[MetaTagsResponse]:
+async def get_game_meta(game_id: str, db_override=None) -> Optional[MetaTagsResponse]:
     """
     Get SEO meta tags for a game record.
-    This would typically query the database for game info.
+    Queries games table and looks up player names from users table.
     """
-    # TODO: Implement database query
-    # For now, return None (will trigger fallback to homepage meta)
-    return None
+    try:
+        game_row = db.fetch_one(
+            "SELECT red_user_id, black_user_id, variant, result, played_at FROM games WHERE id = ?",
+            (game_id,)
+        )
+        if not game_row:
+            return None
+
+        red_user_id = game_row['red_user_id']
+        black_user_id = game_row['black_user_id']
+        variant = game_row['variant']
+        result = game_row['result']
+
+        red_name = "Red"
+        black_name = "Black"
+
+        if red_user_id:
+            red_user = db.fetch_one("SELECT display_name FROM users WHERE id = ?", (red_user_id,))
+            if red_user:
+                red_name = red_user['display_name']
+
+        if black_user_id:
+            black_user = db.fetch_one("SELECT display_name FROM users WHERE id = ?", (black_user_id,))
+            if black_user:
+                black_name = black_user['display_name']
+
+        result_str = result if result else "In Progress"
+
+        card_image = generate_game_board_image(game_id, "", red_name, black_name)
+
+        return MetaTagsResponse(
+            title=f"{red_name} vs {black_name} - {variant.title()} Game",
+            description=f"{red_name} (Red) vs {black_name} (Black) • Result: {result_str}",
+            image=card_image,
+            canonical_url=f"https://xiangqi.games-core.com/#/game/{game_id}",
+            keywords=f"xiangqi, game, {red_name}, {black_name}",
+            type="game",
+            schema=build_game_schema(game_id, red_name, black_name),
+        )
+    except Exception as e:
+        print(f"[seo] Error fetching game meta for {game_id}: {e}")
+        return None
 
 
-async def get_replay_meta(replay_id: str, db=None) -> Optional[MetaTagsResponse]:
-    """Get SEO meta tags for a game replay."""
-    # TODO: Implement database query
-    return None
+async def get_replay_meta(replay_id: str, db_override=None) -> Optional[MetaTagsResponse]:
+    """Get SEO meta tags for a game replay (same as game meta)."""
+    return await get_game_meta(replay_id, db_override)
 
 
 # Schema.org Breadcrumb List helper
