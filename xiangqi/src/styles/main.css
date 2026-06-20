@@ -2,12 +2,12 @@
    This imports all existing CSS files + Phase 1 additions */
 
 /* CRITICAL CSS (inline by Vite) */
-@import '../../../styles/theme.css';
+@import '../../styles/theme.css';
 
 /* NON-CRITICAL CSS (deferred loading) */
-@import '../../../styles/board.css';
-@import '../../../styles/ui.css';
-@import '../../../styles/pages.css';
+@import '../../styles/board.css';
+@import '../../styles/ui.css';
+@import '../../styles/pages.css';
 
 /* PHASE 1 CSS ADDITIONS */
 

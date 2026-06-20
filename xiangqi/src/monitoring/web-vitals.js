@@ -1,7 +1,30 @@
 // Web Vitals Collection — LCP, FID, CLS, TTFB
 // Sends metrics to backend for analytics dashboard (Phase 1)
 
-import { getCLS, getCWV, getFID, getFCP, getLCP, getTTFB } from 'web-vitals';
+// Lazy-load web-vitals to handle missing dependency gracefully
+let metrics_module = null;
+let getCLS, getCWV, getFID, getFCP, getLCP, getTTFB;
+
+async function loadWebVitals() {
+  if (metrics_module) return metrics_module;
+
+  try {
+    metrics_module = await import('web-vitals');
+    ({ getCLS, getCWV, getFID, getFCP, getLCP, getTTFB } = metrics_module);
+    console.log('[Phase 1] Web Vitals module loaded');
+    return metrics_module;
+  } catch (e) {
+    console.warn('[Phase 1] web-vitals module not available, metrics disabled:', e.message);
+    // Fallback: provide no-op functions
+    getCLS = getCWV = getFID = getFCP = getLCP = getTTFB = (cb) => cb({
+      name: 'unavailable',
+      value: 0,
+      rating: 'unknown',
+      delta: 0,
+      id: 'stub',
+    });
+  }
+}
 
 const API_BASE = document.querySelector('meta[name="xq-api-base"]')?.content || 'https://xiangqi.games-core.com';
 const BATCH_SIZE = 5;
@@ -69,14 +92,17 @@ function recordMetric(metric) {
   scheduleSend();
 }
 
-export function initWebVitals() {
-  // Collect all Web Vitals metrics
-  getCLS(recordMetric);
-  getFID(recordMetric);
-  getLCP(recordMetric);
-  getCWV(recordMetric);
-  getFCP(recordMetric);
-  getTTFB(recordMetric);
+export async function initWebVitals() {
+  // Load web-vitals module first
+  await loadWebVitals();
+
+  // Collect all Web Vitals metrics (now safe to call)
+  if (getCLS) getCLS(recordMetric);
+  if (getFID) getFID(recordMetric);
+  if (getLCP) getLCP(recordMetric);
+  if (getCWV) getCWV(recordMetric);
+  if (getFCP) getFCP(recordMetric);
+  if (getTTFB) getTTFB(recordMetric);
 
   // Send remaining metrics on page unload
   window.addEventListener('beforeunload', () => {
