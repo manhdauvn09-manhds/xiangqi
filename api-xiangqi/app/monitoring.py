@@ -5,6 +5,8 @@ from datetime import datetime
 from typing import List, Optional
 from pydantic import BaseModel
 
+from . import db
+
 
 class WebVitalMetric(BaseModel):
     name: str  # "LCP", "FID", "CLS", "TTFB", "FCP"
@@ -18,7 +20,7 @@ class WebVitalMetric(BaseModel):
 class WebVitalsBatch(BaseModel):
     metrics: List[WebVitalMetric]
     timestamp: str
-    userAgent: str
+    userAgent: Optional[str] = None  # sendBeacon (on unload) omits this
     page: str
 
 
@@ -34,13 +36,17 @@ class WebVitalsSummary(BaseModel):
     rating_poor: int
 
 
-# In-memory storage for demo (replace with database in production)
-metrics_storage = []
+def _now_ms() -> int:
+    return int(datetime.utcnow().timestamp() * 1000)
+
+
+def _cutoff_ms(hours: int) -> int:
+    return _now_ms() - hours * 3600 * 1000
 
 
 async def log_web_vitals_batch(batch: WebVitalsBatch, request=None) -> dict:
     """
-    Log a batch of Web Vitals metrics.
+    Log a batch of Web Vitals metrics to the database (persists across restarts).
 
     Used by frontend to send Core Web Vitals:
     - LCP (Largest Contentful Paint) — target < 2.5s
@@ -49,17 +55,31 @@ async def log_web_vitals_batch(batch: WebVitalsBatch, request=None) -> dict:
     - TTFB (Time to First Byte) — target < 600ms
     - FCP (First Contentful Paint) — target < 1.8s
     """
-    # Store metrics (would be saved to database in production)
-    metrics_storage.extend([
-        {
-            **metric.dict(),
-            'stored_at': datetime.utcnow().isoformat(),
-            'user_agent': batch.userAgent,
-            'page': batch.page,
-            'remote_addr': request.client.host if request else 'unknown',
-        }
-        for metric in batch.metrics
-    ])
+    remote_addr = request.client.host if request and request.client else 'unknown'
+    now = _now_ms()
+
+    rows = [
+        (
+            m.name,
+            m.value,
+            m.rating,
+            m.delta,
+            m.id,
+            batch.page,
+            batch.userAgent,
+            remote_addr,
+            now,
+        )
+        for m in batch.metrics
+    ]
+
+    if rows:
+        db.execute_many(
+            """INSERT INTO web_vitals
+               (name, value, rating, delta, metric_id, page, user_agent, remote_addr, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            rows,
+        )
 
     return {
         'status': 'ok',
@@ -73,26 +93,28 @@ async def get_web_vitals_dashboard(hours: int = 24) -> dict:
     Get Web Vitals summary for the last N hours.
     Returns percentile metrics for dashboard display.
     """
-    if not metrics_storage:
-        return {
-            'lcp': {'p50': 0, 'p75': 0, 'p95': 0, 'count': 0},
-            'fid': {'p50': 0, 'p75': 0, 'p95': 0, 'count': 0},
-            'cls': {'p50': 0, 'p75': 0, 'p95': 0, 'count': 0},
-            'ttfb': {'p50': 0, 'p75': 0, 'p95': 0, 'count': 0},
-            'fcp': {'p50': 0, 'p75': 0, 'p95': 0, 'count': 0},
-        }
+    empty = {
+        'lcp': {'p50': 0, 'p75': 0, 'p95': 0, 'count': 0},
+        'fid': {'p50': 0, 'p75': 0, 'p95': 0, 'count': 0},
+        'cls': {'p50': 0, 'p75': 0, 'p95': 0, 'count': 0},
+        'ttfb': {'p50': 0, 'p75': 0, 'p95': 0, 'count': 0},
+        'fcp': {'p50': 0, 'p75': 0, 'p95': 0, 'count': 0},
+    }
+
+    rows = db.query(
+        "SELECT name, value FROM web_vitals WHERE created_at >= ?",
+        (_cutoff_ms(hours),),
+    )
+    if not rows:
+        return empty
 
     # Group by metric name
     by_metric = {}
-    for m in metrics_storage:
-        name = m['name']
-        if name not in by_metric:
-            by_metric[name] = []
-        by_metric[name].append(m['value'])
+    for r in rows:
+        by_metric.setdefault(r['name'], []).append(r['value'])
 
     # Calculate percentiles
     def percentile(data, p):
-        """Calculate pth percentile."""
         if not data:
             return 0
         sorted_data = sorted(data)
@@ -110,35 +132,49 @@ async def get_web_vitals_dashboard(hours: int = 24) -> dict:
             'needs_improvement': 0,  # Simplified
         }
 
+    # Fill in any metrics with no data so the dashboard shape is stable
+    for key, val in empty.items():
+        result.setdefault(key, val)
+
     return result
 
 
 async def get_web_vitals_by_page(page: str, hours: int = 24) -> dict:
     """Get Web Vitals metrics filtered by page."""
-    page_metrics = [m for m in metrics_storage if m['page'] == page]
+    rows = db.query(
+        """SELECT name, value, rating, delta, metric_id, page, created_at
+           FROM web_vitals
+           WHERE page = ? AND created_at >= ?
+           ORDER BY created_at DESC""",
+        (page, _cutoff_ms(hours)),
+        limit=100,
+    )
 
-    if not page_metrics:
+    if not rows:
         return {'page': page, 'metrics': []}
 
     return {
         'page': page,
-        'count': len(page_metrics),
-        'metrics': page_metrics[-100:],  # Return last 100
+        'count': len(rows),
+        'metrics': [dict(r) for r in rows],
     }
 
 
-async def get_web_vitals_health_score() -> dict:
+async def get_web_vitals_health_score(hours: int = 24) -> dict:
     """
     Calculate overall Web Vitals health score (0-100).
     Based on percentage of sessions with "good" ratings.
     """
-    if not metrics_storage:
+    rows = db.query(
+        "SELECT rating FROM web_vitals WHERE created_at >= ?",
+        (_cutoff_ms(hours),),
+    )
+    if not rows:
         return {'score': 0, 'status': 'no-data'}
 
-    # Count good/needs-improvement/poor ratings
-    good = sum(1 for m in metrics_storage if m['rating'] == 'good')
-    poor = sum(1 for m in metrics_storage if m['rating'] == 'poor')
-    total = len(metrics_storage)
+    good = sum(1 for r in rows if r['rating'] == 'good')
+    poor = sum(1 for r in rows if r['rating'] == 'poor')
+    total = len(rows)
 
     # Simple scoring: (good - poor*2) / total * 100
     score = max(0, min(100, (good - poor * 2) / total * 100))

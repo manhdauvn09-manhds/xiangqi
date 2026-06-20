@@ -1804,12 +1804,12 @@ async def metrics_get_by_page(page: str, hours: int = 24):
 
 
 @app.get('/api/metrics/health-score')
-async def metrics_get_health_score():
+async def metrics_get_health_score(hours: int = 24):
     """
     Get overall Web Vitals health score (0-100).
     Indicates site performance health.
     """
-    return await get_web_vitals_health_score()
+    return await get_web_vitals_health_score(hours)
 
 
 # ═════════════════════════════════════════════
