@@ -349,6 +349,24 @@ MIGRATIONS = [
     CREATE INDEX IF NOT EXISTS idx_audit_logs_created ON audit_logs(created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_audit_logs_user ON audit_logs(user_id);
     """,
+    # v6 — Phase 1: Web Vitals persistence (survive container restarts)
+    """
+    CREATE TABLE IF NOT EXISTS web_vitals (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        name        TEXT NOT NULL,        -- LCP | FID | CLS | TTFB | FCP
+        value       REAL NOT NULL,
+        rating      TEXT NOT NULL,        -- good | needs-improvement | poor
+        delta       REAL,
+        metric_id   TEXT NOT NULL,
+        page        TEXT NOT NULL,
+        user_agent  TEXT,
+        remote_addr TEXT,
+        created_at  INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_web_vitals_name ON web_vitals(name, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_web_vitals_page ON web_vitals(page, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_web_vitals_created ON web_vitals(created_at DESC);
+    """,
 ]
 
 

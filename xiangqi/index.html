@@ -12,12 +12,12 @@
 <!-- Cache-Control handled by nginx headers for better control -->
 <meta name="color-scheme" content="light dark">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='75' font-size='90' font-family='serif'>象</text></svg>">
-<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%230a0e1a' width='180' height='180'/><text x='50%' y='55%' font-size='120' font-family='serif' fill='%2306d6a0' text-anchor='middle' dominant-baseline='middle'>象</text></svg>">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%230a0e1a' width='180' height='180'/><text x='50%25' y='55%25' font-size='120' font-family='serif' fill='%2306d6a0' text-anchor='middle' dominant-baseline='middle'>象</text></svg>">
 <link rel="manifest" href="/manifest.json">
 <link rel="preconnect" href="https://accounts.google.com">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 
-<!-- Open Graph Tags -->
+<!-- Open Graph Tags — dynamically updated by Phase 1 meta injector -->
 <meta property="og:title" content="Cờ Tướng Vương - Play Xiangqi Online | AI & Multiplayer">
 <meta property="og:description" content="Play Xiangqi online against AI or real players. 10 difficulty levels, ELO ranking, blind & standard variants.">
 <meta property="og:type" content="website">
@@ -27,7 +27,7 @@
 <meta property="og:locale" content="en_US">
 <meta property="og:locale:alternate" content="vi_VN">
 
-<!-- Twitter Card Tags -->
+<!-- Twitter Card Tags — dynamically updated by Phase 1 meta injector -->
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Cờ Tướng Vương - Play Xiangqi Online | AI & Multiplayer">
 <meta name="twitter:description" content="Modern Xiangqi game with AI opponents and online multiplayer. Multiple variants and skill levels.">
@@ -38,18 +38,11 @@
 <link rel="alternate" hreflang="en" href="https://xiangqi.games-core.com/?lang=en">
 <link rel="alternate" hreflang="x-default" href="https://xiangqi.games-core.com/">
 
-<!-- Backend API base — đổi khi deploy production -->
+<!-- Backend API base — Phase 1: used by meta injector, Web Vitals, Sentry -->
 <meta name="xq-api-base" content="https://xiangqi.games-core.com">
 
-<!-- Performance & Analytics monitoring (Phase 2) -->
-<!-- TODO: Add Web Vitals reporting: https://github.com/GoogleChrome/web-vitals -->
-<!-- TODO: Add Sentry error tracking for production monitoring -->
-<!-- TODO: Add Google Analytics 4 for conversion tracking -->
-<!-- TODO: Add A/B testing framework for funnel optimization -->
-
-<!-- Language-specific optimization -->
-<meta property="og:locale:alternate" content="en_US">
-<meta property="og:locale:alternate" content="vi_VN">
+<!-- Sentry DSN (Phase 1 production error tracking) -->
+<meta name="sentry-dsn" content="">
 
 <!-- Theme boot — chống flash of wrong theme. PHẢI nằm trước CSS để applyTheme kịp. -->
 <script>
@@ -69,10 +62,8 @@
 <title>Cờ Tướng Vương - Play Xiangqi Online | AI & Multiplayer</title>
 <link rel="canonical" href="https://xiangqi.games-core.com/">
 
-<link rel="stylesheet" href="styles/theme.css">
-<link rel="stylesheet" href="styles/board.css">
-<link rel="stylesheet" href="styles/ui.css">
-<link rel="stylesheet" href="styles/pages.css">
+<!-- Vite CSS will be injected here automatically -->
+<!-- Pre-existing CSS imports removed — now handled by src/styles/main.css -->
 
 <script type="application/ld+json">
 {
@@ -97,6 +88,12 @@
   }
 }
 </script>
+
+<!-- Phase 1: Infrastructure module (Vite bundled) — loads first for early initialization -->
+<script type="module" src="./src/main.js"></script>
+
+<!-- Legacy: Game logic (loads after Phase 1 infrastructure is ready) -->
+<script type="module" src="./scripts/main.js"></script>
 
 <script type="application/ld+json">
 {

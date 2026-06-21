@@ -1,0 +1,41 @@
+/* Xiangqi Frontend — Phase 1 CSS Entry Point (minimal working version)
+   Phase 1 CSS additions only; legacy styles loaded separately */
+
+/* Accessibility: Screen reader only */
+.sr-only {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+/* Keyboard navigation indicator */
+body.keyboard-nav *:focus {
+  outline: 3px solid currentColor;
+  outline-offset: 2px;
+}
+
+/* Motion preference support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Phase 1 Core Styles */
+:root {
+  --transition-duration: 0.2s;
+  --animation-duration: 0.4s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --transition-duration: 0ms;
+    --animation-duration: 0ms;
+  }
+}

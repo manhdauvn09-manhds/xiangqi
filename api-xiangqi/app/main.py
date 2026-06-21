@@ -1729,6 +1729,102 @@ def _sha256_short(s: str) -> str:
 
 
 # ═════════════════════════════════════════════
+# Phase 1: SEO + Monitoring Routes
+# ═════════════════════════════════════════════
+
+from .seo import (
+    MetaTagsResponse, build_player_schema, build_game_schema,
+    build_breadcrumb_schema, get_player_meta, get_game_meta, get_replay_meta
+)
+from .monitoring import (
+    WebVitalsBatch, log_web_vitals_batch, get_web_vitals_dashboard,
+    get_web_vitals_by_page, get_web_vitals_health_score
+)
+
+
+@app.get('/api/seo/player/{player_id}', response_model=MetaTagsResponse)
+async def seo_get_player_meta(player_id: str):
+    """
+    Get SEO meta tags for a player profile card.
+    Used for social sharing (OG, Twitter, Schema.org).
+    """
+    meta = await get_player_meta(player_id)
+    if not meta:
+        # Fallback to generic player meta
+        return MetaTagsResponse(
+            title=f'Xiangqi Player Profile',
+            description=f'View player profile and statistics',
+            image='/og-image.svg',
+            canonical_url=f'https://xiangqi.games-core.com/#/player/{player_id}',
+            type='profile',
+        )
+    return meta
+
+
+@app.get('/api/seo/game/{game_id}', response_model=MetaTagsResponse)
+async def seo_get_game_meta(game_id: str):
+    """Get SEO meta tags for a game record card."""
+    meta = await get_game_meta(game_id)
+    if not meta:
+        return MetaTagsResponse(
+            title=f'Xiangqi Game #{game_id}',
+            description=f'Watch Xiangqi game record and analysis',
+            image='/og-image.svg',
+            canonical_url=f'https://xiangqi.games-core.com/#/game/{game_id}',
+            type='game',
+        )
+    return meta
+
+
+@app.get('/api/seo/replay/{replay_id}', response_model=MetaTagsResponse)
+async def seo_get_replay_meta(replay_id: str):
+    """Get SEO meta tags for a game replay."""
+    meta = await get_replay_meta(replay_id)
+    if not meta:
+        return MetaTagsResponse(
+            title=f'Xiangqi Game Replay',
+            description=f'Replay and analyze Xiangqi games',
+            image='/og-image.svg',
+            canonical_url=f'https://xiangqi.games-core.com/#/replay/{replay_id}',
+            type='replay',
+        )
+    return meta
+
+
+@app.post('/api/metrics/web-vitals/batch')
+async def metrics_log_web_vitals(batch: WebVitalsBatch, request: Request):
+    """
+    Log a batch of Web Vitals metrics from client.
+    Used for Core Web Vitals monitoring (LCP, FID, CLS, TTFB, FCP).
+    """
+    return await log_web_vitals_batch(batch, request)
+
+
+@app.get('/api/metrics/dashboard')
+async def metrics_get_dashboard(hours: int = 24):
+    """
+    Get Web Vitals metrics dashboard for last N hours.
+    Returns percentile statistics for LCP, FID, CLS, etc.
+    """
+    return await get_web_vitals_dashboard(hours)
+
+
+@app.get('/api/metrics/by-page')
+async def metrics_get_by_page(page: str, hours: int = 24):
+    """Get Web Vitals metrics filtered by page."""
+    return await get_web_vitals_by_page(page, hours)
+
+
+@app.get('/api/metrics/health-score')
+async def metrics_get_health_score(hours: int = 24):
+    """
+    Get overall Web Vitals health score (0-100).
+    Indicates site performance health.
+    """
+    return await get_web_vitals_health_score(hours)
+
+
+# ═════════════════════════════════════════════
 # Health
 # ═════════════════════════════════════════════
 

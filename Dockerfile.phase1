@@ -1,0 +1,96 @@
+# Dockerfile.phase1 — Phase 1 Optimized Build
+# Multi-stage build: Frontend (Vite) + Backend (FastAPI) + Runtime
+
+# ============= STAGE 1: Frontend Build =============
+FROM node:20-alpine AS fe-builder
+
+WORKDIR /app/fe
+
+# Install dependencies
+COPY xiangqi/package*.json ./
+RUN npm ci --prefer-offline --no-audit
+
+# Copy source code
+COPY xiangqi/src ./src
+COPY xiangqi/public ./public
+COPY xiangqi/vite.config.js ./
+COPY xiangqi/index.html ./
+COPY xiangqi/styles ./styles
+COPY xiangqi/scripts ./scripts
+
+# Build with Vite (tree-shake, minify, fingerprint)
+RUN npm run build
+
+# ============= STAGE 2: Backend Build =============
+FROM python:3.11-slim AS api-builder
+
+WORKDIR /app/api
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies
+COPY api-xiangqi/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy backend source
+COPY api-xiangqi/app ./app
+COPY api-xiangqi/server.py ./
+COPY api-xiangqi/tests ./tests
+
+# Run tests during build (optional, can fail gracefully)
+RUN python -m pytest tests/ --tb=short -v || true
+
+# ============= STAGE 3: Runtime =============
+FROM python:3.11-slim
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    libpq5 \
+    gcc \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Setup API
+WORKDIR /app/api
+
+# Copy requirements and install in runtime (not relying on api-builder site-packages)
+COPY api-xiangqi/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy backend code
+COPY api-xiangqi/app ./app
+COPY api-xiangqi/server.py ./
+
+# Setup Frontend (from Vite build)
+WORKDIR /app/fe
+COPY --from=fe-builder /app/fe/dist ./dist
+COPY --from=fe-builder /app/fe/public ./public
+COPY xiangqi/index.html ./
+COPY xiangqi/manifest.json ./
+
+# Create data directory for SQLite
+RUN mkdir -p /data && chmod 777 /data
+
+# Expose ports
+EXPOSE 8787 5500
+
+# Environment variables
+ENV PYTHONUNBUFFERED=1 \
+    XQ_PORT=8787 \
+    XQ_DB_PATH=/data/xiangqi.db \
+    CORS_ORIGINS=https://xiangqi.games-core.com \
+    NODE_ENV=production \
+    VITE_BUILD=1
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+  CMD curl -f http://localhost:8787/api/health || exit 1
+
+# Entrypoint: start API server
+WORKDIR /app/api
+ENTRYPOINT ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8787"]
