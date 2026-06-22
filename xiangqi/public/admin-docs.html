@@ -1,0 +1,1104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=5.0">
+<meta name="theme-color" content="#0a0e1a">
+<meta name="description" content="Cờ Tướng Vương Admin Documentation - Complete guide for administrators including login credentials, system management, user control, and monitoring features.">
+<meta name="keywords" content="admin, documentation, system management, credentials, monitoring, control panel">
+<meta name="robots" content="noindex, nofollow">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="color-scheme" content="light dark">
+
+<title>Admin Documentation - Cờ Tướng Vương</title>
+<link rel="canonical" href="https://xiangqi.games-core.com/admin-docs.html">
+
+<script>
+(function () {
+  try {
+    var saved = localStorage.getItem('xq_theme') || 'dark';
+    var effective = saved === 'auto'
+      ? (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
+      : saved;
+    document.documentElement.setAttribute('data-theme', effective);
+  } catch (_) {
+    document.documentElement.setAttribute('data-theme', 'dark');
+  }
+})();
+</script>
+
+<style>
+:root {
+  --bg-dark: #0a0e1a;
+  --bg-lighter: #151b2b;
+  --bg-light: #1f2937;
+  --text-primary: #ffffff;
+  --text-secondary: #b0b8cc;
+  --accent: #ff6b6b;
+  --accent-dark: #ff5252;
+  --border: #2d3748;
+  --success: #06d6a0;
+  --warning: #ffd93d;
+  --danger: #ff6b6b;
+}
+
+[data-theme="light"] {
+  --bg-dark: #ffffff;
+  --bg-lighter: #f9fafb;
+  --bg-light: #f3f4f6;
+  --text-primary: #1f2937;
+  --text-secondary: #6b7280;
+  --accent: #dc2626;
+  --accent-dark: #b91c1c;
+  --border: #e5e7eb;
+  --success: #059669;
+  --warning: #f59e0b;
+  --danger: #dc2626;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'Monaco', 'Courier New', monospace;
+  background: var(--bg-dark);
+  color: var(--text-primary);
+  line-height: 1.6;
+  font-size: 15px;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+h1 { font-size: 2.5rem; margin-bottom: 1rem; line-height: 1.2; color: var(--accent); }
+h2 { font-size: 2rem; margin-top: 2rem; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--accent); }
+h3 { font-size: 1.5rem; margin-top: 1.5rem; margin-bottom: 0.75rem; }
+h4 { font-size: 1.25rem; margin-top: 1rem; margin-bottom: 0.5rem; }
+
+p { margin-bottom: 1rem; }
+ul, ol { margin-left: 1.5rem; margin-bottom: 1rem; }
+li { margin-bottom: 0.5rem; }
+
+code {
+  background: var(--bg-light);
+  padding: 0.3em 0.6em;
+  border-radius: 3px;
+  font-family: 'Monaco', 'Courier New', monospace;
+  color: var(--success);
+}
+
+pre {
+  background: var(--bg-light);
+  padding: 1.5rem;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin-bottom: 1.5rem;
+  border-left: 3px solid var(--accent);
+}
+
+pre code { background: none; padding: 0; color: inherit; }
+
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+header {
+  background: var(--bg-lighter);
+  border-bottom: 2px solid var(--accent);
+  padding: 2rem 0;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+header h1 {
+  margin: 0;
+  font-size: 2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+header p {
+  margin: 0.5rem 0 0 0;
+  color: var(--text-secondary);
+}
+
+nav.toc {
+  background: var(--bg-lighter);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin: 2rem 0;
+  border-left: 4px solid var(--danger);
+}
+
+nav.toc h3 {
+  margin-top: 0;
+  color: var(--danger);
+}
+
+nav.toc ul { margin: 1rem 0; }
+nav.toc li { margin: 0.5rem 0; }
+nav.toc a {
+  display: block;
+  padding: 0.5rem;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+nav.toc a:hover { background: var(--bg-light); }
+
+.section {
+  margin: 3rem 0;
+  padding: 2rem;
+  background: var(--bg-lighter);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.warning-box {
+  background: rgba(255, 107, 107, 0.1);
+  border-left: 4px solid var(--danger);
+  padding: 1.5rem;
+  border-radius: 4px;
+  margin: 1.5rem 0;
+}
+
+.warning-box h4 {
+  margin-top: 0;
+  color: var(--danger);
+}
+
+.success-box {
+  background: rgba(6, 214, 160, 0.1);
+  border-left: 4px solid var(--success);
+  padding: 1.5rem;
+  border-radius: 4px;
+  margin: 1.5rem 0;
+}
+
+.info-box {
+  background: var(--bg-light);
+  border-left: 4px solid #3b82f6;
+  padding: 1.5rem;
+  border-radius: 4px;
+  margin: 1.5rem 0;
+}
+
+.credential-box {
+  background: var(--bg-light);
+  border-radius: 8px;
+  padding: 2rem;
+  margin: 2rem 0;
+  border: 2px solid var(--danger);
+  font-family: 'Monaco', monospace;
+}
+
+.credential-box h4 {
+  margin-top: 0;
+  color: var(--danger);
+  margin-bottom: 1rem;
+}
+
+.cred-line {
+  display: flex;
+  margin: 0.75rem 0;
+  align-items: center;
+}
+
+.cred-label {
+  color: var(--text-secondary);
+  min-width: 150px;
+  font-weight: 600;
+}
+
+.cred-value {
+  background: var(--bg-dark);
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  flex: 1;
+  color: var(--success);
+  user-select: all;
+  cursor: pointer;
+}
+
+.cred-value:hover {
+  background: rgba(6, 214, 160, 0.1);
+}
+
+.copy-btn {
+  background: var(--accent);
+  color: var(--bg-dark);
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-left: 1rem;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+.copy-btn:hover { background: var(--accent-dark); }
+.copy-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+  background: var(--bg-light);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 1rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.95rem;
+}
+
+th {
+  background: var(--accent);
+  color: var(--bg-dark);
+  font-weight: bold;
+}
+
+tr:last-child td { border-bottom: none; }
+tr:hover { background: rgba(255, 107, 107, 0.05); }
+
+.endpoint {
+  background: var(--bg-light);
+  padding: 1.5rem;
+  border-radius: 6px;
+  margin: 1.5rem 0;
+  border-left: 4px solid #3b82f6;
+}
+
+.method {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  margin-right: 0.5rem;
+  font-family: 'Monaco', monospace;
+}
+
+.method.get { background: rgba(52, 211, 153, 0.2); color: var(--success); }
+.method.post { background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
+.method.put { background: rgba(251, 191, 36, 0.2); color: var(--warning); }
+.method.delete { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
+
+.breadcrumb {
+  margin: 1.5rem 0;
+  padding: 1rem;
+  background: var(--bg-light);
+  border-radius: 4px;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.breadcrumb a { margin: 0 0.25rem; }
+.breadcrumb span { margin: 0 0.5rem; }
+
+.status-badge {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.status-active { background: rgba(6, 214, 160, 0.2); color: var(--success); }
+.status-inactive { background: rgba(107, 114, 128, 0.2); color: var(--text-secondary); }
+
+footer {
+  background: var(--bg-lighter);
+  border-top: 2px solid var(--accent);
+  padding: 2rem;
+  text-align: center;
+  margin-top: 3rem;
+  color: var(--text-secondary);
+}
+
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  z-index: -1;
+}
+
+.skip-link:focus-visible {
+  position: static;
+  left: 0;
+  z-index: 9999;
+  padding: 1rem;
+  background: var(--accent);
+  color: var(--bg-dark);
+  display: block;
+  text-align: center;
+  font-weight: bold;
+}
+
+@media (max-width: 768px) {
+  h1 { font-size: 1.75rem; }
+  h2 { font-size: 1.5rem; }
+  h3 { font-size: 1.25rem; }
+  .container { padding: 1rem; }
+  .section { padding: 1rem; }
+  table { font-size: 0.85rem; }
+  th, td { padding: 0.75rem; }
+  .credential-box { padding: 1.5rem; }
+  .cred-line { flex-direction: column; align-items: flex-start; }
+  .cred-label { min-width: auto; margin-bottom: 0.5rem; }
+  .copy-btn { margin-left: 0; margin-top: 0.5rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+</style>
+</head>
+<body>
+
+<a href="#main" class="skip-link">Skip to main content</a>
+
+<header role="banner">
+  <div class="container">
+    <h1>⚙️ Admin Documentation</h1>
+    <p>Cờ Tướng Vương - System Administration & Control Panel Guide</p>
+  </div>
+</header>
+
+<main id="main" class="container">
+  <nav class="breadcrumb" aria-label="Breadcrumb">
+    <a href="/" title="Home">Home</a>
+    <span aria-hidden="true">/</span>
+    <span>Admin Docs</span>
+  </nav>
+
+  <nav class="toc" aria-label="Table of Contents">
+    <h3>📋 Contents</h3>
+    <ul>
+      <li><a href="#overview">Overview</a></li>
+      <li><a href="#access">Access & Credentials</a></li>
+      <li><a href="#dashboard">Admin Dashboard</a></li>
+      <li><a href="#user-management">User Management</a></li>
+      <li><a href="#game-control">Game Control</a></li>
+      <li><a href="#monitoring">System Monitoring</a></li>
+      <li><a href="#api">Admin API</a></li>
+      <li><a href="#security">Security Guidelines</a></li>
+      <li><a href="#troubleshooting">Troubleshooting</a></li>
+    </ul>
+  </nav>
+
+  <!-- Overview -->
+  <section class="section" id="overview" aria-labelledby="overview-heading">
+    <h2 id="overview-heading">📊 Admin System Overview</h2>
+    <p>The Cờ Tướng Vương Admin system provides complete control over:</p>
+    <ul>
+      <li>User accounts and authentication</li>
+      <li>Game sessions and matches</li>
+      <li>ELO ratings and rankings</li>
+      <li>Tournaments and competitions</li>
+      <li>System monitoring and analytics</li>
+      <li>Content management and moderation</li>
+      <li>Server health and performance</li>
+    </ul>
+    <p style="color: var(--text-secondary); margin-top: 1.5rem;">Access Level: <span class="status-badge status-active">ADMIN</span></p>
+  </section>
+
+  <!-- Access & Credentials -->
+  <section class="section" id="access" aria-labelledby="access-heading">
+    <h2 id="access-heading">🔐 Access & Login Credentials</h2>
+
+    <h3>Admin Panel URL</h3>
+    <pre><code>https://xiangqi.games-core.com/admin</code></pre>
+
+    <h3>Primary Admin Accounts</h3>
+
+    <div class="credential-box">
+      <h4>👤 Super Admin Account</h4>
+      <div class="cred-line">
+        <span class="cred-label">Email:</span>
+        <span class="cred-value" onclick="copyToClipboard(this)">admin@xiangqi.games-core.com</span>
+        <button class="copy-btn" onclick="copy(this)">Copy</button>
+      </div>
+      <div class="cred-line">
+        <span class="cred-label">Password:</span>
+        <span class="cred-value" onclick="copyToClipboard(this)">XQ@Admin2026!SuperSecure#</span>
+        <button class="copy-btn" onclick="copy(this)">Copy</button>
+      </div>
+      <div class="cred-line">
+        <span class="cred-label">2FA Token:</span>
+        <span class="cred-value" onclick="copyToClipboard(this)">JBSWY3DPEBLW64TMMQ======</span>
+        <button class="copy-btn" onclick="copy(this)">Copy</button>
+      </div>
+      <div class="cred-line">
+        <span class="cred-label">Permissions:</span>
+        <span style="color: var(--success);">All (Full Access)</span>
+      </div>
+    </div>
+
+    <div class="credential-box">
+      <h4>👨‍💼 System Manager Account</h4>
+      <div class="cred-line">
+        <span class="cred-label">Email:</span>
+        <span class="cred-value" onclick="copyToClipboard(this)">manager@xiangqi.games-core.com</span>
+        <button class="copy-btn" onclick="copy(this)">Copy</button>
+      </div>
+      <div class="cred-line">
+        <span class="cred-label">Password:</span>
+        <span class="cred-value" onclick="copyToClipboard(this)">XQ@Manager2026!Secure#</span>
+        <button class="copy-btn" onclick="copy(this)">Copy</button>
+      </div>
+      <div class="cred-line">
+        <span class="cred-label">2FA Token:</span>
+        <span class="cred-value" onclick="copyToClipboard(this)">JBSWY3DQEBLWKU3GNVQ======</span>
+        <button class="copy-btn" onclick="copy(this)">Copy</button>
+      </div>
+      <div class="cred-line">
+        <span class="cred-label">Permissions:</span>
+        <span style="color: #3b82f6;">User Management, Game Control, Monitoring</span>
+      </div>
+    </div>
+
+    <div class="credential-box">
+      <h4>📊 Moderator Account</h4>
+      <div class="cred-line">
+        <span class="cred-label">Email:</span>
+        <span class="cred-value" onclick="copyToClipboard(this)">moderator@xiangqi.games-core.com</span>
+        <button class="copy-btn" onclick="copy(this)">Copy</button>
+      </div>
+      <div class="cred-line">
+        <span class="cred-label">Password:</span>
+        <span class="cred-value" onclick="copyToClipboard(this)">XQ@Mod2026!Secure#</span>
+        <button class="copy-btn" onclick="copy(this)">Copy</button>
+      </div>
+      <div class="cred-line">
+        <span class="cred-label">2FA Token:</span>
+        <span class="cred-value" onclick="copyToClipboard(this)">JBSWY3DOEBLW64TNNQ======</span>
+        <button class="copy-btn" onclick="copy(this)">Copy</button>
+      </div>
+      <div class="cred-line">
+        <span class="cred-label">Permissions:</span>
+        <span style="color: var(--warning);">User Moderation, Content Control</span>
+      </div>
+    </div>
+
+    <div class="warning-box">
+      <h4>⚠️ IMPORTANT SECURITY WARNINGS</h4>
+      <ul>
+        <li><strong>Change default passwords immediately</strong> after first login</li>
+        <li><strong>Enable 2FA</strong> for all admin accounts</li>
+        <li><strong>Never share</strong> admin credentials via email or messaging</li>
+        <li><strong>Use VPN</strong> when accessing admin panel from public networks</li>
+        <li><strong>Log out</strong> after each session and don't leave sessions open</li>
+        <li><strong>Audit logs</strong> regularly for suspicious activities</li>
+        <li><strong>Rotate credentials</strong> every 90 days</li>
+      </ul>
+    </div>
+
+    <h3>Login Steps</h3>
+    <ol>
+      <li>Navigate to <code>https://xiangqi.games-core.com/admin</code></li>
+      <li>Enter email and password from credentials above</li>
+      <li>Enter 2FA code from authenticator app (if enabled)</li>
+      <li>Click "Sign In"</li>
+      <li>You will be redirected to the Admin Dashboard</li>
+    </ol>
+  </section>
+
+  <!-- Admin Dashboard -->
+  <section class="section" id="dashboard" aria-labelledby="dashboard-heading">
+    <h2 id="dashboard-heading">📈 Admin Dashboard</h2>
+
+    <h3>Dashboard Overview</h3>
+    <p>The main dashboard provides a real-time overview of the system:</p>
+
+    <table aria-label="Dashboard widgets">
+      <thead>
+        <tr>
+          <th>Widget</th>
+          <th>Purpose</th>
+          <th>Update Frequency</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Active Users</strong></td>
+          <td>Currently online players</td>
+          <td>Real-time</td>
+        </tr>
+        <tr>
+          <td><strong>Games Today</strong></td>
+          <td>Total matches played</td>
+          <td>Every 5 sec</td>
+        </tr>
+        <tr>
+          <td><strong>Server Status</strong></td>
+          <td>API, Database, Cache health</td>
+          <td>Every 10 sec</td>
+        </tr>
+        <tr>
+          <td><strong>System Load</strong></td>
+          <td>CPU, Memory, Network usage</td>
+          <td>Every 30 sec</td>
+        </tr>
+        <tr>
+          <td><strong>Recent Errors</strong></td>
+          <td>Latest exceptions/failures</td>
+          <td>Real-time</td>
+        </tr>
+        <tr>
+          <td><strong>ELO Changes</strong></td>
+          <td>Top rating movers</td>
+          <td>Every 1 min</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="info-box">
+      <h4>💡 Dashboard Tips</h4>
+      <ul>
+        <li>Use <strong>date range picker</strong> to filter historical data</li>
+        <li>Click on widgets to drill down into detailed reports</li>
+        <li>Export data as CSV or JSON for external analysis</li>
+        <li>Set custom alerts for critical metrics</li>
+        <li>Save dashboard layouts for quick access</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- User Management -->
+  <section class="section" id="user-management" aria-labelledby="user-heading">
+    <h2 id="user-heading">👥 User Management</h2>
+
+    <h3>User List & Search</h3>
+    <p>Access the complete user database:</p>
+    <pre><code>/admin/users</code></pre>
+
+    <h4>Available Filters:</h4>
+    <ul>
+      <li><strong>Status:</strong> Active, Suspended, Banned, Inactive</li>
+      <li><strong>ELO Range:</strong> Min-Max rating</li>
+      <li><strong>Join Date:</strong> From-To date</li>
+      <li><strong>Last Activity:</strong> Last login date</li>
+      <li><strong>Verification:</strong> Email verified, Phone verified</li>
+    </ul>
+
+    <h3>User Actions</h3>
+
+    <h4>View User Profile</h4>
+    <p>Click on username to view:</p>
+    <ul>
+      <li>Account information (email, join date, 2FA status)</li>
+      <li>ELO ratings (Standard & Blind)</li>
+      <li>Game history and statistics</li>
+      <li>Account flags and notes</li>
+      <li>Login history and activity timeline</li>
+    </ul>
+
+    <h4>Modify User Account</h4>
+    <p>Admin can:</p>
+    <ul>
+      <li><strong>Reset password:</strong> User must change on next login</li>
+      <li><strong>Change email:</strong> Update email address</li>
+      <li><strong>Edit display name:</strong> Modify username</li>
+      <li><strong>Adjust ELO:</strong> Manually modify rating (use carefully!)</li>
+      <li><strong>Reset 2FA:</strong> Re-enable if user loses access</li>
+    </ul>
+
+    <h4>Suspend/Ban Users</h4>
+    <div class="warning-box">
+      <h4>⚠️ Account Suspension</h4>
+      <p><strong>Suspend:</strong> Temporary restriction (auto-unlock after period)</p>
+      <pre><code>POST /admin/users/{id}/suspend
+{
+  "reason": "Cheating suspected",
+  "duration_days": 30,
+  "notify_user": true
+}</code></pre>
+
+      <p style="margin-top: 1rem;"><strong>Ban:</strong> Permanent restriction (requires manual unlock)</p>
+      <pre><code>POST /admin/users/{id}/ban
+{
+  "reason": "Multiple violations of ToS",
+  "notify_user": true,
+  "refund": false
+}</code></pre>
+    </div>
+
+    <h3>User Verification</h3>
+    <table aria-label="User verification options">
+      <thead>
+        <tr>
+          <th>Verification Type</th>
+          <th>Status</th>
+          <th>Required For</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Email Verification</td>
+          <td><span class="status-badge status-active">Active</span></td>
+          <td>Account creation, Tournaments</td>
+        </tr>
+        <tr>
+          <td>Phone Verification (SMS)</td>
+          <td><span class="status-badge status-inactive">Optional</span></td>
+          <td>Account recovery, 2FA</td>
+        </tr>
+        <tr>
+          <td>KYC (Know Your Customer)</td>
+          <td><span class="status-badge status-inactive">Not implemented</span></td>
+          <td>Prize tournament participation</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- Game Control -->
+  <section class="section" id="game-control" aria-labelledby="game-heading">
+    <h2 id="game-heading">🎮 Game Control</h2>
+
+    <h3>Active Games Monitoring</h3>
+    <p>Monitor all ongoing games in real-time:</p>
+    <pre><code>/admin/games/active</code></pre>
+
+    <h4>Game Controls:</h4>
+    <ul>
+      <li><strong>Force end:</strong> Terminate game (both players notified)</li>
+      <li><strong>Pause/Resume:</strong> Temporarily stop game timer</li>
+      <li><strong>Reset:</strong> Return to starting position</li>
+      <li><strong>Award win:</strong> Manually assign victory</li>
+      <li><strong>Declare draw:</strong> Force game as draw</li>
+    </ul>
+
+    <h3>ELO Management</h3>
+
+    <h4>Adjust Player Rating</h4>
+    <p><strong>Use sparingly!</strong> Only for corrections or special cases.</p>
+    <pre><code>PATCH /admin/users/{id}/elo
+{
+  "variant": "standard",
+  "new_rating": 1800,
+  "reason": "Rating error correction",
+  "log_reason": true
+}</code></pre>
+
+    <h4>Reset Seasonal Ratings</h4>
+    <p>Reset all ratings at season end:</p>
+    <pre><code>POST /admin/elo/reset-season
+{
+  "season": "2026-Q2",
+  "preserve_percentile": true
+}</code></pre>
+
+    <h3>Tournament Management</h3>
+
+    <h4>Create Tournament</h4>
+    <pre><code>POST /admin/tournaments
+{
+  "name": "Summer Championship 2026",
+  "description": "...",
+  "format": "round-robin",
+  "min_elo": 1400,
+  "max_players": 64,
+  "start_date": "2026-07-01",
+  "end_date": "2026-07-31",
+  "prize_pool": 5000
+}</code></pre>
+
+    <h4>Manage Participants</h4>
+    <ul>
+      <li>Add/remove players</li>
+      <li>Adjust handicap/seeding</li>
+      <li>Publish standings</li>
+      <li>Announce winners</li>
+      <li>Distribute prizes</li>
+    </ul>
+
+    <div class="success-box">
+      <h4>✅ Tournament Workflow</h4>
+      <ol>
+        <li>Create tournament with parameters</li>
+        <li>Open registration period</li>
+        <li>Close registration and generate brackets</li>
+        <li>Monitor matches in real-time</li>
+        <li>Update results as games complete</li>
+        <li>Calculate final standings</li>
+        <li>Award prizes and badges</li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- System Monitoring -->
+  <section class="section" id="monitoring" aria-labelledby="monitoring-heading">
+    <h2 id="monitoring-heading">📊 System Monitoring & Analytics</h2>
+
+    <h3>Server Health</h3>
+    <pre><code>/admin/health</code></pre>
+
+    <table aria-label="System health checks">
+      <thead>
+        <tr>
+          <th>Component</th>
+          <th>Status</th>
+          <th>Response Time</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>API Server</td>
+          <td><span class="status-badge status-active">Healthy</span></td>
+          <td>&lt; 100ms</td>
+        </tr>
+        <tr>
+          <td>Database (PostgreSQL)</td>
+          <td><span class="status-badge status-active">Healthy</span></td>
+          <td>&lt; 50ms</td>
+        </tr>
+        <tr>
+          <td>Redis Cache</td>
+          <td><span class="status-badge status-active">Healthy</span></td>
+          <td>&lt; 10ms</td>
+        </tr>
+        <tr>
+          <td>WebSocket Server</td>
+          <td><span class="status-badge status-active">Healthy</span></td>
+          <td>&lt; 200ms</td>
+        </tr>
+        <tr>
+          <td>File Storage</td>
+          <td><span class="status-badge status-active">Healthy</span></td>
+          <td>&lt; 500ms</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>Performance Metrics</h3>
+    <ul>
+      <li><strong>CPU Usage:</strong> Current and 24h average</li>
+      <li><strong>Memory:</strong> Used/Total, Garbage collection stats</li>
+      <li><strong>Network:</strong> In/Out bandwidth, latency</li>
+      <li><strong>Disk:</strong> Storage usage, I/O operations</li>
+      <li><strong>Database:</strong> Query time, connection pool, slow queries</li>
+    </ul>
+
+    <h3>Analytics Reports</h3>
+    <pre><code>/admin/analytics</code></pre>
+
+    <h4>Available Reports:</h4>
+    <ul>
+      <li><strong>Daily Active Users (DAU):</strong> User engagement trends</li>
+      <li><strong>Games Per Day:</strong> Gaming activity</li>
+      <li><strong>Revenue:</strong> If monetized (if applicable)</li>
+      <li><strong>User Acquisition:</strong> New signups by source</li>
+      <li><strong>Retention Cohorts:</strong> User retention analysis</li>
+      <li><strong>Error Rates:</strong> Application stability</li>
+    </ul>
+
+    <div class="info-box">
+      <h4>📥 Export Options</h4>
+      <ul>
+        <li>CSV for spreadsheet analysis</li>
+        <li>JSON for programmatic access</li>
+        <li>PDF reports with visualizations</li>
+        <li>Real-time dashboards via Grafana/Kibana</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- Admin API -->
+  <section class="section" id="api" aria-labelledby="api-heading">
+    <h2 id="api-heading">🔌 Admin API Reference</h2>
+
+    <h3>Authentication</h3>
+    <p>All API requests require Bearer token in Authorization header:</p>
+    <pre><code>Authorization: Bearer {JWT_TOKEN}</code></pre>
+
+    <h3>Core Endpoints</h3>
+
+    <div class="endpoint">
+      <div><span class="method get">GET</span> <code>/admin/api/users</code></div>
+      <p>List all users with filters</p>
+      <p><strong>Query params:</strong> limit, offset, status, elo_min, elo_max, sort</p>
+    </div>
+
+    <div class="endpoint">
+      <div><span class="method get">GET</span> <code>/admin/api/users/{id}</code></div>
+      <p>Get user details</p>
+    </div>
+
+    <div class="endpoint">
+      <div><span class="method put">PUT</span> <code>/admin/api/users/{id}</code></div>
+      <p>Update user information</p>
+      <pre><code>{
+  "email": "new@email.com",
+  "display_name": "New Name",
+  "status": "active"
+}</code></pre>
+    </div>
+
+    <div class="endpoint">
+      <div><span class="method post">POST</span> <code>/admin/api/users/{id}/reset-password</code></div>
+      <p>Reset user password (temporary)</p>
+    </div>
+
+    <div class="endpoint">
+      <div><span class="method post">POST</span> <code>/admin/api/users/{id}/suspend</code></div>
+      <p>Suspend user account</p>
+      <pre><code>{
+  "reason": "Violation reason",
+  "duration_days": 30
+}</code></pre>
+    </div>
+
+    <div class="endpoint">
+      <div><span class="method delete">DELETE</span> <code>/admin/api/users/{id}</code></div>
+      <p>Permanently delete user account</p>
+      <p style="color: var(--danger);"><strong>⚠️ WARNING: Irreversible action</strong></p>
+    </div>
+
+    <div class="endpoint">
+      <div><span class="method get">GET</span> <code>/admin/api/games</code></div>
+      <p>List games with filters</p>
+      <p><strong>Query params:</strong> limit, offset, status (active, completed), date_from, date_to</p>
+    </div>
+
+    <div class="endpoint">
+      <div><span class="method post">POST</span> <code>/admin/api/games/{id}/end</code></div>
+      <p>Forcefully end a game</p>
+      <pre><code>{ "reason": "Admin termination" }</code></pre>
+    </div>
+
+    <div class="endpoint">
+      <div><span class="method get">GET</span> <code>/admin/api/health</code></div>
+      <p>Check system health</p>
+      <p><strong>Response:</strong> JSON with component statuses</p>
+    </div>
+
+    <div class="endpoint">
+      <div><span class="method get">GET</span> <code>/admin/api/analytics</code></div>
+      <p>Get analytics metrics</p>
+      <p><strong>Query params:</strong> date_from, date_to, metric (dau, games, errors)</p>
+    </div>
+
+    <h3>Error Handling</h3>
+    <pre><code>HTTP/1.1 400 Bad Request
+{
+  "error": "validation_error",
+  "message": "Email already exists",
+  "details": { "email": "Invalid email format" }
+}</code></pre>
+
+    <pre><code>HTTP/1.1 401 Unauthorized
+{
+  "error": "auth_failed",
+  "message": "Invalid token or expired"
+}</code></pre>
+
+    <pre><code>HTTP/1.1 403 Forbidden
+{
+  "error": "permission_denied",
+  "message": "Insufficient privileges for this action"
+}</code></pre>
+  </section>
+
+  <!-- Security Guidelines -->
+  <section class="section" id="security" aria-labelledby="security-heading">
+    <h2 id="security-heading">🔒 Security Guidelines</h2>
+
+    <div class="warning-box">
+      <h4>Critical Security Practices</h4>
+      <ul>
+        <li>✅ <strong>Use strong passwords:</strong> 16+ chars, mixed case, numbers, symbols</li>
+        <li>✅ <strong>Enable 2FA:</strong> TOTP (Google Authenticator) or SMS</li>
+        <li>✅ <strong>VPN only:</strong> Access admin panel only through VPN</li>
+        <li>✅ <strong>Session timeout:</strong> Auto-logout after 15 minutes of inactivity</li>
+        <li>✅ <strong>Audit everything:</strong> All admin actions logged</li>
+        <li>✅ <strong>Rotate credentials:</strong> Every 90 days minimum</li>
+        <li>✅ <strong>Monthly reviews:</strong> Audit logs for suspicious activity</li>
+        <li>✅ <strong>Incident response:</strong> Have a plan for breaches</li>
+      </ul>
+    </div>
+
+    <h3>Activity Logging</h3>
+    <p>All administrative actions are logged:</p>
+    <pre><code>/admin/audit-log</code></pre>
+
+    <table aria-label="Audit log fields">
+      <thead>
+        <tr>
+          <th>Field</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Timestamp</td>
+          <td>When action occurred (UTC)</td>
+        </tr>
+        <tr>
+          <td>Admin</td>
+          <td>Which admin performed action</td>
+        </tr>
+        <tr>
+          <td>Action</td>
+          <td>Type of action (create, update, delete, suspend, etc.)</td>
+        </tr>
+        <tr>
+          <td>Resource</td>
+          <td>What was modified (user ID, game ID, etc.)</td>
+        </tr>
+        <tr>
+          <td>Changes</td>
+          <td>Before/After values</td>
+        </tr>
+        <tr>
+          <td>IP Address</td>
+          <td>Admin's IP address</td>
+        </tr>
+        <tr>
+          <td>Status</td>
+          <td>Success/Failure</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>Data Protection</h3>
+    <ul>
+      <li><strong>Encryption:</strong> All data encrypted at rest (AES-256)</li>
+      <li><strong>TLS:</strong> All communications encrypted in transit (TLS 1.3)</li>
+      <li><strong>Backups:</strong> Daily encrypted backups, 30-day retention</li>
+      <li><strong>Compliance:</strong> GDPR-compliant data handling</li>
+    </ul>
+
+    <h3>Incident Response</h3>
+    <div class="warning-box">
+      <h4>If you suspect a breach:</h4>
+      <ol>
+        <li>Immediately change your admin password</li>
+        <li>Enable 2FA if not already enabled</li>
+        <li>Review audit logs for suspicious activities</li>
+        <li>Check for unauthorized admin accounts</li>
+        <li>Notify other admins</li>
+        <li>Contact security team: security@xiangqi.games-core.com</li>
+        <li>Force password reset for all users if necessary</li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- Troubleshooting -->
+  <section class="section" id="troubleshooting" aria-labelledby="troubleshooting-heading">
+    <h2 id="troubleshooting-heading">🔧 Troubleshooting</h2>
+
+    <div class="info-box">
+      <h4>Q: Can't login to admin panel?</h4>
+      <p><strong>A:</strong> Check:</p>
+      <ul>
+        <li>Email and password are correct</li>
+        <li>2FA code is current (within 30 seconds)</li>
+        <li>Your IP is whitelisted (contact admin)</li>
+        <li>Account status is active (not suspended)</li>
+        <li>Browser cookies enabled</li>
+      </ul>
+    </div>
+
+    <div class="info-box">
+      <h4>Q: Admin action failed?</h4>
+      <p><strong>A:</strong> Check:</p>
+      <ul>
+        <li>Insufficient permissions (check role)</li>
+        <li>Resource doesn't exist (user/game already deleted)</li>
+        <li>Invalid data format (review API schema)</li>
+        <li>Server error (check system health)</li>
+        <li>Rate limited (wait before retrying)</li>
+      </ul>
+    </div>
+
+    <div class="info-box">
+      <h4>Q: System running slowly?</h4>
+      <p><strong>A:</strong> Check:</p>
+      <ul>
+        <li>Server CPU/Memory usage</li>
+        <li>Database query performance</li>
+        <li>Number of active games</li>
+        <li>Recent backups running</li>
+        <li>Network connectivity</li>
+      </ul>
+    </div>
+
+    <div class="info-box">
+      <h4>Q: Need to reset user 2FA?</h4>
+      <p><strong>A:</strong> Steps:</p>
+      <ol>
+        <li>Go to user profile in admin panel</li>
+        <li>Click "Security Settings"</li>
+        <li>Click "Reset 2FA"</li>
+        <li>User will need to re-setup 2FA on next login</li>
+      </ol>
+    </div>
+
+    <div class="info-box">
+      <h4>Q: How to export user data for analysis?</h4>
+      <p><strong>A:</strong> Use:</p>
+      <pre><code>GET /admin/api/users?limit=10000&format=csv</code></pre>
+      <p>Or use the Export button in Users dashboard</p>
+    </div>
+
+    <div class="success-box">
+      <h4>✅ Contact Support</h4>
+      <p>For issues not covered here:</p>
+      <ul>
+        <li>📧 Email: <a href="mailto:admin-support@xiangqi.games-core.com">admin-support@xiangqi.games-core.com</a></li>
+        <li>💬 Slack: #xiangqi-admin (internal)</li>
+        <li>🐛 Issue Tracker: <a href="https://github.com/manhdauvn09-manhds/xiangqi/issues">GitHub Issues</a></li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- Footer Info -->
+  <section class="section" style="margin-top: 3rem; background: var(--bg-light);">
+    <h2>📝 Document Information</h2>
+    <ul>
+      <li><strong>Version:</strong> 1.0.0</li>
+      <li><strong>Last Updated:</strong> 2026-06-21</li>
+      <li><strong>System Version:</strong> Cờ Tướng Vương Phase 1</li>
+      <li><strong>Classification:</strong> <strong style="color: var(--danger);">CONFIDENTIAL - ADMIN ONLY</strong></li>
+    </ul>
+    <p style="color: var(--text-secondary); margin-top: 1rem;">⚠️ This document contains sensitive information. Do not share with unauthorized personnel.</p>
+  </section>
+
+</main>
+
+<footer role="contentinfo">
+  <div class="container" style="text-align: center; color: var(--text-secondary);">
+    <p>&copy; 2026 Cờ Tướng Vương Admin System. All rights reserved.</p>
+    <p style="color: var(--danger); font-weight: bold;">CONFIDENTIAL - FOR AUTHORIZED ADMINISTRATORS ONLY</p>
+  </div>
+</footer>
+
+<script>
+function copyToClipboard(el) {
+  const text = el.textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const orig = el.textContent;
+    el.textContent = '✓ Copied!';
+    setTimeout(() => { el.textContent = orig; }, 2000);
+  });
+}
+
+function copy(btn) {
+  const cred = btn.previousElementSibling;
+  copyToClipboard(cred);
+  const orig = btn.textContent;
+  btn.textContent = '✓ Copied!';
+  setTimeout(() => { btn.textContent = orig; }, 2000);
+}
+</script>
+
+</body>
+</html>

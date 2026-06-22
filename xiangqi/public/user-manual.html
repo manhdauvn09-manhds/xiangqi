@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=5.0">
+<meta name="theme-color" content="#0a0e1a">
+<meta name="description" content="Hướng dẫn sử dụng Cờ Tướng Vương - User Manual đầy đủ về các tính năng, cách chơi, hệ thống ELO, giải đấu và cách sử dụng tất cả chức năng trong trò chơi.">
+<meta name="keywords" content="hướng dẫn, user manual, cờ tướng, xiangqi, cách chơi, ELO, giải đấu, online">
+<meta name="robots" content="index, follow">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="color-scheme" content="light dark">
+
+<meta property="og:title" content="Hướng dẫn sử dụng - Cờ Tướng Vương">
+<meta property="og:description" content="User Manual đầy đủ về các tính năng và cách sử dụng Cờ Tướng Vương">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://xiangqi.games-core.com/user-manual.html">
+<meta property="og:site_name" content="Cờ Tướng Vương">
+
+<title>User Manual - Hướng dẫn sử dụng Cờ Tướng Vương</title>
+<link rel="canonical" href="https://xiangqi.games-core.com/user-manual.html">
+
+<script>
+(function () {
+  try {
+    var saved = localStorage.getItem('xq_theme') || 'dark';
+    var effective = saved === 'auto'
+      ? (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
+      : saved;
+    document.documentElement.setAttribute('data-theme', effective);
+  } catch (_) {
+    document.documentElement.setAttribute('data-theme', 'dark');
+  }
+})();
+</script>
+
+<style>
+:root {
+  --bg-dark: #0a0e1a;
+  --bg-lighter: #151b2b;
+  --bg-light: #1f2937;
+  --text-primary: #ffffff;
+  --text-secondary: #b0b8cc;
+  --accent: #06d6a0;
+  --accent-dark: #04b380;
+  --border: #2d3748;
+}
+
+[data-theme="light"] {
+  --bg-dark: #ffffff;
+  --bg-lighter: #f9fafb;
+  --bg-light: #f3f4f6;
+  --text-primary: #1f2937;
+  --text-secondary: #6b7280;
+  --accent: #059669;
+  --accent-dark: #047857;
+  --border: #e5e7eb;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  background: var(--bg-dark);
+  color: var(--text-primary);
+  line-height: 1.6;
+  font-size: 16px;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+h1 { font-size: 2.5rem; margin-bottom: 1rem; line-height: 1.2; }
+h2 { font-size: 2rem; margin-top: 2rem; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--accent); }
+h3 { font-size: 1.5rem; margin-top: 1.5rem; margin-bottom: 0.75rem; }
+h4 { font-size: 1.25rem; margin-top: 1rem; margin-bottom: 0.5rem; }
+
+p { margin-bottom: 1rem; }
+ul, ol { margin-left: 1.5rem; margin-bottom: 1rem; }
+li { margin-bottom: 0.5rem; }
+
+code { background: var(--bg-light); padding: 0.2em 0.4em; border-radius: 3px; font-family: 'Courier New', monospace; }
+pre { background: var(--bg-light); padding: 1rem; border-radius: 8px; overflow-x: auto; margin-bottom: 1rem; }
+pre code { background: none; padding: 0; }
+
+.container {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+header {
+  background: var(--bg-lighter);
+  border-bottom: 1px solid var(--border);
+  padding: 2rem 0;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+header h1 {
+  margin: 0;
+  font-size: 2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+nav.toc {
+  background: var(--bg-lighter);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin: 2rem 0;
+  border-left: 4px solid var(--accent);
+}
+
+nav.toc h3 {
+  margin-top: 0;
+  color: var(--accent);
+}
+
+nav.toc ul { margin: 1rem 0; }
+nav.toc li { margin: 0.5rem 0; }
+nav.toc a {
+  display: block;
+  padding: 0.5rem;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+nav.toc a:hover { background: var(--bg-light); }
+
+.section {
+  margin: 3rem 0;
+  padding: 2rem;
+  background: var(--bg-lighter);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.feature-box {
+  background: var(--bg-light);
+  border-left: 4px solid var(--accent);
+  padding: 1.5rem;
+  border-radius: 4px;
+  margin: 1.5rem 0;
+}
+
+.feature-box h4 { margin-top: 0; }
+
+.steps {
+  list-style: decimal;
+  margin: 1.5rem 0;
+}
+
+.steps li {
+  margin: 1rem 0;
+  padding-left: 0.5rem;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+  background: var(--bg-light);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 1rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+th {
+  background: var(--accent);
+  color: var(--bg-dark);
+  font-weight: bold;
+}
+
+tr:last-child td { border-bottom: none; }
+tr:hover { background: rgba(6, 214, 160, 0.05); }
+
+.button-demo {
+  display: inline-block;
+  background: var(--accent);
+  color: var(--bg-dark);
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  font-weight: 600;
+  margin-right: 1rem;
+  margin-bottom: 1rem;
+  cursor: pointer;
+  border: none;
+  transition: background 0.2s;
+}
+
+.button-demo:hover { background: var(--accent-dark); }
+.button-demo:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.rating-stars { font-size: 1.5rem; margin: 1rem 0; }
+.pro-badge {
+  display: inline-block;
+  background: var(--accent);
+  color: var(--bg-dark);
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin-left: 0.5rem;
+}
+
+.video-placeholder {
+  background: var(--bg-light);
+  padding: 2rem;
+  text-align: center;
+  border-radius: 8px;
+  margin: 1.5rem 0;
+  color: var(--text-secondary);
+}
+
+footer {
+  background: var(--bg-lighter);
+  border-top: 1px solid var(--border);
+  padding: 2rem;
+  text-align: center;
+  margin-top: 3rem;
+  color: var(--text-secondary);
+}
+
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  z-index: -1;
+}
+
+.skip-link:focus-visible {
+  position: static;
+  left: 0;
+  z-index: 9999;
+  padding: 1rem;
+  background: var(--accent);
+  color: var(--bg-dark);
+  display: block;
+  text-align: center;
+  font-weight: bold;
+}
+
+.breadcrumb {
+  margin: 1.5rem 0;
+  padding: 1rem;
+  background: var(--bg-light);
+  border-radius: 4px;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.breadcrumb a { margin: 0 0.25rem; }
+.breadcrumb span { margin: 0 0.5rem; }
+
+@media (max-width: 768px) {
+  h1 { font-size: 1.75rem; }
+  h2 { font-size: 1.5rem; }
+  h3 { font-size: 1.25rem; }
+  .container { padding: 1rem; }
+  .section { padding: 1rem; }
+  table { font-size: 0.9rem; }
+  th, td { padding: 0.75rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+</style>
+</head>
+<body>
+
+<a href="#main" class="skip-link">Bỏ qua vào nội dung chính</a>
+
+<header role="banner">
+  <div class="container">
+    <h1>📖 Hướng dẫn sử dụng</h1>
+    <p style="margin: 0.5rem 0 0 0; color: var(--text-secondary);">User Manual - Cờ Tướng Vương</p>
+  </div>
+</header>
+
+<main id="main" class="container">
+  <nav class="breadcrumb" aria-label="Breadcrumb">
+    <a href="/" title="Trang chủ">Trang chủ</a>
+    <span aria-hidden="true">/</span>
+    <span>User Manual</span>
+  </nav>
+
+  <nav class="toc" aria-label="Mục lục">
+    <h3>📑 Mục lục</h3>
+    <ul>
+      <li><a href="#intro">Giới thiệu</a></li>
+      <li><a href="#getting-started">Bắt đầu</a></li>
+      <li><a href="#gameplay">Cách chơi</a></li>
+      <li><a href="#game-modes">Chế độ chơi</a></li>
+      <li><a href="#elo-system">Hệ thống ELO</a></li>
+      <li><a href="#tournaments">Giải đấu</a></li>
+      <li><a href="#leaderboard">Bảng xếp hạng</a></li>
+      <li><a href="#features">Các tính năng khác</a></li>
+      <li><a href="#faq">Câu hỏi thường gặp</a></li>
+    </ul>
+  </nav>
+
+  <!-- Introduction Section -->
+  <section class="section" id="intro" aria-labelledby="intro-heading">
+    <h2 id="intro-heading">🎮 Giới thiệu về Cờ Tướng Vương</h2>
+    <p>Cờ Tướng Vương là một trò chơi cờ tướng (Xiangqi) trực tuyến hiện đại, cho phép bạn:</p>
+    <ul>
+      <li>Chơi với <strong>Bot AI 10 cấp độ</strong> (từ 600 đến 2400 ELO)</li>
+      <li>Chơi với <strong>người chơi khác trực tuyến</strong></li>
+      <li>Theo dõi <strong>xếp hạng ELO cá nhân</strong></li>
+      <li>Tham gia <strong>giải đấu cạnh tranh</strong></li>
+      <li>Xem <strong>lịch sử trận đấu</strong> chi tiết</li>
+      <li>Giải <strong>các bài toán hàng ngày</strong></li>
+    </ul>
+    <p style="color: var(--text-secondary); margin-top: 1.5rem;">✨ Với giao diện hiện đại, hiệu suất tối ưu, và tuân thủ tiêu chuẩn trợ năng WCAG 2.1 AA</p>
+  </section>
+
+  <!-- Getting Started -->
+  <section class="section" id="getting-started" aria-labelledby="gs-heading">
+    <h2 id="gs-heading">🚀 Bắt đầu</h2>
+
+    <h3>Đăng ký tài khoản</h3>
+    <ol class="steps">
+      <li>Truy cập <a href="/">trang chủ</a></li>
+      <li>Nhấp nút <strong>"Đăng ký"</strong> hoặc <strong>"Sign Up"</strong></li>
+      <li>Nhập email, mật khẩu, và tên hiển thị</li>
+      <li>Xác nhận email (nếu có yêu cầu)</li>
+      <li>Bắt đầu chơi ngay!</li>
+    </ol>
+
+    <h3>Đăng nhập</h3>
+    <ol class="steps">
+      <li>Nhấp nút <strong>"Đăng nhập"</strong></li>
+      <li>Nhập email và mật khẩu</li>
+      <li>Chọn <strong>"Nhớ tôi"</strong> để lưu phiên (không bắt buộc)</li>
+    </ol>
+
+    <div class="feature-box">
+      <h4>💡 Mẹo: Đăng nhập Google</h4>
+      <p>Bạn cũng có thể đăng nhập bằng tài khoản Google để tiện lợi hơn.</p>
+    </div>
+  </section>
+
+  <!-- Gameplay -->
+  <section class="section" id="gameplay" aria-labelledby="gp-heading">
+    <h2 id="gp-heading">♟️ Cách chơi</h2>
+
+    <h3>Luật cơ bản Xiangqi</h3>
+    <p>Xiangqi (cờ tướng) là trò chơi cờ Trung Quốc truyền thống với các quy tắc riêng:</p>
+
+    <h4>Các quân cờ:</h4>
+    <table aria-label="Các quân cờ và cách di chuyển">
+      <thead>
+        <tr>
+          <th>Quân</th>
+          <th>Ký hiệu</th>
+          <th>Cách di chuyển</th>
+          <th>Giá trị</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Tướng</td>
+          <td>帥/將</td>
+          <td>Di chuyển 1 ô trong cung (3×3)</td>
+          <td>Vô giá</td>
+        </tr>
+        <tr>
+          <td>Sĩ/Vệ sĩ</td>
+          <td>士</td>
+          <td>Di chuyển 1 ô theo đường chéo trong cung</td>
+          <td>2-3</td>
+        </tr>
+        <tr>
+          <td>Tượng/Voi</td>
+          <td>象</td>
+          <td>Di chuyển 2 ô theo đường chéo, không vượt sông</td>
+          <td>2-3</td>
+        </tr>
+        <tr>
+          <td>Mã</td>
+          <td>馬</td>
+          <td>Di chuyển hình chữ L (1 ô + 2 ô), có thể bị chặn</td>
+          <td>4-5</td>
+        </tr>
+        <tr>
+          <td>Xe</td>
+          <td>車</td>
+          <td>Di chuyển theo hàng/cột không giới hạn</td>
+          <td>9</td>
+        </tr>
+        <tr>
+          <td>Pháo</td>
+          <td>砲</td>
+          <td>Giống xe nhưng cần quân đỡ để ăn quân</td>
+          <td>4-5</td>
+        </tr>
+        <tr>
+          <td>Tốn/Binh</td>
+          <td>兵</td>
+          <td>Di chuyển 1 ô trước; sau khi vượt sông có thể sang hông</td>
+          <td>1-2</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>Cách di chuyển quân cờ</h3>
+    <ol class="steps">
+      <li><strong>Chọn quân cờ:</strong> Nhấp chuột vào quân cờ bạn muốn di chuyển</li>
+      <li><strong>Xem các nước đi hợp lệ:</strong> Các ô có thể đi sẽ được tô sáng (màu xanh hoặc vàng)</li>
+      <li><strong>Thực hiện nước đi:</strong> Nhấp vào một trong các ô được tô sáng</li>
+      <li><strong>Xác nhận:</strong> Nước đi được tự động xác nhận</li>
+    </ol>
+
+    <div class="feature-box">
+      <h4>🎯 Lưu ý quan trọng</h4>
+      <p><strong>Chiến thắng:</strong> Ăn tướng của đối thủ hoặc đối thủ không thể di chuyển</p>
+      <p><strong>Hòa:</strong> Cả hai bên đều yêu cầu hoặc vượt quá 60 nước cờ</p>
+      <p><strong>Thua:</strong> Tướng của bạn bị ăn hoặc bạn hết thời gian (trong chế độ tím hoạc)</p>
+    </div>
+  </section>
+
+  <!-- Game Modes -->
+  <section class="section" id="game-modes" aria-labelledby="gm-heading">
+    <h2 id="gm-heading">🎲 Chế độ chơi</h2>
+
+    <div class="feature-box">
+      <h4>1️⃣ Chơi với Bot AI</h4>
+      <p>Chơi với máy tính AI có <strong>10 cấp độ khác nhau</strong>:</p>
+      <ul>
+        <li><strong>Cấp 1-3:</strong> Rất dễ (600-900 ELO) - Phù hợp cho người mới</li>
+        <li><strong>Cấp 4-6:</strong> Trung bình (1000-1500 ELO) - Thách thức vừa phải</li>
+        <li><strong>Cấp 7-9:</strong> Khó (1600-2100 ELO) - Cho các tay chơi giỏi</li>
+        <li><strong>Cấp 10:</strong> Rất khó (2400 ELO) - Thách thức tối đa</li>
+      </ul>
+      <p><strong>Thời gian:</strong> Mặc định 10 phút mỗi bên, có thể thay đổi</p>
+    </div>
+
+    <div class="feature-box">
+      <h4>2️⃣ Chơi trực tuyến (Online)</h4>
+      <p>Chơi với <strong>người chơi thực tế</strong> khác:</p>
+      <ul>
+        <li>Tìm đối thủ ngẫu nhiên</li>
+        <li>Xếp hạng dựa trên ELO</li>
+        <li>Nếu không tìm thấy người chơi trong 30 giây → tự động chơi với Bot</li>
+        <li>Kết quả ảnh hưởng đến xếp hạng ELO của bạn</li>
+      </ul>
+    </div>
+
+    <div class="feature-box">
+      <h4>3️⃣ Cờ mù (Blind)</h4>
+      <p>Phiên bản nâng cao: <strong>không thể nhìn thấy bàn cờ của đối thủ</strong></p>
+      <ul>
+        <li>Yêu cầu chiến thuật tư duy cao hơn</li>
+        <li>Theo dõi nước đi nhập vào ô, hàng, cột</li>
+        <li>Phù hợp cho những người chơi giỏi</li>
+      </ul>
+    </div>
+
+    <div class="feature-box">
+      <h4>4️⃣ Bài toán hàng ngày (Daily Puzzle) <span class="pro-badge">NEW</span></h4>
+      <p>Mỗi ngày có <strong>một bài toán tâm yếu</strong> để giải:</p>
+      <ul>
+        <li>Tìm nước đi tốt nhất để tấn công hoặc phòng thủ</li>
+        <li>Nhận điểm thưởng khi hoàn thành</li>
+        <li>Theo dõi lịch sử bài toán</li>
+      </ul>
+    </div>
+
+    <div class="feature-box">
+      <h4>5️⃣ Giải đấu (Tournaments)</h4>
+      <p>Tham gia các <strong>giải đấu cạnh tranh</strong>:</p>
+      <ul>
+        <li>Giải đấu hàng tuần, hàng tháng</li>
+        <li>Hạng nhân theo ELO</li>
+        <li>Thưởng và danh vọng cho những người chiến thắng</li>
+      </ul>
+    </div>
+
+    <div class="feature-box">
+      <h4>6️⃣ Tạo phòng chơi (Challenges)</h4>
+      <p><strong>Thách đấu bạn bè</strong> hoặc mời người chơi cụ thể:</p>
+      <ul>
+        <li>Tạo phòng riêng với mã và mật khẩu</li>
+        <li>Cài đặt thời gian chơi tùy chỉnh</li>
+        <li>Chơi với bạn bè hoặc những người bạn biết</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ELO System -->
+  <section class="section" id="elo-system" aria-labelledby="elo-heading">
+    <h2 id="elo-heading">📊 Hệ thống xếp hạng ELO</h2>
+
+    <p><strong>ELO rating</strong> là hệ thống xếp hạng quốc tế được sử dụng trong cờ vua, cờ tướng, và nhiều trò chơi cạnh tranh khác.</p>
+
+    <h3>Cách tính ELO</h3>
+    <ul>
+      <li><strong>Thắng:</strong> ELO tăng dựa trên xếp hạng của đối thủ
+        <ul><li>Thắng kẻ yếu hơn → tăng ít</li>
+        <li>Thắng kẻ mạnh hơn → tăng nhiều</li></ul>
+      </li>
+      <li><strong>Thua:</strong> ELO giảm dựa trên xếp hạng của đối thủ
+        <ul><li>Thua kẻ yếu hơn → giảm nhiều</li>
+        <li>Thua kẻ mạnh hơn → giảm ít</li></ul>
+      </li>
+      <li><strong>Hòa:</strong> ELO ít thay đổi, tùy vào mức độ chênh lệch</li>
+    </ul>
+
+    <h3>Bảng xếp hạng ELO (Tiêu chuẩn)</h3>
+    <table aria-label="Bảng xếp hạng ELO">
+      <thead>
+        <tr>
+          <th>Phạm vi ELO</th>
+          <th>Mức độ</th>
+          <th>Mô tả</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>&lt; 800</td>
+          <td>Rất yếu</td>
+          <td>Người mới bắt đầu</td>
+        </tr>
+        <tr>
+          <td>800-1200</td>
+          <td>Yếu</td>
+          <td>Người chơi sơ cấp</td>
+        </tr>
+        <tr>
+          <td>1200-1600</td>
+          <td>Trung bình</td>
+          <td>Người chơi trung bình</td>
+        </tr>
+        <tr>
+          <td>1600-2000</td>
+          <td>Giỏi</td>
+          <td>Người chơi giỏi</td>
+        </tr>
+        <tr>
+          <td>2000-2400</td>
+          <td>Rất giỏi</td>
+          <td>Người chơi chuyên nghiệp</td>
+        </tr>
+        <tr>
+          <td>&gt; 2400</td>
+          <td>Huyền thoại</td>
+          <td>Các tay chơi hàng đầu</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>Theo dõi ELO của bạn</h3>
+    <ol class="steps">
+      <li>Truy cập phần <strong>"Hồ sơ"</strong> (Profile)</li>
+      <li>Xem <strong>ELO hiện tại</strong> của bạn</li>
+      <li>Xem <strong>lịch sử ELO</strong> (biểu đồ)</li>
+      <li>Xem <strong>số trận thắng/thua</strong> gần đây</li>
+      <li>Chọn chế độ: <strong>"Standard"</strong> hoặc <strong>"Blind"</strong></li>
+    </ol>
+
+    <div class="feature-box">
+      <h4>💡 Mẹo cải thiện ELO</h4>
+      <ul>
+        <li>Chơi thường xuyên để tích lũy kinh nghiệm</li>
+        <li>Học các khai cuộc phổ biến</li>
+        <li>Phân tích trận thua để tìm lỗi</li>
+        <li>Chơi với người mạnh hơn bạn</li>
+        <li>Giải các bài toán hàng ngày</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- Tournaments -->
+  <section class="section" id="tournaments" aria-labelledby="tour-heading">
+    <h2 id="tour-heading">🏆 Giải đấu</h2>
+
+    <h3>Tham gia giải đấu</h3>
+    <ol class="steps">
+      <li>Vào mục <strong>"Giải đấu"</strong> (Tournament)</li>
+      <li>Xem danh sách các <strong>giải đấu sắp diễn ra</strong></li>
+      <li>Nhấp <strong>"Tham gia"</strong> (Register)</li>
+      <li>Chọn các tùy chọn của bạn (ELO range, chế độ)</li>
+      <li>Chờ giải đấu bắt đầu</li>
+      <li>Tham gia các trận đấu vòng tròn hoặc loại trực tiếp</li>
+    </ol>
+
+    <h3>Định dạng giải đấu</h3>
+    <ul>
+      <li><strong>Vòng tròn (Round Robin):</strong> Mỗi người chơi với tất cả mọi người khác</li>
+      <li><strong>Loại trực tiếp (Knockout):</strong> Thua một trận → loại khỏi giải</li>
+      <li><strong>Swiss:</strong> Kết hợp cả hai hình thức</li>
+    </ul>
+
+    <h3>Phân hạng giải đấu</h3>
+    <ul>
+      <li><strong>Hạng sơ cấp:</strong> ELO &lt; 1200</li>
+      <li><strong>Hạng trung bình:</strong> ELO 1200-1600</li>
+      <li><strong>Hạng cao:</strong> ELO 1600-2000</li>
+      <li><strong>Hạng chuyên nghiệp:</strong> ELO &gt; 2000</li>
+    </ul>
+
+    <div class="feature-box">
+      <h4>🎁 Thưởng giải đấu</h4>
+      <ul>
+        <li><strong>Hạng 1:</strong> 50 điểm + Huy hiệu vàng</li>
+        <li><strong>Hạng 2:</strong> 30 điểm + Huy hiệu bạc</li>
+        <li><strong>Hạng 3:</strong> 10 điểm + Huy hiệu đồng</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- Leaderboard -->
+  <section class="section" id="leaderboard" aria-labelledby="lb-heading">
+    <h2 id="lb-heading">🥇 Bảng xếp hạng</h2>
+
+    <h3>Xem bảng xếp hạng toàn cầu</h3>
+    <ol class="steps">
+      <li>Truy cập <strong>"Xếp hạng"</strong> (Leaderboard)</li>
+      <li>Xem <strong>top 100</strong> người chơi hàng đầu</li>
+      <li>Chọn chế độ: <strong>"Standard"</strong> hoặc <strong>"Blind"</strong></li>
+      <li>Lọc theo: <strong>ELO cao nhất, mới nhất, có hoạt động</strong></li>
+      <li>Nhấp vào tên người chơi để xem <strong>hồ sơ chi tiết</strong></li>
+    </ol>
+
+    <h3>Thông tin hiển thị</h3>
+    <table aria-label="Thông tin bảng xếp hạng">
+      <thead>
+        <tr>
+          <th>Cột</th>
+          <th>Ý nghĩa</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Hạng (Rank)</td>
+          <td>Vị trí trong top 100</td>
+        </tr>
+        <tr>
+          <td>Tên người chơi</td>
+          <td>Tên hiển thị hoặc nickname</td>
+        </tr>
+        <tr>
+          <td>ELO</td>
+          <td>Xếp hạng hiện tại</td>
+        </tr>
+        <tr>
+          <td>Thắng/Thua</td>
+          <td>Tỷ lệ thắng/thua gần đây</td>
+        </tr>
+        <tr>
+          <td>Hoạt động</td>
+          <td>Lần chơi cuối cùng</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="feature-box">
+      <h4>📈 Theo dõi hạng của bạn</h4>
+      <p>Hạng của bạn được cập nhật <strong>theo thời gian thực</strong> sau mỗi trận đấu. Xem tiến độ của bạn bằng cách nhấp vào hồ sơ.</p>
+    </div>
+  </section>
+
+  <!-- Additional Features -->
+  <section class="section" id="features" aria-labelledby="feat-heading">
+    <h2 id="feat-heading">✨ Các tính năng khác</h2>
+
+    <div class="feature-box">
+      <h4>📱 Hồ sơ người dùng (Profile)</h4>
+      <ul>
+        <li>Chỉnh sửa tên, ảnh đại diện</li>
+        <li>Xem thống kê: số trận, tỷ lệ thắng, ELO</li>
+        <li>Theo dõi các kỳ tích (achievements)</li>
+        <li>Xem lịch sử trận đấu gần đây</li>
+      </ul>
+    </div>
+
+    <div class="feature-box">
+      <h4>⏱️ Lịch sử trận đấu (Game History)</h4>
+      <ul>
+        <li>Xem lại <strong>tất cả các trận đấu</strong> của bạn</li>
+        <li>Xem <strong>từng nước đi</strong> chi tiết</li>
+        <li>Phân tích <strong>các sai lầm</strong> của bạn</li>
+        <li>Tải xuống trong định dạng <strong>PGN</strong> để phân tích sau</li>
+      </ul>
+    </div>
+
+    <div class="feature-box">
+      <h4>🎨 Tuỳ chỉnh giao diện (Settings)</h4>
+      <ul>
+        <li><strong>Chế độ sáng/tối:</strong> Chọn giao diện phù hợp với bạn</li>
+        <li><strong>Ngôn ngữ:</strong> Tiếng Việt (VI) hoặc Tiếng Anh (EN)</li>
+        <li><strong>Âm thanh:</strong> Bật/tắt âm thanh trận đấu</li>
+        <li><strong>Thông báo:</strong> Quản lý các thông báo</li>
+        <li><strong>Ứng dụng offline:</strong> Tải ứng dụng để chơi offline</li>
+      </ul>
+    </div>
+
+    <div class="feature-box">
+      <h4>🔔 Thông báo (Notifications)</h4>
+      <ul>
+        <li>Được thông báo khi <strong>có người thách đấu</strong></li>
+        <li>Được thông báo khi <strong>đối thủ chơi nước</strong> (trong trận)</li>
+        <li>Được thông báo về <strong>giải đấu sắp diễn ra</strong></li>
+        <li>Được thông báo về <strong>bài toán hàng ngày mới</strong></li>
+      </ul>
+    </div>
+
+    <div class="feature-box">
+      <h4>📊 Thống kê chi tiết (Analytics)</h4>
+      <ul>
+        <li>Xem biểu đồ ELO theo thời gian</li>
+        <li>Xem tỷ lệ thắng theo chế độ (Standard/Blind)</li>
+        <li>Xem thời gian chơi trung bình</li>
+        <li>Xem các kỳ tích đạt được</li>
+      </ul>
+    </div>
+
+    <div class="feature-box">
+      <h4>🌙 Chế độ không kết nối (Offline Mode) <span class="pro-badge">PWA</span></h4>
+      <ul>
+        <li>Chơi offline với Bot AI</li>
+        <li>Lịch sử trận đấu được lưu cục bộ</li>
+        <li>Tự động đồng bộ khi có kết nối mạng</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="section" id="faq" aria-labelledby="faq-heading">
+    <h2 id="faq-heading">❓ Câu hỏi thường gặp (FAQ)</h2>
+
+    <h3>Tài khoản &amp; Đăng nhập</h3>
+
+    <div class="feature-box">
+      <h4>Q: Làm sao để tạo tài khoản?</h4>
+      <p><strong>A:</strong> Nhấp nút "Đăng ký", nhập email, mật khẩu, tên hiển thị, và xác nhận. Bạn có thể sử dụng tài khoản Google để đăng ký nhanh hơn.</p>
+    </div>
+
+    <div class="feature-box">
+      <h4>Q: Quên mật khẩu?</h4>
+      <p><strong>A:</strong> Nhấp "Quên mật khẩu?" trên trang đăng nhập, nhập email, chúng tôi sẽ gửi link đặt lại mật khẩu.</p>
+    </div>
+
+    <div class="feature-box">
+      <h4>Q: Có thể xóa tài khoản không?</h4>
+      <p><strong>A:</strong> Có, truy cập Cài đặt → Xóa tài khoản. Lưu ý: <strong>Hành động này không thể hoàn tác</strong>.</p>
+    </div>
+
+    <h3>Gameplay &amp; Quy tắc</h3>
+
+    <div class="feature-box">
+      <h4>Q: Làm sao để biết các nước đi hợp lệ?</h4>
+      <p><strong>A:</strong> Nhấp vào quân cờ bạn muốn di chuyển, các ô có thể đi sẽ được tô sáng.</p>
+    </div>
+
+    <div class="feature-box">
+      <h4>Q: Có thể undo (hoàn tác) nước đi không?</h4>
+      <p><strong>A:</strong> Không, mỗi nước đi là cuối cùng. Tuy nhiên, bạn có thể xin hòa hoặc từ bỏ trận đấu.</p>
+    </div>
+
+    <div class="feature-box">
+      <h4>Q: Quy tắc chiếu tướng (check) là gì?</h4>
+      <p><strong>A:</strong> Tướng của bạn đang bị tấn công được gọi là "chiếu". Bạn phải di chuyển tướng ra khỏi vị trí bị tấn công hoặc khống chế quân tấn công.</p>
+    </div>
+
+    <div class="feature-box">
+      <h4>Q: Khi nào là "hết nước" (checkmate)?</h4>
+      <p><strong>A:</strong> Khi tướng của bạn bị chiếu và bạn không có nước hợp lệ để thoát khỏi chiếu, bạn thua trận.</p>
+    </div>
+
+    <h3>ELO &amp; Xếp hạng</h3>
+
+    <div class="feature-box">
+      <h4>Q: ELO tăng/giảm bao nhiêu mỗi trận?</h4>
+      <p><strong>A:</strong> Tùy vào chênh lệch ELO. Thông thường: <strong>tăng/giảm 16-32 điểm</strong> mỗi trận.</p>
+    </div>
+
+    <div class="feature-box">
+      <h4>Q: Hòa ảnh hưởng đến ELO như thế nào?</h4>
+      <p><strong>A:</strong> Hòa thường <strong>tăng ELO ít nhất</strong>, nhưng nếu bạn chơi với kẻ mạnh hơn, hòa sẽ tăng tương đối.</p>
+    </div>
+
+    <div class="feature-box">
+      <h4>Q: Bao lâu ELO được cập nhật?</h4>
+      <p><strong>A:</strong> ELO được cập nhật <strong>theo thời gian thực</strong> sau trận đấu kết thúc.</p>
+    </div>
+
+    <h3>Giải đấu &amp; Tính năng</h3>
+
+    <div class="feature-box">
+      <h4>Q: Giải đấu diễn ra bao lâu?</h4>
+      <p><strong>A:</strong> Tùy từng giải, thường <strong>1-2 tuần</strong>. Xem chi tiết trong trang Giải đấu.</p>
+    </div>
+
+    <div class="feature-box">
+      <h4>Q: Có thể rút khỏi giải đấu không?</h4>
+      <p><strong>A:</strong> Có thể, nhưng bạn sẽ <strong>mất điểm tham gia</strong> và <strong>mất ELO</strong>.</p>
+    </div>
+
+    <div class="feature-box">
+      <h4>Q: Làm sao để tạo phòng chơi private?</h4>
+      <p><strong>A:</strong> Vào phần "Thách đấu", nhấp "Tạo phòng", đặt mật khẩu (hoặc để trống), và chia sẻ mã cho bạn bè.</p>
+    </div>
+
+    <h3>Kỹ thuật &amp; Hỗ trợ</h3>
+
+    <div class="feature-box">
+      <h4>Q: Ứng dụng bị lag hoặc chậm?</h4>
+      <p><strong>A:</strong> Thử:</p>
+      <ul>
+        <li>Làm mới trang (Ctrl+R hoặc Cmd+R)</li>
+        <li>Xóa cache trình duyệt</li>
+        <li>Kiểm tra kết nối internet</li>
+        <li>Sử dụng trình duyệt khác (Chrome, Firefox, Safari)</li>
+      </ul>
+    </div>
+
+    <div class="feature-box">
+      <h4>Q: Có thể chơi trên điện thoại/máy tính bảng không?</h4>
+      <p><strong>A:</strong> Có! Ứng dụng <strong>100% responsive</strong> với mọi thiết bị. Bạn thậm chí có thể cài đặt ứng dụng (PWA) trên điện thoại để chơi offline.</p>
+    </div>
+
+    <div class="feature-box">
+      <h4>Q: Bị lỗi "Connection refused" là sao?</h4>
+      <p><strong>A:</strong> Máy chủ có thể đang bảo trì. Đợi vài phút và thử lại. Nếu vẫn không được, liên hệ <a href="/">hỗ trợ</a>.</p>
+    </div>
+
+    <div class="feature-box">
+      <h4>Q: Thời gian trận đấu mặc định là bao lâu?</h4>
+      <p><strong>A:</strong> <strong>10 phút</strong> cho mỗi bên. Bạn có thể thay đổi trong cài đặt trò chơi.</p>
+    </div>
+
+    <div class="feature-box">
+      <h4>Q: Bị hết thời gian là thua?</h4>
+      <p><strong>A:</strong> Có. Khi hết thời gian, nước đi hiện tại sẽ bị hủy và bạn thua trận.</p>
+    </div>
+  </section>
+
+  <!-- Getting Help -->
+  <section class="section" style="margin-top: 3rem;">
+    <h2>📞 Cần trợ giúp?</h2>
+    <ul>
+      <li><a href="/">Quay về trang chủ</a></li>
+      <li><a href="https://github.com/manhdauvn09-manhds/xiangqi/issues">Báo cáo vấn đề (GitHub)</a></li>
+      <li><a href="mailto:support@xiangqi.games-core.com">Liên hệ hỗ trợ</a></li>
+    </ul>
+  </section>
+
+</main>
+
+<footer role="contentinfo">
+  <div class="container" style="text-align: center; color: var(--text-secondary);">
+    <p>&copy; 2026 Cờ Tướng Vương. Hướng dẫn sử dụng được cập nhật lần cuối: <strong>2026-06-21</strong></p>
+    <p>
+      <a href="#top" style="color: var(--accent);">↑ Quay lên đầu</a> ·
+      <a href="/" style="color: var(--accent);">Trang chủ</a> ·
+      <a href="https://github.com/manhdauvn09-manhds/xiangqi" style="color: var(--accent);">GitHub</a>
+    </p>
+  </div>
+</footer>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Làm sao để tạo tài khoản?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Nhấp nút 'Đăng ký', nhập email, mật khẩu, tên hiển thị, và xác nhận. Bạn có thể sử dụng tài khoản Google để đăng ký nhanh hơn."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "ELO là gì?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "ELO là hệ thống xếp hạng quốc tế. Mỗi người chơi có một điểm ELO. Thắng làm tăng ELO, thua làm giảm ELO, tùy vào xếp hạng của đối thủ."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Có bao nhiêu cấp độ Bot AI?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Có 10 cấp độ AI từ cấp 1 (dễ, 600 ELO) đến cấp 10 (rất khó, 2400 ELO)."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Có thể chơi offline không?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Có! Ứng dụng hỗ trợ chế độ PWA (offline). Bạn có thể cài đặt ứng dụng và chơi với Bot AI khi không có internet."
+      }
+    }
+  ]
+}
+</script>
+
+</body>
+</html>
