@@ -690,6 +690,12 @@ async def health_check():
     return {'status': 'ok', 'service': 'xiangqi-api'}
 
 
+@app.get('/health')
+async def health():
+    """Health check endpoint for container orchestration."""
+    return {'status': 'ok', 'service': 'xiangqi-api'}
+
+
 @app.get('/api/leaderboard')
 async def leaderboard(variant: str = 'standard', scope: str = 'global', limit: int = 100):
     sql = '''
