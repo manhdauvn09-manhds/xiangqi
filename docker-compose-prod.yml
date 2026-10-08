@@ -40,14 +40,18 @@ services:
       - xiangqi-frontend
 
   xiangqi-frontend:
-    image: python:3.11-slim
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    image: xiangqi-frontend:prod
     container_name: xiangqi-frontend
+    security_opt:
+      - no-new-privileges:true
     ports:
-      - "127.0.0.1:5500:5500"    # Only localhost (nginx proxies)
+      - "127.0.0.1:9400:5500"    # Only localhost (nginx proxies)
     volumes:
       - ./xiangqi:/app/fe:ro     # Read-only mount
     working_dir: /app/fe
-    command: python -m http.server 5500 --bind 0.0.0.0
     restart: always
     networks:
       - xiangqi-network
