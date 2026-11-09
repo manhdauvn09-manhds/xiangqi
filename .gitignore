@@ -71,3 +71,6 @@ tmp/
 dist/
 build/
 *.tar.gz
+
+# Claude Code local settings (may contain secrets) - never commit
+.claude/settings.local.json
